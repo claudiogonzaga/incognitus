@@ -18,6 +18,12 @@ const estado = {
 };
 const ETAPAS = { fila: 'na fila', extraindo: 'extraindo', ocr: 'OCR', anonimizando: 'anonimizando', gravando: 'gravando o PDF', pronto: 'pronto', erro: 'erro' };
 
+/** A promessa, ou erro depois de `ms` (um motor que não responde não pode travar a janela nem a atualização). */
+function comPrazo(p, ms, msg) {
+  let t;
+  return Promise.race([p, new Promise((_, falha) => { t = setTimeout(() => falha(new Error(msg)), ms); })]).finally(() => clearTimeout(t));
+}
+
 // ── o worker do motor ─────────────────────────────────────────────────────────────────────────────────────────────
 const textos = {};
 async function texto(arq) {
@@ -52,7 +58,9 @@ async function criarWorker(js) {
     w.postMessage(Object.assign({ id, tipo }, dados || {}));
   });
   registrar('worker: criado');
-  try { await pedir('versao'); } finally { URL.revokeObjectURL(url); }
+  try { await comPrazo(pedir('versao'), 30000, 'o motor não respondeu ao carregar'); }
+  catch (e) { w.terminate(); throw e; }
+  finally { URL.revokeObjectURL(url); }
   registrar('worker: respondeu');
   return { pedir, fim: () => w.terminate() };
 }
@@ -108,7 +116,7 @@ async function atualizarRegras(manual) {
     try {
       const v = await teste.pedir('versao');
       if (v.api !== 1) throw new Error('o motor novo fala outra API (' + v.api + ')');
-      res = await teste.pedir('testar', { pacote: estado.casos });
+      res = await comPrazo(teste.pedir('testar', { pacote: estado.casos }), 300000, 'os casos de teste não terminaram em 5 minutos');
     } finally { teste.fim(); }
     if (res.falhas.length || res.ok !== res.total) {
       msg('As regras ' + b.manifesto.versao + ' NÃO foram instaladas: ' + res.falhas.length + ' caso(s) de teste falharam (' +
