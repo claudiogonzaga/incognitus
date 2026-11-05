@@ -18,7 +18,7 @@ jobs:
       matrix:
         include:
           - nome: macos-universal
-            os: macos-14
+            os: macos-15
             alvo: universal-apple-darwin
             pacote: dmg
             sidecars: mac
