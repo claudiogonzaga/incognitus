@@ -29,15 +29,15 @@
     <p class="dica">ou arraste PDFs (ou uma pasta) para a janela</p>
 
     <h2>Saída</h2>
-    <label class="opcao"><input type="radio" name="saida" value="ao_lado" checked> Ao lado de cada original, na pasta <b>Skiá — anonimizados</b></label>
-    <label class="opcao"><input type="radio" name="saida" value="outra"> Outra pasta:</label>
+    <label class="opcao"><input type="radio" name="saida" value="ao_lado" checked> <span>Ao lado de cada original, na pasta <b>Skiá — anonimizados</b></span></label>
+    <label class="opcao"><input type="radio" name="saida" value="outra"> <span>Outra pasta:</span></label>
     <div class="linha">
       <input id="pasta_saida" type="text" readonly placeholder="nenhuma escolhida">
       <button id="bt_pasta_saida" class="ghost pequeno">Escolher…</button>
     </div>
     <p class="dica">O PDF anonimizado sai com o MESMO nome do original. O original nunca é alterado.</p>
-    <label class="opcao"><input id="op_txt" type="checkbox"> Gravar também o .txt</label>
-    <label class="opcao"><input id="op_mapa" type="checkbox"> Guardar mapa para reidentificar</label>
+    <label class="opcao"><input id="op_txt" type="checkbox"> <span>Gravar também o .txt</span></label>
+    <label class="opcao"><input id="op_mapa" type="checkbox"> <span>Guardar mapa para reidentificar</span></label>
     <div id="aviso_mapa" class="aviso" hidden>
       O mapa tem os <b>nomes reais</b> de cada token. Ele fica ao lado do PDF, com “MAPA (nomes reais)” no nome:
       guarde-o só neste computador e nunca o mande a ninguém nem a uma IA.
@@ -71,7 +71,7 @@
     <label for="inst">Contatos institucionais que ficam em claro (um por linha: endereço, telefone, CEP ou e-mail da Delegacia, do Fórum, da Promotoria…)</label>
     <textarea id="inst" rows="9" spellcheck="false"></textarea>
     <div class="linha"><button type="button" id="bt_inst_padrao" class="ghost pequeno">Restaurar o padrão</button></div>
-    <label class="opcao"><input id="op_checar" type="checkbox"> Checar atualização das regras ao abrir o Skiá</label>
+    <label class="opcao"><input id="op_checar" type="checkbox"> <span>Checar atualização das regras ao abrir o Skiá</span></label>
 
     <h2>Motor de anonimização</h2>
     <div id="motor_info" class="caixa"></div>

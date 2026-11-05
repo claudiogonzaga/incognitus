@@ -5,6 +5,7 @@
 const T = window.__TAURI__;
 const invoke = T.core.invoke;
 const $ = (id) => document.getElementById(id);
+const avisar = (texto) => T.dialog.message(texto, { title: 'Σκιά · Skiá', kind: 'warning' }).catch(() => {});
 
 const registrar = (m) => invoke('registrar', { msg: String(m) }).catch(() => {});
 window.addEventListener('error', (e) => registrar('erro: ' + e.message + ' @' + e.filename + ':' + e.lineno));
@@ -236,8 +237,10 @@ async function processar(i) {
 
 async function rodar() {
   if (estado.rodando) return;
-  if (estado.ajustes.saida === 'outra' && !estado.ajustes.pastaSaida) { alert('Escolha a pasta de saída (ou marque "ao lado de cada original").'); return; }
-  estado.rodando = true; estado.parar = false; desenhar();
+  if (estado.ajustes.saida === 'outra' && !estado.ajustes.pastaSaida) { avisar('Escolha a pasta de saída (ou marque "ao lado de cada original").'); return; }
+  estado.rodando = true; estado.parar = false;
+  $('bt_parar').textContent = 'Parar depois deste arquivo';
+  desenhar();
   try {
     let i;
     while (!estado.parar && (i = estado.fila.find((x) => x.etapa === 'fila'))) await processar(i);
@@ -333,7 +336,7 @@ async function iniciar() {
   invoke('info_app').then((info) => {
     const f = info.ferramentas;
     $('ferramentas_info').textContent = 'Skiá ' + info.versao + ' · ' + (f.Ok ? f.Ok.join(' · ') : 'PROBLEMA nas ferramentas: ' + f.Err);
-    if (f.Err) alert('As ferramentas embutidas (pdftotext, pdftoppm, tesseract) não rodaram: ' + f.Err);
+    if (f.Err) avisar('As ferramentas embutidas (pdftotext, pdftoppm, tesseract) não rodaram: ' + f.Err);
   });
   estado.e2e = await invoke('e2e_plano');
   if (estado.e2e) return testeDePontaAPonta(estado.e2e);

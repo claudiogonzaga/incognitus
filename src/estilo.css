@@ -61,7 +61,7 @@ body.arrastando .vazio, body.arrastando #fila { outline:3px dashed var(--ink); o
 .item .nome { font-size:13px; font-weight:600; overflow-wrap:anywhere; }
 .chip { flex:none; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid var(--border); background:var(--field); white-space:nowrap; }
 .chip.pronto { background:var(--ok-bg); border-color:var(--ok-border); color:var(--ok-ink); }
-.chip.erro { background:rgba(158,51,39,.18); border-color:var(--danger); color:var(--danger); }
+.chip.erro { background:var(--danger); border-color:var(--danger); color:var(--cream); }
 .chip.trabalhando { background:var(--ink); color:var(--cream); border-color:var(--ink); }
 .barra { height:6px; margin-top:8px; border-radius:3px; background:var(--surface-up); overflow:hidden; }
 .barra > i { display:block; height:100%; width:0; background:var(--ink); transition:width .25s; }
@@ -69,7 +69,9 @@ body.arrastando .vazio, body.arrastando #fila { outline:3px dashed var(--ink); o
 .item .det b { color:var(--ink); font-weight:600; }
 .item .acoes { margin-top:6px; display:flex; gap:8px; }
 .item .acoes button { width:auto; margin:0; padding:4px 10px; font-size:12px; }
-.item .msg-erro { margin-top:6px; color:var(--danger); font-size:12px; overflow-wrap:anywhere; -webkit-user-select:text; user-select:text; }
+.item .msg-erro { margin-top:8px; padding:6px 8px; border-left:3px solid var(--danger); border-radius:4px; background:rgba(158,51,39,.16);
+  color:var(--ink); font-size:12px; overflow-wrap:anywhere; -webkit-user-select:text; user-select:text; }
+.item.erro .barra > i { background:var(--danger); }
 footer { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:8px 20px 12px; font-size:12px; }
 dialog { width:min(640px, 92vw); max-height:88vh; border:2px solid var(--ink); border-radius:12px; padding:18px 20px;
   color:var(--ink); background:linear-gradient(var(--bg-top), var(--bg-end)); }

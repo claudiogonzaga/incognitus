@@ -70,7 +70,26 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: build
-        run: npx tauri build --target ${{ matrix.alvo }} --bundles ${{ matrix.pacote }}
+        run: npx tauri build --target ${{ matrix.alvo }} --bundles ${{ matrix.sidecars == 'mac' && 'app,dmg' || 'msi' }}
+
+      - name: teste de ponta a ponta no Skiá.app empacotado (3 PDFs fictícios)
+        if: matrix.sidecars == 'mac'
+        run: |
+          python -m pip install -q pymupdf reportlab pillow
+          python testes/e2e.py "src-tauri/target/${{ matrix.alvo }}/release/bundle/macos/Skiá.app/Contents/MacOS/skia"
+
+      - name: instalar o .msi e rodar o teste de ponta a ponta no app instalado (3 PDFs fictícios)
+        if: matrix.sidecars == 'windows'
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi" | Select-Object -First 1
+          Start-Process msiexec.exe -Wait -ArgumentList "/i `"$($msi.FullName)`" /qn /norestart /l*v msi.log"
+          $exe = Get-ChildItem -Path "$env:ProgramFiles", "$env:LOCALAPPDATA\Programs" -Recurse -Filter skia.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { Get-Content msi.log -Tail 60; throw "o .msi não instalou o skia.exe" }
+          Write-Host "instalado em $($exe.FullName)"
+          python -m pip install -q pymupdf reportlab pillow
+          python testes/e2e.py $exe.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - uses: actions/upload-artifact@v4
         with:

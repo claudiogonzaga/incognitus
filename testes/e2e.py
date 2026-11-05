@@ -26,14 +26,18 @@ import time
 import urllib.request
 import uuid
 
+import tempfile
+
 import pymupdf
 
 sys.stdout.reconfigure(line_buffering=True)
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EXE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(RAIZ, "src-tauri", "target", "debug", "skia"))
+EXE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(RAIZ, "src-tauri", "target", "debug", "skia" + (".exe" if os.name == "nt" else "")))
+CHAVE = os.path.join(RAIZ, "_segredo", "motor_ed25519.pem")   # no CI não há a chave: só o teste da recusa
 # No disco interno (o externo já se desmontou no meio de um teste): SKIA_TESTE_DIR troca o lugar.
-BASE = os.environ.get("SKIA_TESTE_DIR") or os.path.expanduser("~/Library/Caches/skia-testes")
+BASE = os.environ.get("SKIA_TESTE_DIR") or (os.path.expanduser("~/Library/Caches/skia-testes") if sys.platform == "darwin"
+                                            else os.path.join(tempfile.gettempdir(), "skia-testes"))
 SAIDA = os.path.join(BASE, "saida")
 PDFS = os.path.join(BASE, "pdfs")
 MAIN_PY = os.path.join(os.path.dirname(RAIZ), "Graphe", "cloudrun-pdftotext", "main.py")
@@ -81,9 +85,12 @@ def publicar_motor_teste(pasta, adulterar=False):
     m["bytes"] = len(js.encode("utf-8"))
     m["data"] = "2099-01-01T00:00:00Z"
     open(os.path.join(pasta, "manifesto.json"), "w", encoding="utf-8").write(json.dumps(m, indent=2, ensure_ascii=False) + "\n")
-    r = subprocess.run(["node", os.path.join(RAIZ, "scripts", "assinar_motor.mjs"), pasta], capture_output=True, text=True)
-    if r.returncode:
-        raise SystemExit("assinatura do motor de teste falhou: " + r.stderr)
+    if os.path.exists(CHAVE):
+        r = subprocess.run(["node", os.path.join(RAIZ, "scripts", "assinar_motor.mjs"), pasta], capture_output=True, text=True)
+        if r.returncode:
+            raise SystemExit("assinatura do motor de teste falhou: " + r.stderr)
+    else:   # sem a chave privada: uma assinatura qualquer (o app tem de recusar)
+        open(os.path.join(pasta, "manifesto.json.sig"), "w").write("A" * 86 + "==\n")
     if adulterar:   # a assinatura passa a ser a de OUTRO conteúdo
         m["data"] = "2099-01-02T00:00:00Z"
         open(os.path.join(pasta, "manifesto.json"), "w", encoding="utf-8").write(json.dumps(m, indent=2, ensure_ascii=False) + "\n")
@@ -114,7 +121,7 @@ def norm(s):
 def servico_local():
     """O main.py do Graphé rodando aqui, com as ferramentas embutidas no Skiá à frente do PATH."""
     venv = os.path.join(RAIZ, ".ferramentas", "venv-servico")
-    py = os.path.join(venv, "bin", "python")
+    py = os.path.join(venv, "Scripts", "python.exe") if os.name == "nt" else os.path.join(venv, "bin", "python")
     if not os.path.exists(py):
         subprocess.run([sys.executable, "-m", "venv", venv], check=True)
         subprocess.run([py, "-m", "pip", "install", "-q", "flask==3.0.3", "requests==2.32.3"], check=True)
@@ -201,8 +208,12 @@ def main():
 
     print("3. a atualização das regras")
     a = rel.get("atualizacao") or {}
-    confere(a.get("trocou") is True, f"motor republicado e assinado: baixado, testado e instalado ({a})")
-    confere(novo["data"] in rel.get("motorFinal", ""), f"o motor em uso passou a ser o novo ({rel.get('motorFinal')})")
+    if os.path.exists(CHAVE):
+        confere(a.get("trocou") is True, f"motor republicado e assinado: baixado, testado e instalado ({a})")
+        confere(novo["data"] in rel.get("motorFinal", ""), f"o motor em uso passou a ser o novo ({rel.get('motorFinal')})")
+    else:
+        print("  (sem a chave privada aqui: a instalação de um motor assinado não é testada, só a recusa)")
+        confere(a.get("trocou") is False and "assinatura" in (a.get("erro") or ""), f"assinatura inválida recusada ({a.get('erro')})")
     publicar_motor_teste(pub, adulterar=True)
     plano2 = {"arquivos": [], "relatorio": os.path.join(SAIDA, "relatorio2.json"), "atualizar": True, "extracao": os.path.join(SAIDA, "extracao")}
     shutil.rmtree(os.path.join(dados, "dados", "motor"), ignore_errors=True)   # volta ao embutido
@@ -213,7 +224,7 @@ def main():
 
     print("4. a extração do Skiá × o serviço do Graphé (main.py aqui, com as mesmas ferramentas)")
     if not os.path.exists(MAIN_PY):
-        confere(False, "sem o main.py do Graphé em " + MAIN_PY)
+        print("  (pulei: sem o main.py do Graphé em " + MAIN_PY + ")")
     else:
         proc, base = servico_local()
         try:
