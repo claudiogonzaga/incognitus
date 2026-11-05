@@ -1,0 +1,101 @@
+# Σκιά · Skiá — .dmg (macOS universal: Apple Silicon e Intel) e .msi (Windows x64), sem assinatura digital por ora
+# (ver "Como abrir" no README). Roda à mão (Actions → build → Run workflow) ou com uma tag v*; com tag, os
+# instaladores vão também para uma Release em rascunho, junto com o código-fonte do poppler (GPL).
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nome: macos-universal
+            os: macos-14
+            alvo: universal-apple-darwin
+            pacote: dmg
+            sidecars: mac
+          - nome: windows-x64
+            os: windows-latest
+            alvo: x86_64-pc-windows-msvc
+            pacote: msi
+            sidecars: windows
+    name: ${{ matrix.nome }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.sidecars == 'mac' && 'aarch64-apple-darwin,x86_64-apple-darwin' || 'x86_64-pc-windows-msvc' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: cache das ferramentas (conda-forge e micromamba)
+        uses: actions/cache@v4
+        with:
+          path: .ferramentas
+          key: ferramentas-${{ matrix.sidecars }}-${{ hashFiles('scripts/sidecars.py') }}
+
+      - run: npm ci
+
+      - name: o motor passa nos casos embutidos
+        run: node scripts/regressao_motor.cjs motor/motor.js --casos src/motor/casos.json
+
+      - name: sidecars (poppler, tesseract) e licenças
+        shell: bash
+        run: |
+          if [ "${{ matrix.sidecars }}" = "windows" ]; then python -m pip install -q pefile; fi
+          python scripts/sidecars.py ${{ matrix.sidecars }}
+
+      - name: testes do Rust
+        if: matrix.sidecars == 'mac'
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: build
+        run: npx tauri build --target ${{ matrix.alvo }} --bundles ${{ matrix.pacote }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skia-${{ matrix.nome }}
+          path: |
+            src-tauri/target/${{ matrix.alvo }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi
+          if-no-files-found: error
+
+      - name: código-fonte do poppler (GPL), para acompanhar os instaladores
+        if: matrix.sidecars == 'mac'
+        run: curl -sSL --fail -o poppler-25.02.0.tar.xz https://poppler.freedesktop.org/poppler-25.02.0.tar.xz
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.sidecars == 'mac'
+        with:
+          name: codigo-fonte-poppler
+          path: poppler-25.02.0.tar.xz
+
+      - name: release em rascunho (só com tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            src-tauri/target/${{ matrix.alvo }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi
+            poppler-25.02.0.tar.xz

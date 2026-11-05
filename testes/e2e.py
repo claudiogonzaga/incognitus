@@ -28,10 +28,14 @@ import uuid
 
 import pymupdf
 
+sys.stdout.reconfigure(line_buffering=True)
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(RAIZ, "src-tauri", "target", "debug", "skia"))
-SAIDA = os.path.join(RAIZ, "testes", "saida")
-PDFS = os.path.join(RAIZ, "testes", "pdfs")
+# No disco interno (o externo já se desmontou no meio de um teste): SKIA_TESTE_DIR troca o lugar.
+BASE = os.environ.get("SKIA_TESTE_DIR") or os.path.expanduser("~/Library/Caches/skia-testes")
+SAIDA = os.path.join(BASE, "saida")
+PDFS = os.path.join(BASE, "pdfs")
 MAIN_PY = os.path.join(os.path.dirname(RAIZ), "Graphe", "cloudrun-pdftotext", "main.py")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gerar_pdfs  # noqa: E402
@@ -62,7 +66,7 @@ def servir(pasta):
     porta = porta_livre()
     h = lambda *a, **k: http.server.SimpleHTTPRequestHandler(*a, directory=pasta, **k)
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", porta), h)
-    srv.RequestHandlerClass.log_message = lambda *a: None
+    http.server.SimpleHTTPRequestHandler.log_message = lambda *a: None
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv, f"http://127.0.0.1:{porta}/"
 
@@ -144,6 +148,7 @@ def main():
     if not os.path.exists(EXE):
         raise SystemExit("falta o executável: npx tauri build --debug --no-bundle")
     shutil.rmtree(SAIDA, ignore_errors=True)
+    shutil.rmtree(PDFS, ignore_errors=True)
     os.makedirs(SAIDA)
     gerar_pdfs.PASTA = PDFS
     gerar_pdfs.main()
@@ -155,7 +160,7 @@ def main():
     srv, url = servir(pub)
 
     print("1. o app com os 3 PDFs (e a atualização assinada das regras no fim)")
-    plano = {"arquivos": [os.path.join(PDFS, n) for n in nomes], "saida": os.path.join(SAIDA, "anonimizados"), "txt": True, "mapa": True,
+    plano = {"arquivos": [os.path.join(PDFS, n) for n in nomes], "saida": None, "txt": True, "mapa": True,
              "extracao": os.path.join(SAIDA, "extracao"), "relatorio": os.path.join(SAIDA, "relatorio1.json"), "atualizar": True}
     rel = rodar_app(plano, url, dados)
     for it in rel["itens"]:
@@ -164,7 +169,8 @@ def main():
     confere(all(it["etapa"] == "pronto" for it in rel["itens"]) and len(rel["itens"]) == 3, "os 3 arquivos ficaram prontos")
 
     print("2. a saída")
-    pasta = plano["saida"]
+    pasta = os.path.join(PDFS, "Skiá — anonimizados")   # a saída padrão: ao lado dos originais
+    confere(os.path.isdir(pasta), "a pasta padrão de saída é 'Skiá — anonimizados', ao lado dos originais")
     saidas = sorted(f for f in os.listdir(pasta) if f.lower().endswith(".pdf"))
     confere(saidas == sorted(nomes), f"nomes de saída iguais aos de entrada: {saidas}")
     proibidos = list(gerar_pdfs.PESSOAS.values()) + list(gerar_pdfs.IDENT.values()) + \
@@ -190,7 +196,8 @@ def main():
         confere(os.path.exists(mapa) and "TESTEFULAN" in open(mapa, encoding="utf-8").read().upper(), f"{n}: mapa gravado (pedido no plano)")
         s, m = originais[n]
         confere(sha(os.path.join(PDFS, n)) == s and os.path.getmtime(os.path.join(PDFS, n)) == m, f"{n}: original intacto (sha256 e data)")
-    confere(not os.listdir(os.path.join(dados, "cache", "tmp")), "pasta temporária vazia ao fim")
+    tmp = os.path.join(dados, "cache", "tmp")
+    confere(not os.path.exists(tmp) or not os.listdir(tmp), "nenhum arquivo temporário sobrou")
 
     print("3. a atualização das regras")
     a = rel.get("atualizacao") or {}

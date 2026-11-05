@@ -199,7 +199,8 @@ pub fn gerar(cabecalho: &str, paginas: &[String], produtor: &str) -> Result<Resu
     cid.base_font(Name(nome_base.as_bytes()));
     cid.system_info(sistema);
     cid.font_descriptor(descritor);
-    cid.default_width(por_mil(avanco));
+    // inteiro: o poppler só aceita /DW inteiro (com casas decimais, ignora e usa 1000 — as letras se espalham)
+    cid.default_width(por_mil(avanco).round());
     cid.cid_to_gid_map_predefined(Name(b"Identity"));
     cid.finish();
     let bb = face.global_bounding_box();

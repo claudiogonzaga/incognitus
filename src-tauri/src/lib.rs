@@ -307,6 +307,12 @@ fn motor_voltar(estado: State<'_, Estado>) -> Result<motor::MotorAtivo, String> 
     motor::voltar(&motor::pasta(&estado.0.dados))
 }
 
+/// Erros e marcos do front no stderr (para diagnóstico; nunca leva texto dos autos).
+#[tauri::command]
+fn registrar(msg: String) {
+    eprintln!("[skia] {}", msg.chars().take(500).collect::<String>());
+}
+
 // ── teste de ponta a ponta (só com SKIA_E2E apontando para um plano) ──────────────────────────────────────────────
 
 fn plano_e2e() -> Option<(PathBuf, serde_json::Value)> {
@@ -384,6 +390,7 @@ pub fn run() {
             motor_baixar,
             motor_instalar,
             motor_voltar,
+            registrar,
             e2e_plano,
             e2e_gravar,
             e2e_fim

@@ -6,6 +6,10 @@ const T = window.__TAURI__;
 const invoke = T.core.invoke;
 const $ = (id) => document.getElementById(id);
 
+const registrar = (m) => invoke('registrar', { msg: String(m) }).catch(() => {});
+window.addEventListener('error', (e) => registrar('erro: ' + e.message + ' @' + e.filename + ':' + e.lineno));
+window.addEventListener('unhandledrejection', (e) => registrar('promessa: ' + ((e.reason && e.reason.message) || e.reason)));
+
 const estado = {
   fila: [], rodando: false, parar: false, proximoId: 1,
   ajustes: { saida: 'ao_lado', pastaSaida: '', txt: false, contatos: null, checarAoAbrir: true },
@@ -15,10 +19,17 @@ const ETAPAS = { fila: 'na fila', extraindo: 'extraindo', ocr: 'OCR', anonimizan
 
 // ── o worker do motor ─────────────────────────────────────────────────────────────────────────────────────────────
 const textos = {};
-async function texto(arq) { return textos[arq] || (textos[arq] = await (await fetch(arq)).text()); }
+async function texto(arq) {
+  if (textos[arq]) return textos[arq];
+  registrar('fetch ' + arq + ' (' + location.href + ')');
+  const r = await fetch(arq);
+  registrar('fetch ' + arq + ' → ' + r.status + ' ' + r.headers.get('content-type'));
+  return (textos[arq] = await r.text());
+}
 
 /** Um worker com o motor `js` (+ casos.js + worker.js). Devolve { pedir(tipo, dados), fim() }. */
 async function criarWorker(js) {
+  registrar('worker: montando (' + js.length + ' chars)');
   const url = URL.createObjectURL(new Blob([js, '\n;\n', await texto('casos.js'), '\n;\n', await texto('worker.js')], { type: 'text/javascript' }));
   const w = new Worker(url);
   const espera = new Map();
@@ -39,7 +50,9 @@ async function criarWorker(js) {
     espera.set(id, { ok, falha });
     w.postMessage(Object.assign({ id, tipo }, dados || {}));
   });
+  registrar('worker: criado');
   try { await pedir('versao'); } finally { URL.revokeObjectURL(url); }
+  registrar('worker: respondeu');
   return { pedir, fim: () => w.terminate() };
 }
 
@@ -50,6 +63,7 @@ function cfgMotor() {
 /** Carrega o motor em uso (o baixado e conferido, ou o embutido) num worker novo. */
 async function carregarMotor() {
   const ativo = await invoke('motor_ativo');
+  registrar('motor_ativo: ' + ativo.origem);
   const js = ativo.js || await texto('motor/motor.js');
   const novo = await criarWorker(js);
   const padrao = await novo.pedir('configurar', { cfg: {} });
@@ -173,6 +187,7 @@ async function emParalelo(itens, n, fn) {
 
 async function processar(i) {
   const t0 = Date.now();
+  if (estado.e2e) registrar('processando ' + i.nome);
   const w = estado.worker;
   let prep = null;
   i.avisos = []; i.erro = null; i.saida = null; i.stats = null; i.ocr = null; i.fracas = null;
@@ -211,6 +226,7 @@ async function processar(i) {
     i.etapa = 'pronto';
   } catch (e) {
     i.etapa = 'erro'; i.erro = String((e && e.message) || e);
+    if (estado.e2e) registrar('erro em ' + i.nome + ': ' + i.erro);
   } finally {
     if (prep) await invoke('limpar_arquivo', { id: prep.id }).catch(() => {});
     i.segundos = Math.round((Date.now() - t0) / 1000);
@@ -303,12 +319,16 @@ function ligar() {
 }
 
 async function iniciar() {
+  registrar('início');
   if (/Mac/.test(navigator.platform)) document.documentElement.classList.add('mac');
   ligar();
   desenhar();
   await lerAjustes();
+  registrar('ajustes lidos');
   estado.casos = JSON.parse(await texto('motor/casos.json'));
+  registrar('casos lidos: ' + estado.casos.casos.length);
   await carregarMotor();
+  registrar('motor ' + estado.motor.manifesto.versao + ' carregado (' + estado.motor.origem + ')');
   desenhar();
   invoke('info_app').then((info) => {
     const f = info.ferramentas;
@@ -338,4 +358,4 @@ async function testeDePontaAPonta(p) {
   await invoke('e2e_fim', { relatorio: JSON.stringify(rel, null, 1) });
 }
 
-iniciar().catch((e) => { document.body.insertAdjacentHTML('afterbegin', '<div class="aviso">O Skiá não iniciou: ' + esc(e.message || e) + '</div>'); });
+iniciar().catch((e) => { registrar('o Skiá não iniciou: ' + (e.message || e)); document.body.insertAdjacentHTML('afterbegin', '<div class="aviso">O Skiá não iniciou: ' + esc(e.message || e) + '</div>'); });
