@@ -62,8 +62,13 @@ jobs:
       - name: sidecars (poppler, tesseract) e licenças
         shell: bash
         run: |
-          if [ "${{ matrix.sidecars }}" = "windows" ]; then python -m pip install -q pefile; fi
+          python -m pip install -q pefile pymupdf reportlab pillow
           python scripts/sidecars.py ${{ matrix.sidecars }}
+
+      - name: os sidecars funcionam (sem o app, como o Rust os chama)
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python testes/diag_sidecars.py
 
       - name: testes do Rust
         if: matrix.sidecars == 'mac'
@@ -72,25 +77,6 @@ jobs:
       - name: build
         run: npx tauri build --target ${{ matrix.alvo }} --bundles ${{ matrix.sidecars == 'mac' && 'app,dmg' || 'msi' }}
 
-      - name: teste de ponta a ponta no Skiá.app empacotado (3 PDFs fictícios)
-        if: matrix.sidecars == 'mac'
-        run: |
-          python -m pip install -q pymupdf reportlab pillow
-          python testes/e2e.py "src-tauri/target/${{ matrix.alvo }}/release/bundle/macos/Skiá.app/Contents/MacOS/skia"
-
-      - name: instalar o .msi e rodar o teste de ponta a ponta no app instalado (3 PDFs fictícios)
-        if: matrix.sidecars == 'windows'
-        shell: pwsh
-        run: |
-          $msi = Get-ChildItem "src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi" | Select-Object -First 1
-          Start-Process msiexec.exe -Wait -ArgumentList "/i `"$($msi.FullName)`" /qn /norestart /l*v msi.log"
-          $exe = Get-ChildItem -Path "$env:ProgramFiles", "$env:LOCALAPPDATA\Programs" -Recurse -Filter skia.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $exe) { Get-Content msi.log -Tail 60; throw "o .msi não instalou o skia.exe" }
-          Write-Host "instalado em $($exe.FullName)"
-          python -m pip install -q pymupdf reportlab pillow
-          python testes/e2e.py $exe.FullName
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
       - uses: actions/upload-artifact@v4
         with:
           name: skia-${{ matrix.nome }}
@@ -98,6 +84,40 @@ jobs:
             src-tauri/target/${{ matrix.alvo }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi
           if-no-files-found: error
+
+      - name: teste de ponta a ponta no Skiá.app empacotado (3 PDFs fictícios)
+        if: matrix.sidecars == 'mac'
+        env:
+          PYTHONIOENCODING: utf-8
+          SKIA_TESTE_DIR: ${{ runner.temp }}/skia-testes
+        run: |
+          python testes/e2e.py "src-tauri/target/${{ matrix.alvo }}/release/bundle/macos/Skiá.app/Contents/MacOS/skia"
+
+      - name: instalar o .msi e rodar o teste de ponta a ponta no app instalado (3 PDFs fictícios)
+        if: matrix.sidecars == 'windows'
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
+          SKIA_TESTE_DIR: ${{ runner.temp }}/skia-testes
+        run: |
+          $msi = Get-ChildItem "src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi" | Select-Object -First 1
+          Start-Process msiexec.exe -Wait -ArgumentList "/i `"$($msi.FullName)`" /qn /norestart /l*v msi.log"
+          $exe = Get-ChildItem -Path "$env:ProgramFiles", "$env:LOCALAPPDATA\Programs" -Recurse -Filter skia.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { Get-Content msi.log -Tail 60; throw "o .msi não instalou o skia.exe" }
+          Write-Host "instalado em $($exe.FullName)"
+          python testes/e2e.py $exe.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+
+      - name: o que o teste de ponta a ponta deixou (só se falhou; dados fictícios)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.nome }}
+          path: |
+            ${{ runner.temp }}/skia-testes/saida/*.json
+            ${{ runner.temp }}/skia-testes/saida/*.log
+          if-no-files-found: ignore
 
       - name: código-fonte do poppler (GPL), para acompanhar os instaladores
         if: matrix.sidecars == 'mac'

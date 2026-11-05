@@ -35,10 +35,30 @@ impl Drop for Vaga<'_> {
     }
 }
 
+/// No Windows o Tauri dá a pasta de recursos como caminho "verbatim" (`\\?\C:\…`, do canonicalize): o tesseract
+/// emenda o modelo com "/" e o caminho verbatim não aceita "/" — o OCR não achava o por.traineddata. Tira o prefixo.
+fn simplificar(p: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        if let Some(s) = p.to_str() {
+            if let Some(r) = s.strip_prefix(r"\\?\UNC\") {
+                return PathBuf::from(format!(r"\\{r}"));
+            }
+            if let Some(r) = s.strip_prefix(r"\\?\") {
+                if r.as_bytes().get(1) == Some(&b':') {
+                    return PathBuf::from(r);
+                }
+            }
+        }
+    }
+    p
+}
+
 impl Ferramentas {
     /// `bin`: a pasta do executável do app (onde o Tauri põe os sidecars); `recursos`: a pasta de recursos;
     /// `cache`: a pasta de cache do app (configuração do fontconfig).
     pub fn new(bin: PathBuf, recursos: PathBuf, cache: &Path) -> Self {
+        let (bin, recursos) = (simplificar(bin), simplificar(recursos));
         let lib = recursos.join("lib");
         let fontconfig = cache.join("fonts.conf");
         let dirs = if cfg!(windows) {
@@ -151,8 +171,10 @@ impl Ferramentas {
             imagens.sort();
             let Some(img) = imagens.first() else { return Ok(String::new()) };
             let resta = OCR_TEMPO_PAGINA.saturating_sub(inicio.elapsed()).max(Duration::from_secs(1));
+            // o modelo pelo caminho relativo, a partir da pasta dele: nenhum caminho da instalação (que pode ter acento)
+            // passa pelo argv de 8 bits do tesseract
             let r = rodar(
-                self.comando("tesseract", Some(tmp)).arg(img).arg("stdout").args(["-l", OCR_LANG]).arg("--tessdata-dir").arg(&self.tessdata),
+                self.comando("tesseract", Some(tmp)).current_dir(&self.tessdata).arg(img).arg("stdout").args(["-l", OCR_LANG, "--tessdata-dir", "."]),
                 resta,
             )?;
             if !r.ok {
