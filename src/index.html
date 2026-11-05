@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Σκιά · Skiá</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header data-tauri-drag-region>
+  <div class="titulo" data-tauri-drag-region>
+    <h1 data-tauri-drag-region>Σκιά · Skiá</h1>
+    <span data-tauri-drag-region>anonimização de autos em PDF, no seu computador</span>
+  </div>
+  <div class="topo-direita">
+    <button id="bt_motor" class="selo" title="O motor de anonimização em uso">motor …</button>
+    <button id="bt_ajustes" class="ghost pequeno">Ajustes</button>
+  </div>
+</header>
+<div class="meandro" aria-hidden="true"></div>
+
+<main>
+  <section id="lado">
+    <h2>Arquivos</h2>
+    <div class="linha">
+      <button id="bt_pdfs">Escolher PDFs…</button>
+      <button id="bt_pasta" class="ghost">Uma pasta…</button>
+    </div>
+    <p class="dica">ou arraste PDFs (ou uma pasta) para a janela</p>
+
+    <h2>Saída</h2>
+    <label class="opcao"><input type="radio" name="saida" value="ao_lado" checked> Ao lado de cada original, na pasta <b>Skiá — anonimizados</b></label>
+    <label class="opcao"><input type="radio" name="saida" value="outra"> Outra pasta:</label>
+    <div class="linha">
+      <input id="pasta_saida" type="text" readonly placeholder="nenhuma escolhida">
+      <button id="bt_pasta_saida" class="ghost pequeno">Escolher…</button>
+    </div>
+    <p class="dica">O PDF anonimizado sai com o MESMO nome do original. O original nunca é alterado.</p>
+    <label class="opcao"><input id="op_txt" type="checkbox"> Gravar também o .txt</label>
+    <label class="opcao"><input id="op_mapa" type="checkbox"> Guardar mapa para reidentificar</label>
+    <div id="aviso_mapa" class="aviso" hidden>
+      O mapa tem os <b>nomes reais</b> de cada token. Ele fica ao lado do PDF, com “MAPA (nomes reais)” no nome:
+      guarde-o só neste computador e nunca o mande a ninguém nem a uma IA.
+    </div>
+
+    <button id="bt_rodar" class="principal" disabled>Anonimizar</button>
+    <button id="bt_parar" class="ghost" hidden>Parar depois deste arquivo</button>
+  </section>
+
+  <section id="fila_secao">
+    <div class="linha topo">
+      <h2>Fila</h2>
+      <div class="topo-direita">
+        <span id="resumo" class="suave"></span>
+        <button id="bt_limpar" class="ghost pequeno">Limpar prontos</button>
+      </div>
+    </div>
+    <div id="vazio" class="vazio">Nenhum PDF na fila.</div>
+    <ol id="fila"></ol>
+  </section>
+</main>
+
+<footer>
+  <span>🔒 Tudo fica neste computador: nenhum PDF, texto ou mapa é enviado. Sem telemetria.</span>
+  <span id="rodape_motor" class="suave"></span>
+</footer>
+
+<dialog id="dlg_ajustes">
+  <form method="dialog">
+    <h2>Ajustes</h2>
+    <label for="inst">Contatos institucionais que ficam em claro (um por linha: endereço, telefone, CEP ou e-mail da Delegacia, do Fórum, da Promotoria…)</label>
+    <textarea id="inst" rows="9" spellcheck="false"></textarea>
+    <div class="linha"><button type="button" id="bt_inst_padrao" class="ghost pequeno">Restaurar o padrão</button></div>
+    <label class="opcao"><input id="op_checar" type="checkbox"> Checar atualização das regras ao abrir o Skiá</label>
+
+    <h2>Motor de anonimização</h2>
+    <div id="motor_info" class="caixa"></div>
+    <div class="linha">
+      <button type="button" id="bt_atualizar" class="ghost pequeno">Atualizar regras</button>
+      <button type="button" id="bt_voltar" class="ghost pequeno">Voltar à versão anterior</button>
+    </div>
+    <div id="motor_msg" class="suave"></div>
+
+    <h2>Ferramentas</h2>
+    <div id="ferramentas_info" class="caixa suave"></div>
+    <p class="dica">pdftotext e pdftoppm (poppler, GPL) e tesseract (Apache-2.0) vêm dentro do app. As licenças e onde
+      está o código-fonte: pasta LICENCAS-terceiros, dentro do aplicativo.</p>
+
+    <div class="linha fim">
+      <button type="button" id="bt_ajustes_cancelar" class="ghost">Cancelar</button>
+      <button type="submit" id="bt_ajustes_salvar">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

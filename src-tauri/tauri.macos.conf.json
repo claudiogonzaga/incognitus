@@ -1,0 +1,23 @@
+{
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Σκιά · Skiá",
+        "width": 1040,
+        "height": 760,
+        "minWidth": 760,
+        "minHeight": 560,
+        "dragDropEnabled": true,
+        "backgroundColor": "#c8703f",
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ]
+  },
+  "bundle": {
+    "resources": {
+      "recursos/mac/lib/": "lib/"
+    }
+  }
+}

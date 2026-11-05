@@ -1,0 +1,18 @@
+# segredos (chave privada do motor) — nunca no git
+_segredo/
+# dependências e ferramentas baixadas
+node_modules/
+.ferramentas/
+# build do Tauri
+src-tauri/target/
+src-tauri/gen/
+# sidecars e bibliotecas montados pelos scripts (grandes; o CI monta de novo)
+src-tauri/binaries/
+src-tauri/recursos/mac/
+src-tauri/recursos/win/
+src-tauri/recursos/tessdata/
+src-tauri/recursos/LICENCAS-terceiros/
+# testes: saídas e PDFs gerados
+testes/saida/
+testes/pdfs/
+.DS_Store
