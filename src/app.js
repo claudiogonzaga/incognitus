@@ -177,6 +177,7 @@ function desenhar() {
   $('bt_rodar').disabled = estado.rodando || !pendentes || !estado.worker;
   $('bt_rodar').textContent = estado.rodando ? 'Anonimizando…' : 'Anonimizar' + (pendentes ? ' (' + pendentes + ')' : '');
   $('bt_parar').hidden = !estado.rodando;
+  $('bt_limpar').hidden = !prontos;
 }
 
 /** Roda `fn` sobre os itens, `n` de cada vez. */

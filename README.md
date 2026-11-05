@@ -2,6 +2,8 @@
 
 *σκιά, "sombra": o nome sai, a forma fica.*
 
+![A janela do Skiá no macOS](docs/janela.png)
+
 Aplicativo de computador (Mac e Windows) que **anonimiza autos em PDF, em lote**, com o **mesmo motor de anonimização
 do Graphé**: o mesmo fluxo do lote automático (preparar → classificador bayesiano → concluir), as mesmas regras, o
 mesmo cabeçalho de autos anonimizados. **Tudo roda no computador**: nenhum PDF, texto ou mapa sai dele, e não há
@@ -117,6 +119,19 @@ adulterada); e a **extração idêntica, byte a byte, à do `main.py` do serviç
 e Windows x64 (`.msi`), como artefatos; com tag, também numa Release em rascunho.
 
 Nunca use dados reais de processos em testes, exemplos, commits ou logs.
+
+## Pendências (05/11/2026)
+
+- **Repositório público das regras** (`claudiogonzaga/skia-motor`): não criado — espera a confirmação do Promotor, porque o
+  código das regras fica visível a qualquer pessoa. Depois: `gh repo create claudiogonzaga/skia-motor --public` e
+  `scripts/publicar_motor.sh`. Até lá, o app usa o motor embutido e a checagem ao abrir só não acha nada.
+- **Assinatura digital**: sem Developer ID da Apple nem certificado de código para Windows, ficam os avisos do Gatekeeper
+  e do SmartScreen (ver "Como abrir"). Ao assinar e notarizar no Mac, religar o *hardened runtime* exige também assinar
+  as dylibs dos sidecars com a mesma equipe (ou o direito `com.apple.security.cs.disable-library-validation`).
+- **Licença** do próprio Skiá e do motor publicado: não definida.
+- **Ícone** provisório (folha negra sobre terracota, o nome some entre « »).
+- No Windows, o teste de ponta a ponta roda no CI (instalando o `.msi`); a instalação de um motor assinado só é testada
+  onde está a chave privada (aqui), lá só a recusa de assinatura inválida.
 
 ## Estrutura
 
