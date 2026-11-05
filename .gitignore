@@ -16,3 +16,5 @@ src-tauri/recursos/LICENCAS-terceiros/
 testes/saida/
 testes/pdfs/
 .DS_Store
+# instaladores baixados do CI
+dist/

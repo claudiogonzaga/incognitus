@@ -30,7 +30,7 @@ import tempfile
 
 import pymupdf
 
-sys.stdout.reconfigure(line_buffering=True)
+sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(RAIZ, "src-tauri", "target", "debug", "skia" + (".exe" if os.name == "nt" else "")))
@@ -102,11 +102,15 @@ def rodar_app(plano, url_motor, dados):
     json.dump(plano, open(caminho, "w"), ensure_ascii=False)
     env = dict(os.environ, SKIA_E2E=caminho, SKIA_DADOS=dados, SKIA_MOTOR_URL=url_motor)
     t0 = time.time()
-    r = subprocess.run([EXE], env=env, capture_output=True, text=True, timeout=900)
+    r = subprocess.run([EXE], env=env, capture_output=True, timeout=900)
+    log = r.stderr.decode("utf-8", "replace")
+    open(plano["relatorio"] + ".log", "w", encoding="utf-8").write(log)
     if r.returncode or not os.path.exists(plano["relatorio"]):
-        raise SystemExit(f"o app saiu com {r.returncode} sem relatório:\n{r.stderr[-3000:]}")
+        raise SystemExit(f"o app saiu com {r.returncode} sem relatório:\n{log[-3000:]}")
     rel = json.load(open(plano["relatorio"], encoding="utf-8"))
     print(f"  (app rodou em {time.time() - t0:.1f} s)")
+    if any(it.get("erro") or it.get("avisos") for it in rel.get("itens", [])):
+        print("  log do app:\n    " + "\n    ".join(log.strip().splitlines()[-30:]))
     return rel
 
 
@@ -173,6 +177,8 @@ def main():
     for it in rel["itens"]:
         print(f"  {it['nome']}: {it['etapa']} · {it.get('paginas')} pág. · OCR {it.get('e2e', {}).get('ocr', {}).get('paginas')} · "
               f"{(it.get('stats') or {}).get('pessoas')} pessoa(s) · {it.get('segundos')} s" + (f" · ERRO {it['erro']}" if it.get("erro") else ""))
+        for a in it.get("avisos") or []:
+            print("    aviso: " + a)
     confere(all(it["etapa"] == "pronto" for it in rel["itens"]) and len(rel["itens"]) == 3, "os 3 arquivos ficaram prontos")
 
     print("2. a saída")
