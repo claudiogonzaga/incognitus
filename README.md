@@ -9,7 +9,6 @@ do Graphé**: o mesmo fluxo do lote automático (preparar → classificador baye
 mesmo cabeçalho de autos anonimizados. **Tudo roda no computador**: nenhum PDF, texto ou mapa sai dele, e não há
 telemetria. A única conexão é a checagem das regras (só leitura de um repositório público), que os Ajustes desligam.
 
-> Este é o Skiá de computador. O Skiá de Colab e planilha (2026-09, repositório `claudiogonzaga/skia`) é outro projeto.
 
 ## Como usar
 
