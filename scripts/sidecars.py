@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Σκιά · Skiá — monta os sidecars do Tauri (pdftotext, pdftoppm, tesseract), as bibliotecas deles, o por.traineddata
+"""Skiá — monta os sidecars do Tauri (pdftotext, pdftoppm, tesseract), as bibliotecas deles, o por.traineddata
 e as licenças.
 
 Versões: as do serviço do Graphé. O cloudrun-pdftotext é construído de python:3.11-slim (Debian 13): poppler 25.03,
@@ -270,7 +270,7 @@ def licencas(ambientes):
     print(f"licenças: {len(usados)} pacotes em {LIC}")
 
 
-LEIA_ME = """Σκιά · Skiá — componentes de terceiros
+LEIA_ME = """Skiá — componentes de terceiros
 
 O Skiá chama três programas livres, que vêm dentro do aplicativo e rodam no seu computador:
 pdftotext e pdftoppm (do poppler {poppler}) e tesseract {tesseract}, com o modelo de português

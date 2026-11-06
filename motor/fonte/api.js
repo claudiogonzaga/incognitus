@@ -1,4 +1,4 @@
-// ── API do Skiá (versão 1) ──────────────────────────────────────────────────────────────────────────────────────────
+// ── API do Skiá (versão 2: com a reidentificação) ──────────────────────────────────────────────────────────────────────────────────────────
 // O fluxo é o do lote automático do Graphé: SKIA_PIPELINE.rodar — o testes/anon/pipeline.js, acima, sem alteração
 // (preparar → classificador → concluir) — e, como no anonConcluir, o cabeçalho de autos anonimizados.
 // A leitura do PDF segue o _pdfComOcr_ do Graphé com o serviço cloudrun-pdftotext/main.py: as páginas fracas (pelo
@@ -108,7 +108,7 @@ var SkiaMotor = (function () {
     // Cada página como no corpo do .txt ("===== PÁGINA n =====" e o texto): o PDF do Skiá tem uma página para cada uma.
     var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([p], i + 1); });
     var res = {
-      api: 1, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + corpo,
+      api: 2, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + corpo,
       estatisticas: { paginas: r.paginas.length, tokens: Object.keys(r.mapa.tokens).length, pessoas: contarPessoas(r.mapa),
         candidatos: (r.cand || []).length, confirmados: (r.conf || []).length, naoConfirmados: naoConf,
         sobras: (r.sobras && r.sobras.total) || 0, ocr: (pg.ocr && pg.ocr.paginas) ? pg.ocr.paginas.length : 0,
@@ -118,8 +118,64 @@ var SkiaMotor = (function () {
     return res;
   }
 
+  // ─ A reidentificação, como o 🔓 do Graphé: cada token do mapa volta a ser o nome (_anonReidentificarTexto_, que aceita
+  // os delimitadores que a IA tenha trocado — «», <<>>, [[]], {{}} — e só troca nome grego com delimitador), o título
+  // também (_anonReidTitulo_), e o que sobrou (órfãos, restantes, malformados: _anonSobrasReid_) vai para o aviso.
+  function lerMapa(mapa) {
+    if (typeof mapa === 'string') { try { mapa = JSON.parse(mapa); } catch (e) { mapa = null; } }
+    if (!mapa || typeof mapa !== 'object' || !mapa.tokens || typeof mapa.tokens !== 'object') {
+      throw new Error('Este arquivo não é um mapa de anonimização (do Skiá ou do Graphé).');
+    }
+    return mapa;
+  }
+
+  function reidentificar(texto, mapa, titulo) {
+    mapa = lerMapa(mapa);
+    var r = _anonReidentificarTexto_(texto, mapa);
+    var t = titulo ? _anonReidTitulo_(titulo, mapa) : { texto: '', n: 0 };
+    return { texto: r.texto, n: r.n, titulo: t.texto, nTitulo: t.n,
+      sobras: _anonSobrasListadas_(_anonSobrasReid_(r.texto, t.texto, mapa)) };
+  }
+
+  // Para documento com formatação (.docx): ONDE trocar, em cada trecho (um parágrafo), para o app trocar sem mexer no
+  // resto. Os padrões e a ordem (o token mais longo primeiro) são os de _anonReidentificarTexto_; o que já foi trocado
+  // não se troca de novo. Cada trecho: [{ i, f, v }] — do caractere i ao f (exclusivo) entra o valor v.
+  function trechos(textos, mapa) {
+    mapa = lerMapa(mapa);
+    var tokens = Object.keys(mapa.tokens).sort(function (a, b) { return b.length - a.length; });
+    var res = [];
+    for (var k = 0; k < (textos || []).length; k++) {
+      var s = String(textos[k] == null ? '' : textos[k]), achados = [];
+      for (var i = 0; i < tokens.length; i++) {
+        var re = new RegExp(_anonPadraoToken_(tokens[i]), 'g'), m;
+        while ((m = re.exec(s)) !== null) {
+          if (!m[0].length) { re.lastIndex++; continue; }
+          var a = m.index, b = a + m[0].length, livre = true;
+          for (var j = 0; j < achados.length && livre; j++) if (a < achados[j].f && b > achados[j].i) livre = false;
+          if (livre) achados.push({ i: a, f: b, v: mapa.tokens[tokens[i]].valor });
+        }
+      }
+      res.push(achados.sort(function (x, y) { return x.i - y.i; }));
+    }
+    return res;
+  }
+
+  function sobras(texto, titulo, mapa) {
+    mapa = lerMapa(mapa);
+    return _anonSobrasListadas_(_anonSobrasReid_(texto, titulo || '', mapa));
+  }
+
+  // O dicionário do mapa, para a janela: cada token e o nome (ou o dado) real.
+  function dicionario(mapa) {
+    mapa = lerMapa(mapa);
+    var lista = Object.keys(mapa.tokens).filter(function (t) { return mapa.tokens[t] && mapa.tokens[t].tipo !== 'ALIAS'; })
+      .map(function (t) { return { token: t, valor: mapa.tokens[t].valor, tipo: mapa.tokens[t].tipo }; });
+    return { idCaso: mapa.idCaso || '', versao: mapa.versao || '', criado: mapa.criado || '', pessoas: contarPessoas(mapa), lista: lista };
+  }
+
   return {
-    api: 1, versao: ANON_VERSAO, configurar: configurar, lerPdftotext: lerPdftotext, aplicarOcr: aplicarOcr,
-    anonimizar: anonimizar, charsUteisServico: charsUteisServico, textoDoOcr: textoDoOcr
+    api: 2, versao: ANON_VERSAO, configurar: configurar, lerPdftotext: lerPdftotext, aplicarOcr: aplicarOcr,
+    anonimizar: anonimizar, charsUteisServico: charsUteisServico, textoDoOcr: textoDoOcr,
+    reidentificar: reidentificar, trechos: trechos, sobras: sobras, dicionario: dicionario
   };
 })();

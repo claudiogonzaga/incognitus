@@ -1,4 +1,4 @@
-/* Σκιά · Skiá — a paleta "figura negra sobre terracota" da família (Antígraphon, Katágo, Phonika: o mesmo degradê,
+/* Skiá — a paleta "figura negra sobre terracota" da família (Antígraphon, Katágo, Phonika: o mesmo degradê,
    a mesma tinta e o mesmo creme), com a faixa de meandro grego do painel lateral do Graphé. */
 :root {
   --bg-top:#c8703f; --bg-end:#b05a30; --ink:#2a1a10; --cream:#f2dcc0; --danger:#9e3327;
@@ -79,3 +79,16 @@ dialog::backdrop { background:rgba(26,18,13,.45); }
 dialog h2:first-child { margin-top:0; }
 .caixa { padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:12px; overflow-wrap:anywhere; -webkit-user-select:text; user-select:text; }
 .caixa code { font:11px Menlo, Consolas, monospace; }
+.abas { display:flex; gap:6px; width:100%; max-width:1180px; margin:0 auto; padding:12px 20px 0; }
+.abas .aba { width:auto; margin:0; padding:6px 16px; border-radius:999px; font-size:13px;
+  background:var(--surface-up); color:var(--ink); border-color:var(--border); }
+.abas .aba.ativa { background:var(--ink); color:var(--cream); border-color:var(--ink); }
+.nota { margin:10px 0 0; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:12px; }
+.ok { margin:0 0 8px; padding:8px 10px; border:1px solid var(--ok-border); border-radius:8px; background:var(--ok-bg); color:var(--ok-ink); font-size:12px; }
+#reid_texto_caixa .aviso { margin:0 0 8px; }
+details summary { margin-top:8px; cursor:pointer; font-size:12px; color:var(--ink-soft); }
+#dic_tabela { width:100%; margin-top:6px; border-collapse:collapse; font-size:12px; -webkit-user-select:text; user-select:text; }
+#dic_tabela td { padding:3px 6px; border-bottom:1px solid var(--border); vertical-align:top; overflow-wrap:anywhere; }
+#dic_tabela td:first-child { font:11px Menlo, Consolas, monospace; white-space:nowrap; }
+#dic_tabela td:last-child { color:var(--ink-soft); font-size:11px; }
+#reid_lista { list-style:none; margin:10px 0 0; padding:0; display:grid; gap:8px; max-height:calc(100vh - 260px); overflow-y:auto; }

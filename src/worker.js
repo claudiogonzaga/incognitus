@@ -18,11 +18,23 @@ self.onmessage = function (ev) {
         r = SkiaMotor.aplicarOcr(m.texto, m.fracas, m.lidos);
         break;
       case 'anonimizar':
-        r = SkiaMotor.anonimizar(m.texto, { meta: m.meta, incluirMapa: !!m.comMapa });
-        if (m.comMapa) r.mapaJson = JSON.stringify(r.mapa, null, 1);
+        r = SkiaMotor.anonimizar(m.texto, { meta: m.meta, incluirMapa: true });
+        r.mapaJson = JSON.stringify(r.mapa, null, 1);
         delete r.mapa;
         delete r.corpo;
         if (!m.comTexto) delete r.texto;
+        break;
+      case 'reidentificar':
+        r = SkiaMotor.reidentificar(m.texto, m.mapa, m.titulo);
+        break;
+      case 'trechos':
+        r = SkiaMotor.trechos(m.textos, m.mapa);
+        break;
+      case 'sobras':
+        r = SkiaMotor.sobras(m.texto, m.titulo, m.mapa);
+        break;
+      case 'dicionario':
+        r = SkiaMotor.dicionario(m.mapa);
         break;
       case 'testar':
         r = SkiaCasos.rodar(SkiaMotor, m.pacote);

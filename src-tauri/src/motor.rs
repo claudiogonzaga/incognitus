@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 const CHAVE_PUBLICA: &str = include_str!("../../motor/chave_publica.txt");
 const MANIFESTO_EMBUTIDO: &str = include_str!("../../src/motor/manifesto.json");
 pub const URL_PADRAO: &str = "https://github.com/claudiogonzaga/skia-motor/releases/latest/download/";
-pub const API: u32 = 1;
+pub const API: u32 = 2;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Manifesto {

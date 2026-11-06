@@ -41,6 +41,7 @@ const EMBUTIDO = path.join(SKIA, 'src/motor');
 
 // O que o Skiá pede pelo nome além do que o pipeline.js e a API chamam (o pedido de 05/11/2026: os pesos do
 // classificador, o limiar e a versão). Se algum não existir no graphe.js, o build para.
+const API_MOTOR = 2;   // a versão da API do SkiaMotor (motor/fonte/api.js); o app só aceita motor da sua API
 const OBRIGATORIOS = ['ANON_VERSAO', 'ANON_BAYES_PESOS', 'ANON_BAYES_LIMIAR', 'ANON_INST_PADRAO', 'ANON_BOILERPLATE'];
 
 function parar(msg) { console.error('PAROU: ' + msg); process.exit(1); }
@@ -212,8 +213,8 @@ try {
   // ── 6. Gravar (só agora) ────────────────────────────────────────────────────────────────────────────────────────
   const hash = sha256(motor);
   const manifAntigo = (() => { try { return JSON.parse(fs.readFileSync(path.join(SAIDA, 'manifesto.json'), 'utf8')); } catch (e) { return null; } })();
-  const manifesto = (manifAntigo && manifAntigo.sha256 === hash && manifAntigo.casos && manifAntigo.casos.sha256 === sha256(casosJson)) ? manifAntigo : {
-    nome: 'skia-motor', versao, api: 1, data: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), sha256: hash,
+  const manifesto = (manifAntigo && manifAntigo.sha256 === hash && manifAntigo.casos && manifAntigo.casos.sha256 === sha256(casosJson) && manifAntigo.api === API_MOTOR) ? manifAntigo : {
+    nome: 'skia-motor', versao, api: API_MOTOR, data: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), sha256: hash,
     bytes: Buffer.byteLength(motor), casos: { total: casos.casos.length, sha256: sha256(casosJson) },
     origem: { graphe_sha256: sha256(fonteGraphe), pipeline_sha256: sha256(fontePipeline) }
   };

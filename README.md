@@ -1,30 +1,56 @@
-# Σκιά · Skiá
+# Skiá
 
-*σκιά, "sombra": o nome sai, a forma fica.*
+*Skiá quer dizer "sombra" em grego: o nome sai, a forma fica.*
 
 ![A janela do Skiá no macOS](docs/janela.png)
 
 Aplicativo de computador (Mac e Windows) que **anonimiza autos em PDF, em lote**, com o **mesmo motor de anonimização
-do Graphé**: o mesmo fluxo do lote automático (preparar → classificador bayesiano → concluir), as mesmas regras, o
-mesmo cabeçalho de autos anonimizados. **Tudo roda no computador**: nenhum PDF, texto ou mapa sai dele, e não há
-telemetria. A única conexão é a checagem das regras (só leitura de um repositório público), que os Ajustes desligam.
+do Graphé** — o mesmo fluxo do lote automático (preparar → classificador bayesiano → concluir), as mesmas regras, o
+mesmo cabeçalho de autos anonimizados — e **reidentifica as minutas** que a IA devolve, com o mapa de cada processo,
+como o 🔓 do Graphé. **Tudo roda no computador**: nenhum PDF, texto ou mapa sai dele, e não há telemetria. A única
+conexão é a checagem das regras (só leitura de um repositório público), que os Ajustes desligam.
 
 
 ## Como usar
+
+### Anonimizar
 
 1. **Escolher PDFs…** (vários de uma vez), **Uma pasta…**, ou arrastar PDFs/pastas para a janela.
 2. **Saída**: por padrão, ao lado de cada original, na pasta **`Skiá — anonimizados`**; ou outra pasta à escolha.
    O PDF anonimizado sai com o **mesmo nome** do original. O original **nunca** é aberto para escrita: as ferramentas
    trabalham numa cópia temporária, e o Skiá recusa gravar por cima dele.
 3. Opcional: **Gravar também o .txt** (o mesmo texto do Graphé: cabeçalho + `===== PÁGINA n =====`).
-4. Opcional: **Guardar mapa para reidentificar** (token → nome real). Vem sempre desmarcado. O arquivo
-   `… — MAPA (nomes reais).json` tem os nomes verdadeiros: fica só no computador, nunca vai à IA.
-5. **Anonimizar**. Um PDF por vez; a fila mostra cada etapa (extraindo, OCR x/y, anonimizando, gravando, pronto, erro).
+4. **Anonimizar**. Um PDF por vez; a fila mostra cada etapa (extraindo, OCR x/y, anonimizando, gravando, pronto, erro).
    No máximo 2 OCRs ao mesmo tempo, com prioridade baixa. A pasta temporária de cada PDF é apagada ao fim dele.
 
-**A saída**: um PDF com a primeira folha para o cabeçalho de autos anonimizados (com a versão do motor) e **uma folha
-para cada página dos autos**, em fonte monoespaçada (DejaVu Sans Mono) de **11 pt** — a fonte nunca encolhe: a folha
-cresce quando a página tem linhas longas. O texto é selecionável (dá para copiar e mandar a uma IA).
+**A saída**: os **autos anonimizados** e o **mapa**, lado a lado.
+
+- O PDF tem a primeira folha para o cabeçalho de autos anonimizados (com a versão do motor) e **uma folha para cada
+  página dos autos**, em fonte monoespaçada (DejaVu Sans Mono) de **11 pt** — a fonte nunca encolhe: a folha cresce
+  quando a página tem linhas longas. O texto é selecionável (dá para copiar e mandar a uma IA).
+- O mapa, `… — MAPA (nomes reais).json`, sai **sempre** (pedido do Promotor, 05/11/2026): o dicionário de cada token
+  («Thanasis», «REU_01», «CPF_01»…) com o nome ou o dado real, no mesmo formato do mapa do Graphé. É ele que devolve
+  os nomes na reidentificação. Tem os **nomes reais**: fica no computador e nunca vai à IA — para a IA vai só o PDF.
+
+### Reidentificar
+
+![A aba Reidentificar, com dados fictícios](docs/reidentificar.png)
+
+A aba **Reidentificar** faz o que o 🔓 do Graphé faz na minuta, com as mesmas funções do motor:
+
+1. **Escolher o mapa…** (ou, na fila, **Reidentificar com este mapa**). O mapa do Graphé também serve. O dicionário
+   (token → nome) fica à vista em **Ver o dicionário**.
+2. A minuta que a IA devolveu: **arquivos .docx, .txt ou .md** (ou arrastados para a janela, junto com o mapa), ou o
+   texto **colado** na caixa.
+3. Cada token do mapa volta a ser o nome — aceitando os delimitadores que a IA tenha trocado (`«»`, `<<>>`, `[[]]`,
+   `{{}}`); o nome grego só é trocado com delimitador (um "Sócrates" solto pode ser o filósofo). O nome do arquivo
+   também é reidentificado.
+4. O **aviso** aponta o que sobrou: token fora do mapa, malformado ou que ficou. Confira esses pontos antes de usar.
+
+O arquivo reidentificado sai **ao lado da minuta**, com `(reidentificado)` no nome; a minuta não muda. No .docx, a
+troca é feita dentro de cada parágrafo (mesmo com o token partido em trechos de formatação diferentes, como o Word às
+vezes grava), no corpo, nos cabeçalhos, nos rodapés, nas notas e nos comentários; o resto do arquivo sai igual. O texto
+colado volta na tela, com **Copiar** e **Salvar como .txt…**.
 
 **Ajustes**: os **contatos institucionais** que ficam em claro (um por linha; o padrão é o `ANON_INST_PADRAO` do
 Graphé), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar regras** e **Voltar à versão anterior**.
@@ -42,11 +68,13 @@ Graphé), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar
 
 `motor/motor.js` é gerado por **`scripts/extrair_motor.mjs`** a partir do `graphe.js` (pasta irmã `../Graphe`):
 
-- tira **só** o que o lote automático usa — as funções que o `testes/anon/pipeline.js` do Graphé chama, mais o
-  cabeçalho do `anonConcluir` e a escolha das páginas para o OCR — e, **pelo nome** (nunca por número de linha), tudo
-  de que elas dependem (349 declarações na 1.9.0). O `pipeline.js` vai junto, sem alteração;
+- tira **só** o que o app usa — as funções que o `testes/anon/pipeline.js` do Graphé chama, mais o cabeçalho do
+  `anonConcluir`, a escolha das páginas para o OCR e a reidentificação do 🔓 (`_anonReidentificarTexto_`,
+  `_anonReidTitulo_`, `_anonSobrasReid_`) — e, **pelo nome** (nunca por número de linha), tudo de que elas dependem
+  (355 declarações na 1.9.0). O `pipeline.js` vai junto, sem alteração;
 - o que no Graphé vem da planilha e do Apps Script (VARIAVEIS_GLOBAIS, equipe, propriedades, Logger) é o
-  `motor/fonte/ambiente.js`: equipe vazia, contatos institucionais pelos Ajustes. A API do app é `motor/fonte/api.js`;
+  `motor/fonte/ambiente.js`: equipe vazia, contatos institucionais pelos Ajustes. A API do app é `motor/fonte/api.js`
+  (versão 2, a da reidentificação: o app só aceita motor da sua versão de API);
 - os comentários saem (o motor vai para um repositório público e eles citam casos);
 - **trava** (`scripts/trava.mjs`): o build **para** se o motor tiver ID de arquivo do Drive, URL de WebApp, ID de
   planilha, token ou chave, e-mail, prompt de IA, código do Apps Script ou nome de pessoa — e lista o que achou. Nomes
@@ -54,7 +82,8 @@ Graphé), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar
   autoridades públicas que o motor deixa em claro (`ANON_LISTA_BRANCA_FIXA`) e nos contatos institucionais;
 - **suíte** (`scripts/regressao_motor.cjs`): o `testes/anon/regressao.js` do Graphé (63 casos fictícios), **sem
   alteração**, rodando sobre o `motor.js` num contexto limpo, sem nada do Apps Script; depois os mesmos casos pela
-  API do Skiá, e a paridade caso a caso com o `pipeline.js`. Só aceita o motor com **"0 falhas"** e **63/63**.
+  API do Skiá — cada um com a **volta**: os autos anonimizados, reidentificados com o próprio mapa, não podem guardar
+  token nem sobra —, e a paridade caso a caso com o `pipeline.js`. Só aceita o motor com **"0 falhas"** e **63/63**.
 
 ```bash
 node scripts/extrair_motor.mjs            # monta motor/ e o motor embutido no app (src/motor/)
@@ -105,14 +134,17 @@ npm ci
 python3 scripts/sidecars.py mac                              # uma vez (fica em .ferramentas/, fora do git)
 npx tauri dev                                                # o app
 npx tauri build --target universal-apple-darwin --bundles dmg
-cargo test --manifest-path src-tauri/Cargo.toml              # PDF, assinatura, versões
+cargo test --manifest-path src-tauri/Cargo.toml              # PDF, assinatura, versões, .docx da reidentificação
 python3 testes/e2e.py                                        # ponta a ponta (depois de: npx tauri build --debug --no-bundle)
+python3 scripts/icone/gerar_icone.py && npx tauri icon scripts/icone/icone.png   # o ícone (depois: rm -r src-tauri/icons/{android,ios})
 ```
 
 O **teste de ponta a ponta** gera 3 PDFs **fictícios** (texto, escaneado, misto), roda o app de verdade (modo de teste,
 `SKIA_E2E`, com dados e cache à parte) e confere: nomes de saída iguais aos de entrada, nenhum dado de pessoa fictícia
-em claro, originais intactos, uma folha por página + cabeçalho, 11 pt; a atualização assinada das regras (e a recusa da
-adulterada); e a **extração idêntica, byte a byte, à do `main.py` do serviço** rodando localmente com as mesmas ferramentas.
+em claro, originais intactos, uma folha por página + cabeçalho, 11 pt, o mapa ao lado; a **reidentificação** com o mapa
+que o app gravou (texto colado, minuta .txt e .docx com um token partido em dois trechos de formatação, no corpo, no
+cabeçalho e no nome do arquivo); a atualização assinada das regras (e a recusa da adulterada); e a **extração idêntica,
+byte a byte, à do `main.py` do serviço** rodando localmente com as mesmas ferramentas.
 
 **Build e entrega**: `.github/workflows/build.yml` (Actions → build → Run workflow, ou tag `v*`): macOS universal (`.dmg`)
 e Windows x64 (`.msi`), como artefatos; com tag, também numa Release em rascunho.
@@ -128,7 +160,9 @@ Nunca use dados reais de processos em testes, exemplos, commits ou logs.
   e do SmartScreen (ver "Como abrir"). Ao assinar e notarizar no Mac, religar o *hardened runtime* exige também assinar
   as dylibs dos sidecars com a mesma equipe (ou o direito `com.apple.security.cs.disable-library-validation`).
 - **Licença** do próprio Skiá e do motor publicado: não definida.
-- **Ícone** provisório (folha negra sobre terracota, o nome some entre « »).
+- **Ícone** (06/11/2026): uma mão segura o guarda-sol grego — o *skiádeion*, "o que faz sombra", da mesma raiz de
+  skiá — e a sombra dele cai sobre a página e esconde as linhas; moldura de meandro do Phylax. Gerado por
+  `scripts/icone/gerar_icone.py` (SVG → PNG pelo `rsvg-convert`). Aguarda o aceite do Promotor.
 - No Windows, o teste de ponta a ponta roda no CI (instalando o `.msi`); a instalação de um motor assinado só é testada
   onde está a chave privada (aqui), lá só a recusa de assinatura inválida.
 
@@ -137,8 +171,10 @@ Nunca use dados reais de processos em testes, exemplos, commits ou logs.
 ```
 motor/            motor.js (gerado), manifesto + assinatura, casos.json, chave_publica.txt; fonte/: ambiente.js e api.js
 src/              a janela (HTML/JS/CSS simples), worker.js (o motor no Web Worker), casos.js, motor/ (o embutido)
-src-tauri/        Rust: sidecars (ferramentas.rs), PDF de saída (pdf.rs), motor e atualização (motor.rs), comandos (lib.rs)
-scripts/          extrair_motor.mjs, trava.mjs, regressao_motor.cjs, assinar_motor.mjs, publicar_motor.sh, sidecars.py
+src-tauri/        Rust: sidecars (ferramentas.rs), PDF de saída (pdf.rs), motor e atualização (motor.rs), minutas da
+                  reidentificação: .txt e .docx (reid.rs), comandos (lib.rs)
+scripts/          extrair_motor.mjs, trava.mjs, regressao_motor.cjs, assinar_motor.mjs, publicar_motor.sh, sidecars.py,
+                  icone/gerar_icone.py
 testes/           gerar_pdfs.py (PDFs fictícios) e e2e.py
 _segredo/         a chave privada do motor (fora do git)
 ```

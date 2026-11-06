@@ -41,7 +41,7 @@ var Utilities = {
     });
   }
 };
-// ── Graphé: anonimização (349 declarações) ──
+// ── Graphé: anonimização (355 declarações) ──
 var _TZ_MT_ = 'America/Cuiaba';
 function _pdfPaginasFracas_(texto) {
   var ps = _anonPaginas_(texto), out = [];
@@ -3996,6 +3996,77 @@ function _anonPessoaDoBloco_(linhas, i, mapa) {
   }
   return '';
 }
+function _anonPadraoToken_(token) {
+  var nu = token.replace(ANON_ABRE, '').replace(ANON_FECHA, '');
+
+  if (_anonTokenEhGrego_(token)) return '[«<\\[{]{1,2}\\s?' + nu.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s?[»>\\]}]{1,2}';
+  return '(?:[«<\\[{]{1,2}\\s?)?\\b' + nu + '\\b(?:\\s?[»>\\]}]{1,2})?';
+}
+function _anonReidentificarTexto_(texto, mapa) {
+  var tokens = Object.keys((mapa && mapa.tokens) || {}).sort(function (a, b) { return b.length - a.length; });
+  var n = 0;
+  texto = String(texto == null ? '' : texto);
+  for (var i = 0; i < tokens.length; i++) {
+    var valor = mapa.tokens[tokens[i]].valor;
+    texto = texto.replace(new RegExp(_anonPadraoToken_(tokens[i]), 'g'), function () { n++; return valor; });
+  }
+  return { texto: texto, n: n };
+}
+function _anonReidTitulo_(titulo, mapa) {
+  var tokens = Object.keys(mapa.tokens).sort(function (a, b) { return b.length - a.length; }), n = 0, t = String(titulo || '');
+  for (var i = 0; i < tokens.length; i++) {
+    var nu = tokens[i].replace(ANON_ABRE, '').replace(ANON_FECHA, '');
+    var re = _anonTokenEhGrego_(tokens[i])
+      ? new RegExp(_anonPadraoToken_(tokens[i]), 'g')
+      : new RegExp('(?:[«<\\[{]{1,2}\\s?)?(?<![A-Za-z0-9])' + nu + '(?![0-9])(?:\\s?[»>\\]}]{1,2})?', 'g');
+    t = t.replace(re, function () { n++; return mapa.tokens[tokens[i]].valor; });
+  }
+  return { texto: t, n: n };
+}
+var ANON_PAPEIS_TOKEN = { AUTOR: 1, REU: 1, VITIMA: 1, TESTEMUNHA: 1, TEST: 1, ADV: 1, PES: 1, EMP: 1, ESPOLIO: 1, PRENOME: 1, ALCUNHA: 1,
+  INICIAIS: 1, CPF: 1, CPFMASC: 1, CNPJ: 1, RG: 1, CNH: 1, DOC: 1, CNS: 1, CERT: 1, RJI: 1, CAR: 1, TEL: 1, EMAIL: 1, REDE: 1, END: 1, CEP: 1,
+  PLACA: 1, NASC: 1, BANCO: 1, GPS: 1 };
+function _anonSobrasReid_(texto, titulo, mapa) {
+  function ehPapel(w) { var k = _anonSemAcento_(w).toUpperCase(); return !!ANON_PAPEIS_TOKEN[k]; }
+  function varrer(s0) {
+    var s = String(s0 || ''), orf = [], rest = [], mal = [], vistos = {}, m;
+    var reTok = /(?:^|[^A-Za-z0-9])([A-Z]{2,12}_\d{2,3})(?![0-9])/g;
+    while ((m = reTok.exec(s)) !== null) {
+      var k = m[1]; if (vistos[k]) continue; vistos[k] = 1;
+      (mapa.tokens[ANON_ABRE + k + ANON_FECHA] ? rest : orf).push(k);
+    }
+
+    for (var tg in mapa.tokens) {
+      if (!_anonTokenEhGrego_(tg) || mapa.tokens[tg].tipo === 'ALIAS') continue;
+      var ng = tg.replace(ANON_ABRE, '').replace(ANON_FECHA, '');
+      if (!vistos[ng] && new RegExp('(?:^|[^' + ANON_LETRA + '])' + ng + '(?![' + ANON_LETRA + '])').test(s)) { vistos[ng] = 1; rest.push(ng); }
+    }
+    var reGr = /«\s*([A-ZÀ-Ý][a-zà-ÿ]+(?: [IVX]+)?)\s*»/g;
+    while ((m = reGr.exec(s)) !== null) {
+      if (mapa.tokens[ANON_ABRE + m[1] + ANON_FECHA]) continue;
+      if (!vistos[m[1]]) { vistos[m[1]] = 1; orf.push(m[1]); }
+    }
+    var reMal1 = /«\s*([A-Za-zÀ-ÿ]{2,12})\s*[_\- ]?\s*(\d{1,3})\s*»/g;
+    while ((m = reMal1.exec(s)) !== null) {
+      if (/^[A-Z]{2,12}$/.test(m[1]) && m[2].length >= 2 && /«[A-Z]{2,12}_\d{2,3}»/.test(m[0])) continue;
+      if (!ehPapel(m[1])) continue;
+      var k1 = m[0].replace(/\s+/g, ' '); if (!vistos[k1]) { vistos[k1] = 1; mal.push(k1); }
+    }
+    var reMal2 = /(?:^|[^A-Za-zÀ-ÿ0-9])([A-Za-zÀ-ÿ]{2,12})[_](\d{1,3})(?![0-9])/g;
+    while ((m = reMal2.exec(s)) !== null) {
+      if (/^[A-Z]{2,12}$/.test(m[1]) && m[2].length >= 2) continue;
+      if (!ehPapel(m[1])) continue;
+      var k2 = m[1] + '_' + m[2]; if (!vistos[k2]) { vistos[k2] = 1; mal.push(k2); }
+    }
+    return { orf: orf, rest: rest, mal: mal };
+  }
+  var a = varrer(texto), b = varrer(titulo);
+  var tit = function (x) { return x + ' (título)'; };
+  return { orfaos: a.orf, orfaosTitulo: b.orf, restantes: a.rest.concat(b.rest.map(tit)), malformados: a.mal.concat(b.mal.map(tit)) };
+}
+function _anonSobrasListadas_(r) {
+  return (r.orfaos || []).concat((r.orfaosTitulo || []).map(function (x) { return x + ' (título)'; }), r.restantes || [], r.malformados || []);
+}
 // ── Graphé: testes/anon/pipeline.js (o lote automático) ──
 var SKIA_PIPELINE = (function () {
   var module = { exports: {} };
@@ -4057,7 +4128,7 @@ function rodar(G, texto, o) {
 module.exports = { rodar, preparar, EQUIPE };
   return module.exports;
 })();
-// ── API do Skiá (versão 1) ──────────────────────────────────────────────────────────────────────────────────────────
+// ── API do Skiá (versão 2: com a reidentificação) ──────────────────────────────────────────────────────────────────────────────────────────
 // O fluxo é o do lote automático do Graphé: SKIA_PIPELINE.rodar — o testes/anon/pipeline.js, acima, sem alteração
 // (preparar → classificador → concluir) — e, como no anonConcluir, o cabeçalho de autos anonimizados.
 // A leitura do PDF segue o _pdfComOcr_ do Graphé com o serviço cloudrun-pdftotext/main.py: as páginas fracas (pelo
@@ -4167,7 +4238,7 @@ var SkiaMotor = (function () {
     // Cada página como no corpo do .txt ("===== PÁGINA n =====" e o texto): o PDF do Skiá tem uma página para cada uma.
     var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([p], i + 1); });
     var res = {
-      api: 1, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + corpo,
+      api: 2, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + corpo,
       estatisticas: { paginas: r.paginas.length, tokens: Object.keys(r.mapa.tokens).length, pessoas: contarPessoas(r.mapa),
         candidatos: (r.cand || []).length, confirmados: (r.conf || []).length, naoConfirmados: naoConf,
         sobras: (r.sobras && r.sobras.total) || 0, ocr: (pg.ocr && pg.ocr.paginas) ? pg.ocr.paginas.length : 0,
@@ -4177,8 +4248,64 @@ var SkiaMotor = (function () {
     return res;
   }
 
+  // ─ A reidentificação, como o 🔓 do Graphé: cada token do mapa volta a ser o nome (_anonReidentificarTexto_, que aceita
+  // os delimitadores que a IA tenha trocado — «», <<>>, [[]], {{}} — e só troca nome grego com delimitador), o título
+  // também (_anonReidTitulo_), e o que sobrou (órfãos, restantes, malformados: _anonSobrasReid_) vai para o aviso.
+  function lerMapa(mapa) {
+    if (typeof mapa === 'string') { try { mapa = JSON.parse(mapa); } catch (e) { mapa = null; } }
+    if (!mapa || typeof mapa !== 'object' || !mapa.tokens || typeof mapa.tokens !== 'object') {
+      throw new Error('Este arquivo não é um mapa de anonimização (do Skiá ou do Graphé).');
+    }
+    return mapa;
+  }
+
+  function reidentificar(texto, mapa, titulo) {
+    mapa = lerMapa(mapa);
+    var r = _anonReidentificarTexto_(texto, mapa);
+    var t = titulo ? _anonReidTitulo_(titulo, mapa) : { texto: '', n: 0 };
+    return { texto: r.texto, n: r.n, titulo: t.texto, nTitulo: t.n,
+      sobras: _anonSobrasListadas_(_anonSobrasReid_(r.texto, t.texto, mapa)) };
+  }
+
+  // Para documento com formatação (.docx): ONDE trocar, em cada trecho (um parágrafo), para o app trocar sem mexer no
+  // resto. Os padrões e a ordem (o token mais longo primeiro) são os de _anonReidentificarTexto_; o que já foi trocado
+  // não se troca de novo. Cada trecho: [{ i, f, v }] — do caractere i ao f (exclusivo) entra o valor v.
+  function trechos(textos, mapa) {
+    mapa = lerMapa(mapa);
+    var tokens = Object.keys(mapa.tokens).sort(function (a, b) { return b.length - a.length; });
+    var res = [];
+    for (var k = 0; k < (textos || []).length; k++) {
+      var s = String(textos[k] == null ? '' : textos[k]), achados = [];
+      for (var i = 0; i < tokens.length; i++) {
+        var re = new RegExp(_anonPadraoToken_(tokens[i]), 'g'), m;
+        while ((m = re.exec(s)) !== null) {
+          if (!m[0].length) { re.lastIndex++; continue; }
+          var a = m.index, b = a + m[0].length, livre = true;
+          for (var j = 0; j < achados.length && livre; j++) if (a < achados[j].f && b > achados[j].i) livre = false;
+          if (livre) achados.push({ i: a, f: b, v: mapa.tokens[tokens[i]].valor });
+        }
+      }
+      res.push(achados.sort(function (x, y) { return x.i - y.i; }));
+    }
+    return res;
+  }
+
+  function sobras(texto, titulo, mapa) {
+    mapa = lerMapa(mapa);
+    return _anonSobrasListadas_(_anonSobrasReid_(texto, titulo || '', mapa));
+  }
+
+  // O dicionário do mapa, para a janela: cada token e o nome (ou o dado) real.
+  function dicionario(mapa) {
+    mapa = lerMapa(mapa);
+    var lista = Object.keys(mapa.tokens).filter(function (t) { return mapa.tokens[t] && mapa.tokens[t].tipo !== 'ALIAS'; })
+      .map(function (t) { return { token: t, valor: mapa.tokens[t].valor, tipo: mapa.tokens[t].tipo }; });
+    return { idCaso: mapa.idCaso || '', versao: mapa.versao || '', criado: mapa.criado || '', pessoas: contarPessoas(mapa), lista: lista };
+  }
+
   return {
-    api: 1, versao: ANON_VERSAO, configurar: configurar, lerPdftotext: lerPdftotext, aplicarOcr: aplicarOcr,
-    anonimizar: anonimizar, charsUteisServico: charsUteisServico, textoDoOcr: textoDoOcr
+    api: 2, versao: ANON_VERSAO, configurar: configurar, lerPdftotext: lerPdftotext, aplicarOcr: aplicarOcr,
+    anonimizar: anonimizar, charsUteisServico: charsUteisServico, textoDoOcr: textoDoOcr,
+    reidentificar: reidentificar, trechos: trechos, sobras: sobras, dicionario: dicionario
   };
 })();

@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Σκιά · Skiá</title>
+<title>Skiá</title>
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
 <header data-tauri-drag-region>
   <div class="titulo" data-tauri-drag-region>
-    <h1 data-tauri-drag-region>Σκιά · Skiá</h1>
-    <span data-tauri-drag-region>anonimização de autos em PDF, no seu computador</span>
+    <h1 data-tauri-drag-region>Skiá</h1>
+    <span data-tauri-drag-region>anonimização de autos e reidentificação de minutas, no seu computador</span>
   </div>
   <div class="topo-direita">
     <button id="bt_motor" class="selo" title="O motor de anonimização em uso">motor …</button>
@@ -18,8 +18,12 @@
   </div>
 </header>
 <div class="meandro" aria-hidden="true"></div>
+<nav class="abas" role="tablist">
+  <button id="aba_bt_anon" class="aba ativa" role="tab">Anonimizar</button>
+  <button id="aba_bt_reid" class="aba" role="tab">Reidentificar</button>
+</nav>
 
-<main>
+<main id="aba_anon">
   <section id="lado">
     <h2>Arquivos</h2>
     <div class="linha">
@@ -37,10 +41,10 @@
     </div>
     <p class="dica">O PDF anonimizado sai com o MESMO nome do original. O original nunca é alterado.</p>
     <label class="opcao"><input id="op_txt" type="checkbox"> <span>Gravar também o .txt</span></label>
-    <label class="opcao"><input id="op_mapa" type="checkbox"> <span>Guardar mapa para reidentificar</span></label>
-    <div id="aviso_mapa" class="aviso" hidden>
-      O mapa tem os <b>nomes reais</b> de cada token. Ele fica ao lado do PDF, com “MAPA (nomes reais)” no nome:
-      guarde-o só neste computador e nunca o mande a ninguém nem a uma IA.
+    <div class="nota">
+      Junto com cada PDF sai sempre o <b>mapa</b> (“… — MAPA (nomes reais).json”): o dicionário de cada token com o
+      nome real, que a aba <b>Reidentificar</b> usa para devolver os nomes à minuta. Ele tem os <b>nomes reais</b>:
+      guarde-o neste computador e nunca o mande à IA — para a IA vai só o PDF anonimizado.
     </div>
 
     <button id="bt_rodar" class="principal" disabled>Anonimizar</button>
@@ -57,6 +61,45 @@
     </div>
     <div id="vazio" class="vazio">Nenhum PDF na fila.</div>
     <ol id="fila"></ol>
+  </section>
+</main>
+
+<main id="aba_reid" hidden>
+  <section id="reid_lado">
+    <h2>Mapa</h2>
+    <button id="bt_mapa">Escolher o mapa…</button>
+    <div id="mapa_info" class="dica">É o “… — MAPA (nomes reais).json” que o Skiá grava ao lado de cada PDF anonimizado
+      (o mapa do Graphé também serve).</div>
+    <details id="dicionario" hidden>
+      <summary>Ver o dicionário</summary>
+      <table id="dic_tabela"></table>
+    </details>
+
+    <h2>Minutas</h2>
+    <button id="bt_minutas" class="ghost" disabled>Arquivos .docx, .txt ou .md…</button>
+    <p class="dica">ou arraste para a janela o mapa e as minutas. A cópia reidentificada sai ao lado da minuta, com
+      “(reidentificado)” no nome; a minuta não muda.</p>
+
+    <h2>Ou cole o texto</h2>
+    <textarea id="reid_entrada" rows="6" spellcheck="false" placeholder="Cole aqui o que a IA devolveu, com os tokens («Thanasis», «REU_01»…)"></textarea>
+    <button id="bt_reid_texto" class="principal" disabled>Reidentificar o texto</button>
+  </section>
+
+  <section id="reid_resultado">
+    <div class="linha topo">
+      <h2>Resultado</h2>
+      <div class="topo-direita"><button id="bt_reid_limpar" class="ghost pequeno" hidden>Limpar</button></div>
+    </div>
+    <div id="reid_vazio" class="vazio">Escolha o mapa e depois as minutas, ou cole o texto.</div>
+    <div id="reid_texto_caixa" hidden>
+      <div id="reid_texto_info"></div>
+      <textarea id="reid_saida" rows="9" readonly spellcheck="false"></textarea>
+      <div class="linha">
+        <button id="bt_copiar" class="ghost">Copiar</button>
+        <button id="bt_salvar_txt" class="ghost">Salvar como .txt…</button>
+      </div>
+    </div>
+    <ol id="reid_lista"></ol>
   </section>
 </main>
 

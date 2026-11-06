@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Σκιά · Skiá — teste de ponta a ponta com os 3 PDFs FICTÍCIOS (texto, escaneado, misto).
+"""Skiá — teste de ponta a ponta com os 3 PDFs FICTÍCIOS (texto, escaneado, misto).
 
 1. Gera os PDFs (gerar_pdfs.py) e guarda o sha256 e a data de cada original.
 2. Roda o APP DE VERDADE em modo de teste (SKIA_E2E=plano.json; dados e cache numa pasta à parte, SKIA_DADOS): fila,
@@ -8,8 +8,11 @@
    casos de teste) e, numa segunda execução, um manifesto adulterado (tem de ser recusado).
 3. Confere: nomes de saída iguais aos de entrada; nenhum dado de pessoa fictícia em claro na saída (PDF e .txt);
    originais intactos; o cabeçalho com a versão do motor; uma folha por página dos autos + a do cabeçalho; fonte
-   monoespaçada de 11 pt.
-4. Compara a extração do Skiá com a do serviço do Graphé (cloudrun-pdftotext/main.py rodando aqui, com as MESMAS
+   monoespaçada de 11 pt; o mapa ao lado de cada PDF.
+4. A reidentificação (na segunda execução), com o mapa que o app gravou: um texto colado, uma minuta .txt e uma .docx
+   com um token partido em dois trechos de formatação, no corpo, no cabeçalho e no nome do arquivo. Os nomes voltam,
+   nenhum token fica, o que está fora do mapa é apontado, as minutas não mudam e o resto do .docx sai igual.
+5. Compara a extração do Skiá com a do serviço do Graphé (cloudrun-pdftotext/main.py rodando aqui, com as MESMAS
    ferramentas embutidas no Skiá e o mesmo pedido que o Graphé faz): tem de ser idêntica, byte a byte.
 Uso: python3 testes/e2e.py [executável]   (padrão: src-tauri/target/debug/skia, de `npx tauri build --debug --no-bundle`)
 """
@@ -25,6 +28,7 @@ import threading
 import time
 import urllib.request
 import uuid
+import zipfile
 
 import tempfile
 
@@ -155,6 +159,74 @@ def extrair_servico(url, pdf, fracas):
     return json.load(urllib.request.urlopen(req, timeout=900))
 
 
+W_DOC = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+         '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>{}</w:body></w:document>')
+W_HDR = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+         '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">{}</w:hdr>')
+ESTILOS = '<?xml version="1.0" encoding="UTF-8"?>\n<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'
+
+
+def minutas(mapa_path):
+    """As minutas fictícias da IA, com os tokens do mapa que o app gravou."""
+    mapa = json.load(open(mapa_path, encoding="utf-8"))["tokens"]
+    pessoas = [t for t, v in mapa.items() if v.get("variantes") and v.get("tipo") != "ALIAS"]
+    cpf = next((t for t, v in mapa.items() if v.get("tipo") == "CPF"), None)
+    a, b = pessoas[0], pessoas[1]
+    nu = lambda t: t.strip("«»")
+    linhas = [f"MINUTA — {a}", f"O requerente {a} move ação contra <<{nu(b)}>>."] + ([f"CPF do requerente: {cpf}."] if cpf else [])
+    texto = "\n".join(linhas) + "\n"
+    pasta = os.path.join(SAIDA, "minutas")
+    os.makedirs(pasta, exist_ok=True)
+    txt = os.path.join(pasta, "minuta-texto.txt")
+    open(txt, "w", encoding="utf-8").write(texto)
+    k = len(a) // 2   # o token partido em dois trechos (o primeiro em negrito), como o Word às vezes grava
+    corpo = (f'<w:p><w:r><w:t xml:space="preserve">MINUTA — </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{a[:k]}</w:t></w:r>'
+             f'<w:r><w:t xml:space="preserve">{a[k:]}, requerente.</w:t></w:r></w:p>'
+             f'<w:p><w:r><w:t xml:space="preserve">Contra {b}, e só.</w:t></w:r></w:p>')
+    docx = os.path.join(pasta, f"Minuta {a}.docx")
+    with zipfile.ZipFile(docx, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>')
+        z.writestr("word/document.xml", W_DOC.format(corpo))
+        z.writestr("word/header1.xml", W_HDR.format(f"<w:p><w:r><w:t>Parte: {b}</w:t></w:r></w:p>"))
+        z.writestr("word/styles.xml", ESTILOS)
+    v = lambda t: mapa[t]["valor"]
+    return {"texto": texto + "Citação solta: «Fulaninho».\n", "n_texto": 3 + (1 if cpf else 0), "txt": txt, "docx": docx,
+            "tokens": [a, b] + ([cpf] if cpf else []), "valores": [v(a), v(b)] + ([v(cpf)] if cpf else []),
+            "titulo_docx": f"Minuta {v(a)}", "originais": {p: sha(p) for p in (txt, docx)}}
+
+
+def conferir_reid(rel2, mm):
+    r = rel2.get("reid") or {}
+    confere((r.get("tokens") or 0) >= 2, f"o mapa abriu na aba Reidentificar ({r.get('tokens')} tokens)")
+    t = r.get("texto") or {}
+    confere(t.get("n") == mm["n_texto"] and all(x in t.get("texto", "") for x in mm["valores"]) and
+            not any(x in t.get("texto", "") for x in mm["tokens"]), f"texto colado: {t.get('n')} tokens trocados pelos nomes, nenhum token ficou")
+    confere(t.get("sobras") == ["Fulaninho"], f"o «Fulaninho», fora do mapa, ficou no aviso ({t.get('sobras')})")
+    arqs = {os.path.basename(x["caminho"]): x for x in r.get("arquivos") or []}
+    for nome, p in (("txt", mm["txt"]), ("docx", mm["docx"])):
+        it = arqs.get(os.path.basename(p)) or {}
+        s = it.get("saida") or ""
+        confere(it.get("etapa") == "pronto" and os.path.exists(s) and "(reidentificado)" in s,
+                f".{nome}: cópia reidentificada ao lado da minuta ({os.path.basename(s) or it.get('erro')})")
+        confere(not it.get("sobras"), f".{nome}: nenhuma sobra ({it.get('sobras')})")
+        confere(sha(p) == mm["originais"][p], f".{nome}: a minuta original não mudou")
+        if not os.path.exists(s):
+            continue
+        if nome == "txt":
+            c = open(s, encoding="utf-8").read()
+            confere(all(x in c for x in mm["valores"]) and not any(x in c for x in mm["tokens"]), ".txt: os nomes voltaram, nenhum token ficou")
+        else:
+            z = zipfile.ZipFile(s)
+            doc, hdr = z.read("word/document.xml").decode("utf-8"), z.read("word/header1.xml").decode("utf-8")
+            confere(mm["valores"][0] in doc and mm["valores"][1] in doc and not any(x.strip("«»") in doc for x in mm["tokens"][:2]),
+                    ".docx: o token partido em dois trechos voltou inteiro, e o do segundo parágrafo também")
+            confere(mm["valores"][1] in hdr, ".docx: o cabeçalho também foi reidentificado")
+            confere(z.read("word/styles.xml").decode("utf-8") == ESTILOS and z.namelist() == zipfile.ZipFile(p).namelist(),
+                    ".docx: as outras partes saíram iguais, na mesma ordem")
+            confere(os.path.basename(s) == mm["titulo_docx"] + " (reidentificado).docx", f".docx: o nome do arquivo também ({os.path.basename(s)})")
+            confere(it.get("n") == 4, f".docx: 4 trocas (corpo, cabeçalho e nome do arquivo) — {it.get('n')}")
+
+
 def main():
     if not os.path.exists(EXE):
         raise SystemExit("falta o executável: npx tauri build --debug --no-bundle")
@@ -171,7 +243,7 @@ def main():
     srv, url = servir(pub)
 
     print("1. o app com os 3 PDFs (e a atualização assinada das regras no fim)")
-    plano = {"arquivos": [os.path.join(PDFS, n) for n in nomes], "saida": None, "txt": True, "mapa": True,
+    plano = {"arquivos": [os.path.join(PDFS, n) for n in nomes], "saida": None, "txt": True,
              "extracao": os.path.join(SAIDA, "extracao"), "relatorio": os.path.join(SAIDA, "relatorio1.json"), "atualizar": True}
     rel = rodar_app(plano, url, dados)
     for it in rel["itens"]:
@@ -206,7 +278,7 @@ def main():
                 confere(False, f"{n}: a folha {pagina + 1} é a página {pagina} dos autos")
                 break
         mapa = os.path.join(pasta, n[:-4] + " — MAPA (nomes reais).json")
-        confere(os.path.exists(mapa) and "TESTEFULAN" in open(mapa, encoding="utf-8").read().upper(), f"{n}: mapa gravado (pedido no plano)")
+        confere(os.path.exists(mapa) and "TESTEFULAN" in open(mapa, encoding="utf-8").read().upper(), f"{n}: mapa gravado ao lado (sempre)")
         s, m = originais[n]
         confere(sha(os.path.join(PDFS, n)) == s and os.path.getmtime(os.path.join(PDFS, n)) == m, f"{n}: original intacto (sha256 e data)")
     tmp = os.path.join(dados, "cache", "tmp")
@@ -221,14 +293,19 @@ def main():
         print("  (sem a chave privada aqui: a instalação de um motor assinado não é testada, só a recusa)")
         confere(a.get("trocou") is False and "assinatura" in (a.get("erro") or ""), f"assinatura inválida recusada ({a.get('erro')})")
     publicar_motor_teste(pub, adulterar=True)
-    plano2 = {"arquivos": [], "relatorio": os.path.join(SAIDA, "relatorio2.json"), "atualizar": True, "extracao": os.path.join(SAIDA, "extracao")}
+    mm = minutas(os.path.join(pasta, "texto — MAPA (nomes reais).json"))
+    plano2 = {"arquivos": [], "relatorio": os.path.join(SAIDA, "relatorio2.json"), "atualizar": True, "extracao": os.path.join(SAIDA, "extracao"),
+              "reidentificar": {"mapa": os.path.join(pasta, "texto — MAPA (nomes reais).json"), "texto": mm["texto"], "arquivos": [mm["txt"], mm["docx"]]}}
     shutil.rmtree(os.path.join(dados, "dados", "motor"), ignore_errors=True)   # volta ao embutido
     rel2 = rodar_app(plano2, url, dados)
     a2 = rel2.get("atualizacao") or {}
     confere(a2.get("trocou") is False and "assinatura" in (a2.get("erro") or ""), f"manifesto adulterado recusado ({a2.get('erro')})")
     srv.shutdown()
 
-    print("4. a extração do Skiá × o serviço do Graphé (main.py aqui, com as mesmas ferramentas)")
+    print("4. a reidentificação, com o mapa que o app gravou")
+    conferir_reid(rel2, mm)
+
+    print("5. a extração do Skiá × o serviço do Graphé (main.py aqui, com as mesmas ferramentas)")
     if not os.path.exists(MAIN_PY):
         print("  (pulei: sem o main.py do Graphé em " + MAIN_PY + ")")
     else:

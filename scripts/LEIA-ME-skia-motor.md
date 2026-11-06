@@ -1,6 +1,6 @@
 # skia-motor
 
-As regras de anonimização que o **Σκιά · Skiá** usa: o motor de anonimização de autos do Graphé, extraído para rodar
+As regras de anonimização que o **Skiá** usa: o motor de anonimização de autos do Graphé, extraído para rodar
 sozinho, no computador de quem anonimiza. Este repositório só publica as regras; os autos nunca passam por aqui.
 
 | arquivo | o que é |

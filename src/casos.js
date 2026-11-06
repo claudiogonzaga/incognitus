@@ -29,6 +29,16 @@ var SkiaCasos = (function () {
     return erros;
   }
 
+  // A volta: os autos anonimizados, reidentificados com o próprio mapa, não podem guardar token nenhum, nem sobra.
+  function voltar(M, r) {
+    var v;
+    try { v = M.reidentificar(r.corpo, r.mapa); } catch (e) { return ['reidentificação: ' + ((e && e.message) || e)]; }
+    var erros = [], ficou = Object.keys(r.mapa.tokens).filter(function (t) { return v.texto.indexOf(t) >= 0; });
+    if (ficou.length) erros.push('reidentificação: sobrou ' + ficou.join(', '));
+    if (v.sobras.length) erros.push('reidentificação, sobras: ' + v.sobras.join(', '));
+    return erros;
+  }
+
   // Roda o pacote de casos ({ capa, reqPadrao, casos }) num motor (o SkiaMotor de um contexto/worker).
   function rodar(M, pacote, aoAndar) {
     var ok = 0, falhas = [], casos = (pacote && pacote.casos) || [];
@@ -39,6 +49,7 @@ var SkiaCasos = (function () {
       else {
         try { r = M.anonimizar(pacote.capa + k.t + '\f', { req: k.req || pacote.reqPadrao, incluirMapa: true }); } catch (e) { r = null; }
         erros = conferir(k, r && { corpo: r.corpo, mapa: r.mapa });
+        if (r && !erros.length) erros = voltar(M, r);
       }
       if (erros.length) falhas.push({ id: k.id, c: k.c, erros: erros }); else ok++;
       if (aoAndar) aoAndar(i + 1, casos.length);

@@ -1,16 +1,16 @@
 {
   "nome": "skia-motor",
   "versao": "1.9.0",
-  "api": 1,
-  "data": "2026-11-05T17:17:11Z",
-  "sha256": "96834b0ee6e55b49f596d2cde7a9a205f85f7085cd64e172ac67a06c438053c1",
-  "bytes": 366049,
+  "api": 2,
+  "data": "2026-11-06T00:13:26Z",
+  "sha256": "68e667a1c425297f1ef5e439b4ea21f093b8aebce720c8e6722a0412ae5c4a3b",
+  "bytes": 373081,
   "casos": {
     "total": 63,
     "sha256": "0a4482949fc5e778bf7b02654eda5558239549c309f917f4c3afe8fcd8b622f4"
   },
   "origem": {
-    "graphe_sha256": "11804cc2194a80ab7808d63fa042d4c7270bc5f812144625debf87bf73f52791",
+    "graphe_sha256": "5db12ad39ad5bb97d9a0aa7e0937a19c2d77fe109a323cb0407e470a49040943",
     "pipeline_sha256": "10f13457937b8ff99ade9e6911ee61ffc74ee0c869bf5d2d26c4729dd2c41155"
   }
 }

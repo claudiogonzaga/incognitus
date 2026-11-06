@@ -1,7 +1,7 @@
 [package]
 name = "skia"
-version = "0.1.0"
-description = "Σκιά · Skiá — anonimização de PDFs em lote com o motor do Graphé"
+version = "0.2.0"
+description = "Skiá — anonimização de PDFs em lote com o motor do Graphé"
 edition = "2021"
 publish = false
 
@@ -25,6 +25,7 @@ pdf-writer = "0.12"
 subsetter = "0.2"
 ttf-parser = "0.25"
 flate2 = "1"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -1,11 +1,13 @@
-//! Σκιά · Skiá — anonimização de PDFs em lote, no computador, com o motor de anonimização do Graphé.
-//! O Rust cuida do que é do sistema: os sidecars (pdftotext, pdftoppm, tesseract), a cópia temporária de cada PDF, a
-//! gravação da saída (PDF, .txt e mapa) e o motor em uso (embutido ou baixado e assinado). A anonimização em si roda no
-//! front, num Web Worker, com o motor.js. Nada sai do computador: a única conexão é a checagem das regras (só leitura
-//! do repositório público skia-motor), que os Ajustes desligam.
+//! Skiá — anonimização de PDFs em lote, no computador, com o motor de anonimização do Graphé, e a reidentificação das
+//! minutas com o mapa. O Rust cuida do que é do sistema: os sidecars (pdftotext, pdftoppm, tesseract), a cópia temporária
+//! de cada PDF, a gravação da saída (PDF, .txt e mapa), a leitura e a gravação das minutas (reid.rs) e o motor em uso
+//! (embutido ou baixado e assinado). A anonimização e a reidentificação rodam no front, num Web Worker, com o motor.js.
+//! Nada sai do computador: a única conexão é a checagem das regras (só leitura do repositório público skia-motor), que
+//! os Ajustes desligam.
 mod ferramentas;
 mod motor;
 mod pdf;
+mod reid;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -244,6 +246,55 @@ fn expandir_caminhos(caminhos: Vec<String>) -> Vec<String> {
     v
 }
 
+// ── reidentificação ────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// O texto de um arquivo (o mapa .json, uma minuta .txt ou .md).
+#[tauri::command]
+async fn ler_texto(caminho: String) -> Result<String, String> {
+    em_segundo_plano(move || reid::ler_texto(Path::new(&caminho))).await
+}
+
+/// As partes com texto de uma minuta .docx, para o front trocar os tokens.
+#[tauri::command]
+async fn docx_partes(caminho: String) -> Result<Vec<reid::Parte>, String> {
+    em_segundo_plano(move || reid::docx_partes(Path::new(&caminho))).await
+}
+
+#[derive(Deserialize)]
+struct PedidoReid {
+    origem: String,
+    titulo: String,
+    texto: Option<String>,
+    partes: Option<Vec<reid::Parte>>,
+}
+
+/// A minuta reidentificada, ao lado da original, com "(reidentificado)" no nome; a original não muda.
+#[tauri::command]
+async fn gravar_reidentificado(pedido: PedidoReid) -> Result<String, String> {
+    em_segundo_plano(move || {
+        let origem = PathBuf::from(&pedido.origem);
+        let dir = origem.parent().ok_or("a minuta não tem pasta")?.to_path_buf();
+        let ext = origem.extension().map(|x| format!(".{}", x.to_string_lossy().to_lowercase())).unwrap_or_default();
+        let destino = livre(&dir, &format!("{} (reidentificado)", reid::nome_seguro(&pedido.titulo)), &ext, |_| false);
+        if mesmo_arquivo(&destino, &origem) || destino == origem {
+            return Err("a cópia reidentificada tomaria o lugar da original".into());
+        }
+        match (&pedido.partes, &pedido.texto) {
+            (Some(p), _) => reid::docx_gravar(&origem, &destino, p)?,
+            (None, Some(t)) => gravar_atomico(&destino, t.as_bytes())?,
+            _ => return Err("nada para gravar".into()),
+        }
+        Ok(destino.to_string_lossy().to_string())
+    })
+    .await
+}
+
+/// O texto reidentificado, no arquivo que o usuário escolheu ("Salvar como .txt…").
+#[tauri::command]
+async fn gravar_texto(caminho: String, texto: String) -> Result<(), String> {
+    em_segundo_plano(move || gravar_atomico(Path::new(&caminho), texto.as_bytes())).await
+}
+
 #[tauri::command]
 fn revelar(caminho: String) -> Result<(), String> {
     let p = PathBuf::from(&caminho);
@@ -340,7 +391,10 @@ fn e2e_fim(app: tauri::AppHandle, relatorio: String) -> Result<(), String> {
     let (_, v) = plano_e2e().ok_or("fora do modo de teste")?;
     let p = PathBuf::from(v["relatorio"].as_str().ok_or("plano sem relatório")?);
     std::fs::write(p, relatorio).map_err(|e| e.to_string())?;
-    app.exit(0);
+    // "manter": a janela fica aberta no fim (para a foto do README); senão, o app sai.
+    if !v["manter"].as_bool().unwrap_or(false) {
+        app.exit(0);
+    }
     Ok(())
 }
 
@@ -382,6 +436,10 @@ pub fn run() {
             pasta_padrao,
             listar_pdfs,
             expandir_caminhos,
+            ler_texto,
+            docx_partes,
+            gravar_reidentificado,
+            gravar_texto,
             revelar,
             ajustes_ler,
             ajustes_gravar,
