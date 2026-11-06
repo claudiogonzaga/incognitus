@@ -40,7 +40,7 @@ def main():
     os.makedirs(tmp)
     conf = os.path.join(trab, "fonts.conf")
     dirs = "<dir>WINDOWSFONTDIR</dir>" if WIN else "<dir>/System/Library/Fonts</dir><dir>/Library/Fonts</dir>"
-    open(conf, "w").write(f'<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">\n'
+    open(conf, "w", encoding="utf-8").write(f'<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">\n'
                           f"<fontconfig>{dirs}<cachedir>{os.path.join(trab, 'fc')}</cachedir></fontconfig>\n")
     env = dict(os.environ, FONTCONFIG_FILE=conf, OMP_THREAD_LIMIT="1", TMPDIR=tmp, TMP=tmp, TEMP=tmp)
     if WIN:

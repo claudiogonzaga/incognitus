@@ -402,6 +402,13 @@ fn e2e_fim(app: tauri::AppHandle, relatorio: String) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Modo de teste com um plano que não abre (JSON em UTF-8): para já, com o motivo, em vez de abrir como app normal.
+    if let Some(p) = std::env::var_os("SKIA_E2E") {
+        if plano_e2e().is_none() {
+            eprintln!("[skia] SKIA_E2E: o plano {} não abre como JSON em UTF-8", PathBuf::from(p).display());
+            std::process::exit(2);
+        }
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {

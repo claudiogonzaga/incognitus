@@ -103,7 +103,7 @@ def publicar_motor_teste(pasta, adulterar=False):
 
 def rodar_app(plano, url_motor, dados):
     caminho = os.path.join(SAIDA, "plano-" + uuid.uuid4().hex[:6] + ".json")
-    json.dump(plano, open(caminho, "w"), ensure_ascii=False)
+    json.dump(plano, open(caminho, "w", encoding="utf-8"), ensure_ascii=False)
     env = dict(os.environ, SKIA_E2E=caminho, SKIA_DADOS=dados, SKIA_MOTOR_URL=url_motor)
     t0 = time.time()
     r = subprocess.run([EXE], env=env, capture_output=True, timeout=900)
