@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Skiá — gera o ícone (figura negra sobre terracota, como os outros apps da família): uma mão grega
-segura o guarda-sol grego (skiádeion), e a sombra dele esconde o meio das linhas da página — o nome sai, a forma fica.
+faz sombra sobre a inscrição de uma coluna jônica e esconde o meio das linhas — o nome sai, a forma fica.
 A moldura de meandro é a do Phylax (mac/icon/gerar_icone.py).
 Uso: python3 scripts/icone/gerar_icone.py  →  scripts/icone/skia.svg e scripts/icone/icone.png (rsvg-convert)
 Depois: npx tauri icon scripts/icone/icone.png
@@ -77,112 +77,139 @@ def caminhos(ds):
     return "".join(f'<path d="{d}"/>' for d in ds)
 
 
-# ── o guarda-sol grego (skiádeion, "o que faz sombra", da mesma raiz de skiá), seguro por uma mão ──────────────────
-# Coordenadas locais: o punho em (0,0), a haste para cima (-y); o grupo todo gira em volta do punho.
-def cupula(R, H, n=8, franja=22):
-    """A cúpula aberta para baixo, como a dos vasos: o ápice em (0,0), a borda reta em y=H e a franja de pontas."""
-    xs = [-R + 2 * R * k / n for k in range(n + 1)]
-    d = f"M {-R},{H} C {-R * 0.92:.1f},{H * 0.52:.1f} {-R * 0.42:.1f},{H * 0.06:.1f} 0,0 C {R * 0.42:.1f},{H * 0.06:.1f} {R * 0.92:.1f},{H * 0.52:.1f} {R},{H}"
-    m = 2 * n
-    for k in range(m):
-        xa, xb = R - 2 * R * k / m, R - 2 * R * (k + 1) / m
-        d += f" L {xa:.1f},{H} L {(xa + xb) / 2:.1f},{H + franja} L {xb:.1f},{H}"
-    return d + " Z", xs
-
-
-def guarda_sol(p):
-    R, H, L = p["raio"], p["altura"], p["haste"]
-    dome, xs = cupula(R, H)
-    ty = -L - H                                         # o ápice
-    varetas = " ".join(f"M {x * 0.08:.1f},{ty + 16} L {x * 0.97:.1f},{ty + H - 4}" for x in xs[1:-1])
-    faixa = f"M {-R * 0.93:.1f},{ty + H * 0.70:.1f} Q 0,{ty + H * 0.52:.1f} {R * 0.93:.1f},{ty + H * 0.70:.1f}"
-    pontos = "".join(f'<circle cx="{x * 0.94:.1f}" cy="{ty + H * 0.86 - 0.10 * H * (1 - (x / R) ** 2):.1f}" r="4.4" fill="{BG}"/>'
-                     for x in [-R + 2 * R * (k + 0.5) / 12 for k in range(12)])
-    return (f'<rect x="-9" y="{ty - 10}" width="18" height="{L + H + 70}" rx="9" fill="{INK}"/>'          # a haste
-            f'<circle cx="0" cy="{ty - 20}" r="14" fill="{INK}"/>'                                           # o remate
-            f'<path d="{dome}" transform="translate(0,{ty})" fill="{INK}" stroke="{BG}" stroke-width="10" paint-order="stroke"/>'
-            f'<path d="{varetas}" {inc} stroke-width="5"/>'
-            f'<path d="{faixa}" {inc} stroke-width="5"/>{pontos}')
-
-
-# o punho fechado em volta da haste (local, gira com ela): o polegar por cima, os nós dos dedos à direita
-PUNHO = ("M -50,-30 C -40,-58 -6,-66 22,-62 C 40,-60 54,-52 60,-40 C 70,-32 72,-16 66,-8 "
-         "C 74,2 74,18 66,26 C 72,36 70,50 58,56 C 44,66 20,70 -6,68 C -30,66 -52,54 -58,34 C -62,14 -58,-12 -50,-30 Z")
-PUNHO_INCISOES = [
-    "M -40,-40 C -14,-56 18,-56 40,-44 C 50,-38 52,-28 44,-22 C 30,-16 8,-20 -8,-26",          # o polegar
-    "M 34,-8 C 46,-8 56,-6 64,-6", "M 34,18 C 46,18 56,20 64,22", "M 30,42 C 42,44 50,46 58,50",  # os dedos
+# ── a mão (direita, palma para baixo, os dedos um pouco curvos; o polegar do lado de quem olha) ──────────────────
+# Coordenadas locais: o pulso em (0,0), os dedos para -x, y para baixo. No ícone ela vem espelhada, da esquerda.
+MAO = ("M 150,-52 C 105,-50 50,-46 10,-44 "
+       "C -20,-52 -60,-62 -100,-60 C -130,-58 -150,-54 -165,-50 "            # dorso até os nós dos dedos
+       "C -210,-42 -250,-30 -274,-12 "                                       # o indicador, por cima
+       "C -290,0 -296,14 -286,22 "                                           # ponta do indicador
+       "C -300,30 -302,44 -290,50 "                                          # ponta do médio, mais dobrado
+       "C -284,54 -276,54 -268,52 "
+       "C -276,60 -272,70 -260,72 "                                          # ponta do anelar
+       "C -246,74 -232,68 -222,64 "
+       "C -200,60 -172,56 -152,56 "                                          # por baixo dos dedos, até o vão
+       "C -170,68 -196,82 -214,92 "                                          # o polegar, por cima
+       "C -230,100 -232,114 -218,118 "                                       # ponta do polegar
+       "C -196,122 -160,112 -128,102 "                                       # o polegar, por baixo
+       "C -90,92 -45,72 4,58 "                                               # a palma
+       "C 50,60 100,62 150,62 Z")
+MAO_INCISOES = [
+    "M -170,-22 C -215,-14 -258,0 -284,20",                  # indicador | médio
+    "M -176,4 C -220,14 -258,28 -280,46",                    # médio | anelar
+    "M -182,30 C -215,40 -240,52 -258,66",                   # anelar | mínimo
+    "M -270,-16 C -262,-10 -258,-2 -259,6",                  # unha do indicador
+    "M -222,-38 C -216,-30 -214,-22 -218,-14",               # dobra do indicador
+    "M -152,56 C -126,66 -98,72 -66,74",                     # monte do polegar
+    "M -208,94 C -200,100 -198,108 -202,115",                # unha do polegar
+    "M -18,-40 C -60,-44 -100,-44 -140,-38",                 # tendão no dorso
+]
+# a manga (o quíton), com a barra pontilhada no punho e as dobras
+MANGA = ("M 140,-74 C 220,-92 360,-118 520,-140 L 530,160 C 380,136 240,104 140,80 "
+         "C 126,36 124,-30 140,-74 Z")
+MANGA_INCISOES = [
+    "M 170,-78 C 158,-28 158,30 170,84",                     # a barra do punho
+    "M 214,-44 C 300,-58 400,-74 500,-88",
+    "M 210,-8 C 300,-14 400,-18 510,-22",
+    "M 208,28 C 300,34 400,42 512,50",
+    "M 214,62 C 300,76 400,92 500,108",
 ]
 
 
-def braco(X, Y):
-    """O antebraço que sobe da borda de baixo até o punho, com a pulseira e a manga do quíton (sem girar)."""
-    ante = f"M {X - 46},{Y + 30} C {X - 20},{Y + 50} {X + 14},{Y + 52} {X + 34},{Y + 44} L {X + 44},{Y + 170} L {X - 60},{Y + 170} Z"
-    manga = (f"M {X - 74},{Y + 150} C {X - 30},{Y + 140} {X + 30},{Y + 140} {X + 62},{Y + 150} "
-             f"L {X + 96},{Y + 330} L {X - 120},{Y + 330} Z")
-    dobras = [f"M {X - 40},{Y + 192} L {X - 70},{Y + 320}", f"M {X - 6},{Y + 194} L {X - 12},{Y + 320}",
-              f"M {X + 28},{Y + 192} L {X + 48},{Y + 320}"]
-    barra = f"M {X - 70},{Y + 172} C {X - 30},{Y + 164} {X + 30},{Y + 164} {X + 64},{Y + 172}"
-    pulseira = (f"M {X - 52},{Y + 96} C {X - 20},{Y + 92} {X + 14},{Y + 92} {X + 40},{Y + 96} "
-                f"M {X - 54},{Y + 120} C {X - 20},{Y + 116} {X + 14},{Y + 116} {X + 41},{Y + 120}")
-    pontos = "".join(f'<circle cx="{X - 40 + 19 * k}" cy="{Y + 107}" r="4.4" fill="{BG}"/>' for k in range(5))
-    return (f'<path d="{manga}" fill="{INK}" stroke="{BG}" stroke-width="10" paint-order="stroke"/>'
-            f'<g {inc} stroke-width="6">{caminhos(dobras + [barra])}</g>'
-            f'<path d="{ante}" fill="{INK}" stroke="{BG}" stroke-width="10" paint-order="stroke"/>'
-            f'<path d="{pulseira}" {inc} stroke-width="5"/>{pontos}')
+def mao(t):
+    pulseira = (f'<path d="M 24,-45 C 33,-16 33,20 26,57" {inc} stroke-width="5.5"/>'
+                f'<path d="M 46,-47 C 55,-16 55,20 48,59" {inc} stroke-width="5.5"/>'
+                + "".join(f'<circle cx="{37 + 1.0 * k}" cy="{-30 + 19 * k}" r="4.6" fill="{BG}"/>' for k in range(5)))
+    pontos = "".join(f'<circle cx="{154 - 0.04 * (v + 60)}" cy="{v}" r="4.6" fill="{BG}"/>' for v in range(-60, 76, 17))
+    return (f'<g transform="{t}">'
+            f'<path d="{MANGA}" fill="{INK}" stroke="{BG}" stroke-width="10" paint-order="stroke"/>'
+            f'<g {inc} stroke-width="6">{caminhos(MANGA_INCISOES)}</g>{pontos}'
+            f'<path d="{MAO}" fill="{INK}" stroke="{BG}" stroke-width="12" paint-order="stroke"/>'
+            f'<g {inc} stroke-width="5.5">{caminhos(MAO_INCISOES)}</g>'
+            f'{pulseira}</g>')
 
 
 def pose(p):
-    x, y, a = p["mao"]
-    return f"translate({x},{y}) rotate({a})"
+    x, y, a, e = p["mao"]
+    return f"translate({x},{y}) rotate({a}) scale({-e},{e})"
 
 
-def segurando(p):
-    x, y, _ = p["mao"]
-    return (f'<g transform="{pose(p)}">' + guarda_sol(p) + '</g>' + braco(x, y)
-            + f'<g transform="{pose(p)}"><path d="{PUNHO}" fill="{INK}" stroke="{BG}" stroke-width="10" paint-order="stroke"/>'
-            + f'<g {inc} stroke-width="5.5">{caminhos(PUNHO_INCISOES)}</g></g>')
+# ── a coluna jônica, com a inscrição no fuste ───────────────────────────────────────────────────────────────────
+def voluta(cx, cy, r, lado):
+    """A voluta do capitel: o disco negro com a espiral incisa, enrolando para dentro (lado: -1 esquerda, 1 direita)."""
+    pts = []
+    for k in range(161):
+        u = k / 160
+        a = math.pi * (0.5 + 5.0 * u)
+        rr = r * (0.78 - 0.58 * u)
+        pts.append((cx + lado * rr * math.cos(a), cy - rr * math.sin(a)))
+    espiral = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    return (f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{INK}"/>'
+            f'<path d="{espiral}" {inc} stroke-width="5"/>'
+            f'<circle cx="{cx}" cy="{cy}" r="{r * 0.16:.1f}" fill="{BG}"/>')
 
 
-def folha(p):
-    """A página, com a orelha dobrada no canto, e as linhas do texto."""
-    x0, y0, x1, y1 = p["folha"]
-    o = 74
-    contorno = f"M {x0},{y0} L {x1 - o},{y0} L {x1},{y0 + o} L {x1},{y1} L {x0},{y1} Z"
-    orelha = f"M {x1 - o},{y0} L {x1 - o},{y0 + o} L {x1},{y0 + o}"
-    sorte = random.Random(5)
-    linhas = []
-    for n, y in enumerate(p["linhas"]):
-        x, fim = x0 + 34, x1 - 34 - (o if y < y0 + o + 10 else 0) - (110 if n == len(p["linhas"]) - 1 else 0)
-        while x < fim - 20:
-            w = min(sorte.choice([30, 42, 56, 70, 86]), fim - x)
-            if w > 14:
-                linhas.append(f"M {x},{y} L {x + w},{y}")
-            x += w + 22
-    texto = f'<path d="{" ".join(linhas)}" fill="none" stroke="{INK}" stroke-width="{p["grossura"]}" stroke-linecap="round"/>'
-    return contorno, orelha, texto
+def coluna(p):
+    cx, y0, y1 = p["coluna"]                         # o eixo, o alto do fuste e o pé do fuste
+    lt, lb = p["fuste"]                              # meia-largura do fuste em cima e embaixo (a êntase)
+    fuste = f"M {cx - lt},{y0} L {cx + lt},{y0} L {cx + lb},{y1} L {cx - lb},{y1} Z"
+    # caneluras curtas no alto e no pé do fuste; no meio, a faixa lisa da inscrição
+    can = []
+    for k in range(-3, 4):
+        if k == 0:
+            continue
+        xt, xb = cx + k * lt / 3.6, cx + k * lb / 3.6
+        can.append(f"M {xt:.1f},{y0 + 8} L {xt + (xb - xt) * 0.16:.1f},{y0 + 72}")
+        can.append(f"M {xt + (xb - xt) * 0.84:.1f},{y1 - 72} L {xb:.1f},{y1 - 8}")
+    lin_can = (f'<path d="{" ".join(can)}" stroke="{INK}" stroke-width="7" stroke-linecap="round"/>'
+               f'<path d="M {cx - lt + 6},{y0 + 90} L {cx + lt - 6},{y0 + 90} M {cx - lb + 6},{y1 - 90} L {cx + lb - 6},{y1 - 90}" stroke="{INK}" stroke-width="6"/>')
+    k = lt / 112                                     # o capitel acompanha a largura do fuste
+    ab, vx, vr = 176 * k, 150 * k, 46 * k
+    ova = "".join(f'<ellipse cx="{cx + j * 30 * k:.1f}" cy="{y0 - 52 * k:.1f}" rx="{10 * k:.1f}" ry="{14 * k:.1f}" fill="{BG}"/>' for j in range(-3, 4))
+    capitel = (f'<rect x="{cx - ab:.1f}" y="{y0 - 118 * k:.1f}" width="{2 * ab:.1f}" height="{26 * k:.1f}" rx="4" fill="{INK}"/>'   # o ábaco
+               f'<path d="M {cx - vx:.1f},{y0 - 92 * k:.1f} L {cx + vx:.1f},{y0 - 92 * k:.1f} C {cx + 128 * k:.1f},{y0 - 50 * k:.1f} {cx + 120 * k:.1f},{y0 - 22 * k:.1f} {cx + lt + 6},{y0 - 12} '
+               f'L {cx - lt - 6},{y0 - 12} C {cx - 120 * k:.1f},{y0 - 22 * k:.1f} {cx - 128 * k:.1f},{y0 - 50 * k:.1f} {cx - vx:.1f},{y0 - 92 * k:.1f} Z" fill="{INK}"/>'
+               + ova + voluta(cx - vx, y0 - 52 * k, vr, -1) + voluta(cx + vx, y0 - 52 * k, vr, 1)
+               + f'<rect x="{cx - lt - 4}" y="{y0 - 14}" width="{2 * lt + 8}" height="14" fill="{INK}"/>')
+    base = (f'<rect x="{cx - lb - 18}" y="{y1}" width="{2 * lb + 36}" height="30" rx="15" fill="{INK}"/>'
+            f'<rect x="{cx - lb - 34}" y="{y1 + 32}" width="{2 * lb + 68}" height="34" rx="4" fill="{INK}"/>'
+            f'<path d="M {cx - lb - 6},{y1 + 15} L {cx + lb + 6},{y1 + 15}" {inc} stroke-width="5"/>')
+    return fuste, lin_can, capitel, base
+
+
+def inscricao(p):
+    cx, y0, y1 = p["coluna"]
+    lt, lb = p["fuste"]
+    sorte = random.Random(11)
+    out = []
+    for y in p["linhas"]:
+        meia = lt + (lb - lt) * (y - y0) / (y1 - y0) - 26
+        x, fim = cx - meia, cx + meia
+        while x < fim - 12:
+            w = min(sorte.choice([22, 30, 40, 52, 64]), fim - x)
+            if w > 10:
+                out.append(f"M {x:.1f},{y} L {x + w:.1f},{y}")
+            x += w + 18
+    return f'<path d="{" ".join(out)}" fill="none" stroke="{INK}" stroke-width="{p["grossura"]}" stroke-linecap="round"/>'
 
 
 def figura(p):
-    contorno, orelha, texto = folha(p)
-    R, H, L = p["raio"], p["altura"], p["haste"]
-    dome, _ = cupula(R * 1.06, H * 0.96)
+    fuste, lin_can, capitel, base = coluna(p)
     dx, dy = p["sombra"]
-    # a sombra da cúpula sobre a página: a mesma cúpula, deslocada (a luz vem do alto, à esquerda), só dentro da folha
-    sombra = (f'<clipPath id="f"><path d="{contorno}"/></clipPath>'
+    # a sombra da mão sobre o fuste: a mesma mão, deslocada (a luz vem do alto, à esquerda), só dentro do fuste
+    sombra = (f'<clipPath id="f"><path d="{fuste}"/></clipPath>'
               f'<g clip-path="url(#f)"><g transform="translate({dx},{dy}) {pose(p)}">'
-              f'<path d="{dome}" transform="translate(0,{-L - H})" fill="{INK}"/></g></g>')
-    pagina = (f'<path d="{contorno}" fill="none" stroke="{INK}" stroke-width="12" stroke-linejoin="round"/>'
-              f'<path d="{orelha}" fill="none" stroke="{INK}" stroke-width="10" stroke-linejoin="round"/>')
-    return texto + sombra + pagina + segurando(p)
+              f'<path d="{MAO}" fill="{INK}"/><path d="{MANGA}" fill="{INK}"/></g></g>')
+    contorno = f'<path d="{fuste}" fill="none" stroke="{INK}" stroke-width="12" stroke-linejoin="round"/>'
+    return inscricao(p) + lin_can + sombra + contorno + capitel + base + mao(pose(p))
 
 
 P = dict(
-    folha=(470, 404, 840, 872),          # x0, y0, x1, y1 da página
-    linhas=(470, 520, 570, 620, 670, 720, 770, 820),
-    grossura=15,
-    mao=(240, 690, 20),                   # o punho (x, y) e o giro da haste
-    raio=180, altura=120, haste=330,      # a cúpula (meia-largura, altura) e a haste do punho até a borda
-    sombra=(240, 220),
+    coluna=(612, 326, 806),              # o eixo da coluna, o alto e o pé do fuste
+    fuste=(124, 136),                    # meia-largura do fuste em cima e embaixo
+    linhas=(450, 492, 534, 576, 618, 660, 702),
+    grossura=13,
+    mao=(168, 420, -6, 1.08),             # o pulso (x, y), o giro e a escala da mão (que vem da esquerda)
+    sombra=(206, 170),                   # deslocamento da sombra sobre o fuste (a luz vem do alto, à esquerda)
 )
 
 

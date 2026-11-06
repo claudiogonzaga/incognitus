@@ -160,9 +160,9 @@ Nunca use dados reais de processos em testes, exemplos, commits ou logs.
   e do SmartScreen (ver "Como abrir"). Ao assinar e notarizar no Mac, religar o *hardened runtime* exige também assinar
   as dylibs dos sidecars com a mesma equipe (ou o direito `com.apple.security.cs.disable-library-validation`).
 - **Licença** do próprio Skiá e do motor publicado: não definida.
-- **Ícone** (06/11/2026): uma mão segura o guarda-sol grego — o *skiádeion*, "o que faz sombra", da mesma raiz de
-  skiá — e a sombra dele cai sobre a página e esconde as linhas; moldura de meandro do Phylax. Gerado por
-  `scripts/icone/gerar_icone.py` (SVG → PNG pelo `rsvg-convert`). Aguarda o aceite do Promotor.
+- **Ícone** (06/11/2026, a pedido do Promotor): uma mão grega faz sombra sobre a inscrição de uma coluna jônica, e a
+  sombra esconde o meio das linhas; moldura de meandro do Phylax. Gerado por `scripts/icone/gerar_icone.py` (SVG → PNG
+  pelo `rsvg-convert`).
 - No Windows, o teste de ponta a ponta roda no CI (instalando o `.msi`); a instalação de um motor assinado só é testada
   onde está a chave privada (aqui), lá só a recusa de assinatura inválida.
 
