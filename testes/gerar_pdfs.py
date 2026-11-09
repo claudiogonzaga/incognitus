@@ -30,6 +30,16 @@ PESSOAS = {
 IDENT = {"cpf": "123.456.789-09", "tel": "99876-5432", "rg": "23456789", "nasc": "03/04/1991", "rua": "Rua das Mangueiras Fictícias"}
 # Servidores e autoridades ficam em claro por regra do motor (também fictícios).
 AUTORIDADES = ["ROBERVAL FICTICIO SILVA"]
+# O rodapé que o PJe põe no PDF: quem assina e quem gerou o PDF (CPF mascarado). Saem da saída como "[omitido]".
+ASSINANTE = "TESTEJUIZA HELENA FICTICIA MOURA"
+USUARIO_PJE = "987.***.***-21"
+RODAPE_PJE = [
+    f"Assinado eletronicamente por: {ASSINANTE} - 15/03/2026 17:21:45",
+    "https://pje.tjmt.jus.br:443/pje/Processo/ConsultaDocumento/listView.seam?x=26031517214512300000001234567",
+    "Número do documento: 26031517214512300000001234567",
+    "Num. 1234567 - Pág. 1",
+    f"Este documento foi gerado pelo usuário {USUARIO_PJE} em 09/11/2026 10:00:00",
+]
 
 CAPA = [
     "PODER JUDICIÁRIO DO ESTADO DE MATO GROSSO",
@@ -92,21 +102,26 @@ ESCANEADA2 = [
 ]
 
 
-def pagina_texto(c, linhas):
+def pagina_texto(c, linhas, rodape=None):
     y = A4[1] - 60
     for l in linhas:
         c.setFont("Helvetica", 11)
         c.drawString(56, y, l)
         y -= 16
+    y = 90
+    for l in rodape or []:
+        c.setFont("Helvetica", 7)
+        c.drawString(56, y, l)
+        y -= 10
     c.showPage()
 
 
-def pdf_texto(paginas):
+def pdf_texto(paginas, rodapes=None):
     b = io.BytesIO()
     c = canvas.Canvas(b, pagesize=A4)
     c.setTitle("teste ficticio")
-    for p in paginas:
-        pagina_texto(c, p)
+    for k, p in enumerate(paginas):
+        pagina_texto(c, p, (rodapes or {}).get(k))
     c.save()
     return b.getvalue()
 
@@ -144,7 +159,7 @@ def pdf_imagens(paginas_imagem):
 
 def main():
     os.makedirs(PASTA, exist_ok=True)
-    open(os.path.join(PASTA, "texto.pdf"), "wb").write(pdf_texto([CAPA, DEPOIMENTO, DESPACHO]))
+    open(os.path.join(PASTA, "texto.pdf"), "wb").write(pdf_texto([CAPA, DEPOIMENTO, DESPACHO], {2: RODAPE_PJE}))
     pdf_imagens([imagem_pagina(ESCANEADA1), imagem_pagina(ESCANEADA2)]).save(os.path.join(PASTA, "escaneado.pdf"))
     misto = fitz.open(stream=pdf_texto([CAPA]), filetype="pdf")
     misto.insert_pdf(pdf_imagens([imagem_pagina(ESCANEADA1)]))

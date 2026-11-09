@@ -1,8 +1,8 @@
-//! Skiá — anonimização de PDFs em lote, no computador, com o motor de anonimização do Graphé, e a reidentificação das
+//! Incognitus — anonimização de PDFs em lote, no computador, com o motor de anonimização do Graphé, e a reidentificação das
 //! minutas com o mapa. O Rust cuida do que é do sistema: os sidecars (pdftotext, pdftoppm, tesseract), a cópia temporária
 //! de cada PDF, a gravação da saída (PDF, .txt e mapa), a leitura e a gravação das minutas (reid.rs) e o motor em uso
 //! (embutido ou baixado e assinado). A anonimização e a reidentificação rodam no front, num Web Worker, com o motor.js.
-//! Nada sai do computador: a única conexão é a checagem das regras (só leitura do repositório público skia-motor), que
+//! Nada sai do computador: a única conexão é a checagem das regras (só leitura do repositório público incognitus-motor), que
 //! os Ajustes desligam.
 mod ferramentas;
 mod motor;
@@ -16,8 +16,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{Manager, State};
 
-const PASTA_SAIDA: &str = "Skiá — anonimizados";
-const MARCA_PRODUTOR: &[u8] = b"/Producer (Skia ";
+const PASTA_SAIDA: &str = "Incognitus — anonimizados";
+const MARCA_PRODUTOR: &[u8] = b"/Producer (Incognitus ";
+const MARCA_ANTIGA: &[u8] = b"/Producer (Skia ";   // as saídas de antes do nome novo (até a 0.2.0)
 
 struct Interno {
     ferramentas: ferramentas::Ferramentas,
@@ -148,7 +149,7 @@ fn mesmo_arquivo(a: &Path, b: &Path) -> bool {
     }
 }
 
-/// O nome livre: o próprio, se não existe ou se é saída do Skiá; senão "nome (2).ext", "nome (3).ext"…
+/// O nome livre: o próprio, se não existe ou se é saída do Incognitus; senão "nome (2).ext", "nome (3).ext"…
 fn livre(dir: &Path, base: &str, ext: &str, eh_nosso: impl Fn(&Path) -> bool) -> PathBuf {
     let p = dir.join(format!("{base}{ext}"));
     if !p.exists() || eh_nosso(&p) {
@@ -157,11 +158,13 @@ fn livre(dir: &Path, base: &str, ext: &str, eh_nosso: impl Fn(&Path) -> bool) ->
     (2..).map(|n| dir.join(format!("{base} ({n}){ext}"))).find(|q| !q.exists() || eh_nosso(q)).unwrap()
 }
 
-fn pdf_do_skia(p: &Path) -> bool {
-    std::fs::read(p).map(|b| b.windows(MARCA_PRODUTOR.len()).any(|w| w == MARCA_PRODUTOR)).unwrap_or(false)
+fn pdf_nosso(p: &Path) -> bool {
+    std::fs::read(p)
+        .map(|b| [MARCA_PRODUTOR, MARCA_ANTIGA].iter().any(|m| b.windows(m.len()).any(|w| w == *m)))
+        .unwrap_or(false)
 }
 
-fn txt_do_skia(p: &Path) -> bool {
+fn txt_nosso(p: &Path) -> bool {
     std::fs::read(p).map(|b| String::from_utf8_lossy(&b[..b.len().min(400)]).contains("AUTOS ANONIMIZADOS")).unwrap_or(false)
 }
 
@@ -182,17 +185,17 @@ async fn gravar_saida(pedido: PedidoSaida) -> Result<Gravado, String> {
             Some(k) if k > 0 => (nome[..k].to_string(), nome[k..].to_string()),
             _ => (nome.clone(), ".pdf".to_string()),
         };
-        let destino_pdf = livre(&dir, &base, &ext, pdf_do_skia);
+        let destino_pdf = livre(&dir, &base, &ext, pdf_nosso);
         if mesmo_arquivo(&destino_pdf, &origem) || destino_pdf == origem {
             return Err("a pasta de saída é a dos originais: o anonimizado teria o mesmo nome e tomaria o lugar do original".into());
         }
-        let produtor = format!("Skia {} - motor de anonimizacao {}", env!("CARGO_PKG_VERSION"), pedido.versao_motor);
+        let produtor = format!("Incognitus {} - motor de anonimizacao {}", env!("CARGO_PKG_VERSION"), pedido.versao_motor);
         let r = pdf::gerar(&pedido.cabecalho, &pedido.paginas, &produtor)?;
         gravar_atomico(&destino_pdf, &r.bytes)?;
         let base_final = destino_pdf.file_stem().unwrap().to_string_lossy().to_string();
         let mut txt = None;
         if let Some(t) = &pedido.texto {
-            let p = livre(&dir, &base_final, ".txt", txt_do_skia);
+            let p = livre(&dir, &base_final, ".txt", txt_nosso);
             if mesmo_arquivo(&p, &origem) {
                 return Err("o .txt tomaria o lugar do original".into());
             }
@@ -216,7 +219,7 @@ fn pasta_padrao(caminho: String) -> String {
     pasta_destino(Path::new(&caminho), &None).to_string_lossy().to_string()
 }
 
-/// Os PDFs de uma pasta (sem descer às subpastas; a de saída do Skiá fica de fora).
+/// Os PDFs de uma pasta (sem descer às subpastas; a de saída do Incognitus fica de fora).
 #[tauri::command]
 fn listar_pdfs(pasta: String) -> Result<Vec<String>, String> {
     let mut v: Vec<String> = std::fs::read_dir(&pasta)
@@ -361,7 +364,7 @@ fn motor_voltar(estado: State<'_, Estado>) -> Result<motor::MotorAtivo, String> 
 /// Erros e marcos do front no stderr (para diagnóstico; nunca leva texto dos autos).
 #[tauri::command]
 fn registrar(msg: String) {
-    eprintln!("[skia] {}", msg.chars().take(500).collect::<String>());
+    eprintln!("[incognitus] {}", msg.chars().take(500).collect::<String>());
 }
 
 // ── teste de ponta a ponta (só com SKIA_E2E apontando para um plano) ──────────────────────────────────────────────
@@ -405,7 +408,7 @@ pub fn run() {
     // Modo de teste com um plano que não abre (JSON em UTF-8): para já, com o motivo, em vez de abrir como app normal.
     if let Some(p) = std::env::var_os("SKIA_E2E") {
         if plano_e2e().is_none() {
-            eprintln!("[skia] SKIA_E2E: o plano {} não abre como JSON em UTF-8", PathBuf::from(p).display());
+            eprintln!("[incognitus] SKIA_E2E: o plano {} não abre como JSON em UTF-8", PathBuf::from(p).display());
             std::process::exit(2);
         }
     }
@@ -461,7 +464,7 @@ pub fn run() {
             e2e_fim
         ])
         .build(tauri::generate_context!())
-        .expect("erro ao montar o Skiá")
+        .expect("erro ao montar o Incognitus")
         .run(|app, ev| {
             if let tauri::RunEvent::Exit = ev {
                 if let Some(e) = app.try_state::<Estado>() {

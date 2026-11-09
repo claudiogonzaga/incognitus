@@ -1,8 +1,8 @@
 {
-  "name": "skia",
-  "version": "0.2.0",
+  "name": "incognitus",
+  "version": "0.3.0",
   "private": true,
-  "description": "Skiá — anonimização de PDFs em lote com o motor do Graphé (Tauri 2)",
+  "description": "Incognitus — anonimização de PDFs em lote com o motor do Graphé (Tauri 2)",
   "scripts": {
     "motor": "node scripts/extrair_motor.mjs",
     "suite": "node scripts/regressao_motor.cjs motor/motor.js",

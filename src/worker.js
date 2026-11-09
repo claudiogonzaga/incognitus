@@ -1,4 +1,4 @@
-// Σκιά · Skiá — o worker do motor. O app monta este worker de um Blob com três partes: o motor.js (o embutido ou o
+// Incognitus — o worker do motor. O app monta este worker de um Blob com três partes: o motor.js (o embutido ou o
 // baixado e conferido), o casos.js e este arquivo. O motor roda aqui, fora da linha da interface: autos de centenas de
 // páginas não travam a janela. Cada pedido: { id, tipo, ... } → { id, ok, r } ou { id, ok: false, erro }.
 self.onmessage = function (ev) {

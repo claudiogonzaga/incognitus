@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Skiá — monta os sidecars do Tauri (pdftotext, pdftoppm, tesseract), as bibliotecas deles, o por.traineddata
+"""Incognitus — monta os sidecars do Tauri (pdftotext, pdftoppm, tesseract), as bibliotecas deles, o por.traineddata
 e as licenças.
 
 Versões: as do serviço do Graphé. O cloudrun-pdftotext é construído de python:3.11-slim (Debian 13): poppler 25.03,
@@ -270,12 +270,12 @@ def licencas(ambientes):
     print(f"licenças: {len(usados)} pacotes em {LIC}")
 
 
-LEIA_ME = """Skiá — componentes de terceiros
+LEIA_ME = """Incognitus — componentes de terceiros
 
-O Skiá chama três programas livres, que vêm dentro do aplicativo e rodam no seu computador:
+O Incognitus chama três programas livres, que vêm dentro do aplicativo e rodam no seu computador:
 pdftotext e pdftoppm (do poppler {poppler}) e tesseract {tesseract}, com o modelo de português
 por.traineddata (tessdata_fast 4.1.0, licença Apache-2.0). Eles são executados como processos separados;
-o Skiá não os altera.
+o Incognitus não os altera.
 
 O POPPLER É SOFTWARE LIVRE SOB A GNU GPL (versão 2 ou, a seu critério, versão 3).
 Código-fonte exato desta versão: https://poppler.freedesktop.org/poppler-{poppler}.tar.xz
@@ -283,7 +283,7 @@ Receita de compilação usada (conda-forge): https://github.com/conda-forge/popp
 O tesseract (Apache-2.0): https://github.com/tesseract-ocr/tesseract/archive/refs/tags/{tesseract}.tar.gz
 e https://github.com/conda-forge/tesseract-feedstock
 O código-fonte de cada biblioteca abaixo está no endereço do pacote (conda-forge) e no projeto de origem.
-Quem recebeu o Skiá pode pedir, a quem o distribuiu, uma cópia do código-fonte correspondente destes componentes,
+Quem recebeu o Incognitus pode pedir, a quem o distribuiu, uma cópia do código-fonte correspondente destes componentes,
 pelo prazo de três anos, sem custo além do meio físico.
 
 Os textos das licenças estão nas pastas ao lado, uma por pacote.

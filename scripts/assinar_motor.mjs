@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Σκιά · Skiá — assina o manifesto do motor com Ed25519.
+// Incognitus — assina o manifesto do motor com Ed25519.
 //   node scripts/assinar_motor.mjs --criar-chave   cria o par de chaves (uma vez): a privada em _segredo/ (fora do git,
 //                                                  permissão 600, nunca impressa); a pública em motor/chave_publica.txt
 //                                                  (vai embutida no app)

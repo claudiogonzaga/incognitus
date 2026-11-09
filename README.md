@@ -1,8 +1,8 @@
-# Skiá
+# Incognitus
 
-*Skiá quer dizer "sombra" em grego: o nome sai, a forma fica.*
+*Incognitus: em latim, "não reconhecido". A pessoa continua nos autos, só não é reconhecida — o nome sai, a forma fica.*
 
-![A janela do Skiá no macOS](docs/janela.png)
+![A janela do Incognitus no macOS](docs/janela.png)
 
 Aplicativo de computador (Mac e Windows) que **anonimiza autos em PDF, em lote**, com o **mesmo motor de anonimização
 do Graphé** — o mesmo fluxo do lote automático (preparar → classificador bayesiano → concluir), as mesmas regras, o
@@ -16,9 +16,9 @@ conexão é a checagem das regras (só leitura de um repositório público), que
 ### Anonimizar
 
 1. **Escolher PDFs…** (vários de uma vez), **Uma pasta…**, ou arrastar PDFs/pastas para a janela.
-2. **Saída**: por padrão, ao lado de cada original, na pasta **`Skiá — anonimizados`**; ou outra pasta à escolha.
+2. **Saída**: por padrão, ao lado de cada original, na pasta **`Incognitus — anonimizados`**; ou outra pasta à escolha.
    O PDF anonimizado sai com o **mesmo nome** do original. O original **nunca** é aberto para escrita: as ferramentas
-   trabalham numa cópia temporária, e o Skiá recusa gravar por cima dele.
+   trabalham numa cópia temporária, e o Incognitus recusa gravar por cima dele.
 3. Opcional: **Gravar também o .txt** (o mesmo texto do Graphé: cabeçalho + `===== PÁGINA n =====`).
 4. **Anonimizar**. Um PDF por vez; a fila mostra cada etapa (extraindo, OCR x/y, anonimizando, gravando, pronto, erro).
    No máximo 2 OCRs ao mesmo tempo, com prioridade baixa. A pasta temporária de cada PDF é apagada ao fim dele.
@@ -31,6 +31,12 @@ conexão é a checagem das regras (só leitura de um repositório público), que
 - O mapa, `… — MAPA (nomes reais).json`, sai **sempre** (pedido do Promotor, 05/11/2026): o dicionário de cada token
   («Thanasis», «REU_01», «CPF_01»…) com o nome ou o dado real, no mesmo formato do mapa do Graphé. É ele que devolve
   os nomes na reidentificação. Tem os **nomes reais**: fica no computador e nunca vai à IA — para a IA vai só o PDF.
+- **Os carimbos do PJe** (pedido do Promotor, 09/11/2026) saem **sem quem assina e sem quem gerou o PDF**:
+  "Assinado eletronicamente por: [omitido] - 05/11/2026 14:32:10", "Este documento foi gerado pelo usuário [omitido]
+  em …"; o pedaço do carimbo que o pdftotext parte em linhas na diagonal some. Também os carimbos do SEI ("documento
+  assinado eletronicamente por [omitido], Promotora de Justiça, …") e da assinatura ICP-Brasil (o CPF junto). Ficam a
+  data, a hora, o número do documento e o "Num. … - Pág.", que a IA usa para citar o ID. No corpo dos autos vale a
+  regra do Graphé: servidores, autoridades e advogados ficam em claro.
 
 ### Reidentificar
 
@@ -57,10 +63,10 @@ Graphé), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar
 
 ## Como abrir (o app ainda não tem assinatura digital)
 
-- **Mac**: abra o `.dmg`, arraste o Skiá para Aplicativos. Na primeira vez, o macOS avisa que não pode verificar o
-  desenvolvedor: clique em **OK**, abra **Ajustes do Sistema → Privacidade e Segurança**, role até "O Skiá foi
+- **Mac**: abra o `.dmg`, arraste o Incognitus para Aplicativos. Na primeira vez, o macOS avisa que não pode verificar o
+  desenvolvedor: clique em **OK**, abra **Ajustes do Sistema → Privacidade e Segurança**, role até "O Incognitus foi
   bloqueado…" e clique em **Abrir Mesmo Assim** (pede a senha). Se aparecer "está danificado", rode uma vez no Terminal:
-  `xattr -dr com.apple.quarantine /Applications/Skiá.app`.
+  `xattr -dr com.apple.quarantine /Applications/Incognitus.app`.
 - **Windows**: rode o `.msi`. Se o SmartScreen avisar "O Windows protegeu o computador", clique em **Mais informações →
   Executar assim mesmo**. (Se o navegador bloquear o download, escolha "Manter".)
 
@@ -82,7 +88,7 @@ Graphé), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar
   autoridades públicas que o motor deixa em claro (`ANON_LISTA_BRANCA_FIXA`) e nos contatos institucionais;
 - **suíte** (`scripts/regressao_motor.cjs`): o `testes/anon/regressao.js` do Graphé (63 casos fictícios), **sem
   alteração**, rodando sobre o `motor.js` num contexto limpo, sem nada do Apps Script; depois os mesmos casos pela
-  API do Skiá — cada um com a **volta**: os autos anonimizados, reidentificados com o próprio mapa, não podem guardar
+  API do Incognitus — cada um com a **volta**: os autos anonimizados, reidentificados com o próprio mapa, não podem guardar
   token nem sobra —, e a paridade caso a caso com o `pipeline.js`. Só aceita o motor com **"0 falhas"** e **63/63**.
 
 ```bash
@@ -92,7 +98,7 @@ node scripts/regressao_motor.cjs          # só a suíte
 
 ### Atualização das regras pelo GitHub
 
-O app baixa as regras de um repositório **público** só com o motor (`claudiogonzaga/skia-motor`, ainda **não
+O app baixa as regras de um repositório **público** só com o motor (`claudiogonzaga/incognitus-motor`, ainda **não
 criado** — ver Pendências): `motor.js`, `manifesto.json` (versão = `ANON_VERSAO`, data, sha256) e
 `manifesto.json.sig` (Ed25519). Ao abrir (se ligado nos Ajustes) e no botão **Atualizar regras**: baixa o manifesto,
 **confere a assinatura** com a chave pública embutida no app (`motor/chave_publica.txt`), compara a versão, baixa o
@@ -151,15 +157,23 @@ e Windows x64 (`.msi`), como artefatos; com tag, também numa Release em rascunh
 
 Nunca use dados reais de processos em testes, exemplos, commits ou logs.
 
-## Pendências (05/11/2026)
+## Pendências (09/11/2026)
 
-- **Repositório público das regras** (`claudiogonzaga/skia-motor`): não criado — espera a confirmação do Promotor, porque o
-  código das regras fica visível a qualquer pessoa. Depois: `gh repo create claudiogonzaga/skia-motor --public` e
+- **Repositório público das regras** (`claudiogonzaga/incognitus-motor`): não criado — espera a confirmação do Promotor, porque o
+  código das regras fica visível a qualquer pessoa. Depois: `gh repo create claudiogonzaga/incognitus-motor --public` e
   `scripts/publicar_motor.sh`. Até lá, o app usa o motor embutido e a checagem ao abrir só não acha nada.
 - **Assinatura digital**: sem Developer ID da Apple nem certificado de código para Windows, ficam os avisos do Gatekeeper
   e do SmartScreen (ver "Como abrir"). Ao assinar e notarizar no Mac, religar o *hardened runtime* exige também assinar
   as dylibs dos sidecars com a mesma equipe (ou o direito `com.apple.security.cs.disable-library-validation`).
-- **Licença** do próprio Skiá e do motor publicado: não definida.
+- **Licença** do próprio Incognitus e do motor publicado: não definida.
+- **Achado no motor do Graphé** (09/11/2026, com texto fictício): quando o vocativo da petição termina em "JUIZ DE
+  DIREITO" ("EXCELENTÍSSIMO SENHOR JUIZ DE DIREITO", mesmo com linha em branco antes do parágrafo seguinte), o nome
+  que abre o parágrafo seguinte fica **em claro** — a regra das autoridades (`ANON_RE_AUTORIDADE_ANTES`) o lê como o
+  nome do juiz. Com a vara depois ("…JUIZ DE DIREITO DA 1ª VARA…") a parte vira token. A correção é no `graphe.js`;
+  depois, `node scripts/extrair_motor.mjs` traz para cá.
+- **Nome**: o app se chamava Skiá até a 0.2.0. O repositório (`claudiogonzaga/skia`) e a pasta (`CODIGO/Skia`) ainda
+  têm o nome antigo; as variáveis de teste (`SKIA_E2E`, `SKIA_DADOS`…) e a API do motor (`SkiaMotor`) também, de
+  propósito (são internas).
 - **Ícone** (06/11/2026, a pedido do Promotor): uma mão grega faz sombra sobre a inscrição de uma coluna jônica, e a
   sombra esconde o meio das linhas; moldura de meandro do Phylax. Gerado por `scripts/icone/gerar_icone.py` (SVG → PNG
   pelo `rsvg-convert`).

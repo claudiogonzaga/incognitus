@@ -1,11 +1,11 @@
-// Skiá — a janela: a fila de PDFs e o fluxo de cada um, igual ao lote automático do Graphé, e a reidentificação.
+// Incognitus — a janela: a fila de PDFs e o fluxo de cada um, igual ao lote automático do Graphé, e a reidentificação.
 //   extrair (pdftotext -layout) → páginas fracas ao OCR (2 de cada vez) → anonimizar (motor, no worker) → gravar
 // Um PDF por vez. A pasta temporária de cada PDF é apagada ao fim dele, com ou sem erro.
 'use strict';
 const T = window.__TAURI__;
 const invoke = T.core.invoke;
 const $ = (id) => document.getElementById(id);
-const avisar = (texto) => T.dialog.message(texto, { title: 'Skiá', kind: 'warning' }).catch(() => {});
+const avisar = (texto) => T.dialog.message(texto, { title: 'Incognitus', kind: 'warning' }).catch(() => {});
 
 const registrar = (m) => invoke('registrar', { msg: String(m) }).catch(() => {});
 window.addEventListener('error', (e) => registrar('erro: ' + e.message + ' @' + e.filename + ':' + e.lineno));
@@ -329,7 +329,7 @@ function desenharReid() {
   $('mapa_info').innerHTML = m
     ? '<b>' + esc(nomeDe(m.caminho)) + '</b><br>' + (/\d{7}-\d{2}\.\d{4}/.test(m.dic.idCaso) ? 'processo ' + esc(m.dic.idCaso) + ' · ' : '') +
       m.dic.pessoas + ' pessoa(s) · ' + m.dic.lista.length + ' token(s)'
-    : 'É o “… — MAPA (nomes reais).json” que o Skiá grava ao lado de cada PDF anonimizado (o mapa do Graphé também serve).';
+    : 'É o “… — MAPA (nomes reais).json” que o Incognitus grava ao lado de cada PDF anonimizado (o mapa do Graphé também serve).';
   $('dicionario').hidden = !m;
   $('dic_tabela').innerHTML = m ? m.dic.lista.map((x) => '<tr><td>' + esc(x.token) + '</td><td>' + esc(x.valor) + '</td><td>' + esc(x.tipo) + '</td></tr>').join('') : '';
   $('bt_minutas').disabled = !m;
@@ -543,7 +543,7 @@ async function iniciar() {
   desenharReid();
   invoke('info_app').then((info) => {
     const f = info.ferramentas;
-    $('ferramentas_info').textContent = 'Skiá ' + info.versao + ' · ' + (f.Ok ? f.Ok.join(' · ') : 'PROBLEMA nas ferramentas: ' + f.Err);
+    $('ferramentas_info').textContent = 'Incognitus ' + info.versao + ' · ' + (f.Ok ? f.Ok.join(' · ') : 'PROBLEMA nas ferramentas: ' + f.Err);
     if (f.Err) avisar('As ferramentas embutidas (pdftotext, pdftoppm, tesseract) não rodaram: ' + f.Err);
   });
   estado.e2e = await invoke('e2e_plano');
@@ -580,4 +580,4 @@ async function testeDePontaAPonta(p) {
   await invoke('e2e_fim', { relatorio: JSON.stringify(rel, null, 1) });
 }
 
-iniciar().catch((e) => { registrar('o Skiá não iniciou: ' + (e.message || e)); document.body.insertAdjacentHTML('afterbegin', '<div class="aviso">O Skiá não iniciou: ' + esc(e.message || e) + '</div>'); });
+iniciar().catch((e) => { registrar('o Incognitus não iniciou: ' + (e.message || e)); document.body.insertAdjacentHTML('afterbegin', '<div class="aviso">O Incognitus não iniciou: ' + esc(e.message || e) + '</div>'); });

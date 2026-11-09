@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Σκιά · Skiá — monta o motor de anonimização (motor/motor.js) a partir do graphe.js do Graphé.
+// Incognitus — monta o motor de anonimização (motor/motor.js) a partir do graphe.js do Graphé.
 //
 // O que entra: SÓ o que o lote automático da anonimização usa — as funções que o testes/anon/pipeline.js do Graphé
-// chama (preparar → classificador → concluir), as que a API do Skiá chama (cabeçalho do anonConcluir, páginas para o
+// chama (preparar → classificador → concluir), as que a API do Incognitus chama (cabeçalho do anonConcluir, páginas para o
 // OCR) e, pelo NOME, tudo de que elas dependem: função que chama função, constante que usa constante, e os comandos
 // soltos que enchem essas constantes. Nada é tirado por número de linha. O que no Graphé vem da planilha e do Apps
 // Script (VARIAVEIS_GLOBAIS, equipe, propriedades, Logger, Utilities) fica de fora: é o motor/fonte/ambiente.js.
@@ -13,7 +13,7 @@
 //   2. a TRAVA (scripts/trava.mjs): nenhum ID do Drive, URL de WebApp, ID de planilha, token, e-mail, prompt ou nome
 //      de pessoa;
 //   3. a SUÍTE (scripts/regressao_motor.cjs): o regressao.js do Graphé, sem alteração, com o motor.js num contexto
-//      limpo (nada do Apps Script), e os mesmos casos pela API do Skiá — tem de dar "0 falhas" nas duas.
+//      limpo (nada do Apps Script), e os mesmos casos pela API do Incognitus — tem de dar "0 falhas" nas duas.
 //
 // Uso: node scripts/extrair_motor.mjs [--fonte caminho/graphe.js] [--sem-copiar]
 //   GRAPHE_DIR (padrão ../Graphe) ou GRAPHE_FONTE trocam a origem. --sem-copiar não atualiza o motor embutido no app.
@@ -39,7 +39,7 @@ const API = path.join(SKIA, 'motor/fonte/api.js');
 const SAIDA = path.join(SKIA, 'motor');
 const EMBUTIDO = path.join(SKIA, 'src/motor');
 
-// O que o Skiá pede pelo nome além do que o pipeline.js e a API chamam (o pedido de 05/11/2026: os pesos do
+// O que o Incognitus pede pelo nome além do que o pipeline.js e a API chamam (o pedido de 05/11/2026: os pesos do
 // classificador, o limiar e a versão). Se algum não existir no graphe.js, o build para.
 const API_MOTOR = 2;   // a versão da API do SkiaMotor (motor/fonte/api.js); o app só aceita motor da sua API
 const OBRIGATORIOS = ['ANON_VERSAO', 'ANON_BAYES_PESOS', 'ANON_BAYES_LIMIAR', 'ANON_INST_PADRAO', 'ANON_BOILERPLATE'];
@@ -161,7 +161,7 @@ const extraido = ordem.map((i) => { const n = G.lista[i].n; return semComentario
 const pipelineSemComent = semComentarios(fontePipeline, 0, fontePipeline.length, pip.comentarios);
 const versao = (() => { const m = /^var ANON_VERSAO = '([^']+)'/m.exec(extraido); return m ? m[1] : parar('ANON_VERSAO sem valor literal'); })();
 const motor = [
-  '// Σκιά · Skiá — motor de anonimização ' + versao + '. Gerado por scripts/extrair_motor.mjs a partir do graphe.js do Graphé',
+  '// Incognitus — motor de anonimização ' + versao + '. Gerado por scripts/extrair_motor.mjs a partir do graphe.js do Graphé',
   '// (as funções do lote automático da anonimização e as dependências delas, pelo nome) e do testes/anon/pipeline.js.',
   '// Não edite à mão: rode de novo o script. O cabeçalho que este motor escreve diz "GRAPHE v' + versao + '": é a versão do motor.',
   fonteAmbiente.trim(),
@@ -208,13 +208,13 @@ try {
       '--casos', path.join(tmp, 'casos.json'), '--graphe', GRAPHE], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) { parar('a suíte falhou:\n' + ((e.stdout || '') + (e.stderr || '')).trim()); }
   process.stdout.write(out);
-  if (!/RESULTADO: \d+ ok, 0 falhas/.test(out) || !/SKIÁ: \d+ ok, 0 falhas/.test(out)) parar('a suíte não terminou em "0 falhas"');
+  if (!/RESULTADO: \d+ ok, 0 falhas/.test(out) || !/INCOGNITUS: \d+ ok, 0 falhas/.test(out) || !/CARIMBOS: \d+ ok, 0 falhas/.test(out)) parar('a suíte não terminou em "0 falhas"');
 
   // ── 6. Gravar (só agora) ────────────────────────────────────────────────────────────────────────────────────────
   const hash = sha256(motor);
   const manifAntigo = (() => { try { return JSON.parse(fs.readFileSync(path.join(SAIDA, 'manifesto.json'), 'utf8')); } catch (e) { return null; } })();
   const manifesto = (manifAntigo && manifAntigo.sha256 === hash && manifAntigo.casos && manifAntigo.casos.sha256 === sha256(casosJson) && manifAntigo.api === API_MOTOR) ? manifAntigo : {
-    nome: 'skia-motor', versao, api: API_MOTOR, data: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), sha256: hash,
+    nome: 'incognitus-motor', versao, api: API_MOTOR, data: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), sha256: hash,
     bytes: Buffer.byteLength(motor), casos: { total: casos.casos.length, sha256: sha256(casosJson) },
     origem: { graphe_sha256: sha256(fonteGraphe), pipeline_sha256: sha256(fontePipeline) }
   };

@@ -1,4 +1,4 @@
-// ── API do Skiá (versão 2: com a reidentificação) ──────────────────────────────────────────────────────────────────────────────────────────
+// ── API do Incognitus (versão 2: com a reidentificação) ──────────────────────────────────────────────────────────────────────────────────────────
 // O fluxo é o do lote automático do Graphé: SKIA_PIPELINE.rodar — o testes/anon/pipeline.js, acima, sem alteração
 // (preparar → classificador → concluir) — e, como no anonConcluir, o cabeçalho de autos anonimizados.
 // A leitura do PDF segue o _pdfComOcr_ do Graphé com o serviço cloudrun-pdftotext/main.py: as páginas fracas (pelo
@@ -86,6 +86,31 @@ var SkiaMotor = (function () {
     return n;
   }
 
+  // ─ Os carimbos do PJe na SAÍDA (pedido do Promotor, 09/11/2026): quem gerou o PDF e quem assina saem do texto. O lote
+  // do Graphé continua lendo o carimbo de assinatura para saber quem é autoridade ou advogado (regra 4: em claro no
+  // corpo); aqui só o carimbo perde o nome. Ficam a data, a hora, o número do documento e o "Num. … - Pág.".
+  var OMITIDO = '[omitido]';
+  var RE_GERADO = /(Este\s+documento\s+foi\s+gerado\s+pelo\s+usu[áa]rio)[ \t]+.+?(?=[ \t]+em[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]*$)/gi;
+  var RE_ASSINANTE = /(assinad[oa]\s+(?:eletronicamente|digitalmente|de\s+forma\s+digital)\s+por)([ \t]*:?[ \t]*)(.*?)(?::[ \t]*\d{11})?(?=[ \t]+[-–][ \t]+\d|[ \t]*[,;(]|[ \t]+em[ \t]+\d|[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]+(?:documento\s+)?assinad[oa]\s|[ \t]*$)/gi;
+  function semCarimbos(texto) {
+    var ls = String(texto == null ? '' : texto).split('\n'), resto = 0;
+    for (var i = 0; i < ls.length; i++) {
+      var l = ls[i];
+      if (ANON_RE_CARIMBO.test(l)) {
+        l = l.replace(RE_ASSINANTE, function (m, por, sep) { return por + (sep.indexOf(':') >= 0 ? ': ' : ' ') + OMITIDO; });
+        resto = 12;
+      } else if (resto > 0 && /^[ \t]{10,}\S/.test(l) && !/[a-zß-ÿ]{3,}/.test(l)) {
+        // o resto do carimbo que vem na DIAGONAL: o pdftotext -layout o parte em linhas recuadas, só com maiúsculas (o
+        // mesmo critério de _anonSemCarimbos_ do Graphé, que tira essas linhas da colheita de candidatos)
+        ls[i] = '';
+        resto--;
+        continue;
+      } else resto = 0;
+      ls[i] = l.replace(RE_GERADO, '$1 ' + OMITIDO);
+    }
+    return ls.join('\n');
+  }
+
   // O lote automático + o cabeçalho. op: { meta (de aplicarOcr), req, idCaso, aba, incluirMapa }.
   function anonimizar(texto, op) {
     op = op || {};
@@ -102,13 +127,14 @@ var SkiaMotor = (function () {
     var naoConf = (r.cand || []).filter(function (c) { return c && !c.provavel && !c.ctxPessoa; }).length;
     var corpo = r.corpo.replace(/\s+$/, '');
     var idCaso = (op.idCaso != null) ? op.idCaso : ((r.paginas.slice(0, ANON_PAGINAS_CAPA).join('\n').match(RE_CNJ) || [''])[0]);
-    var cab = _anonCabecalho_({ idCaso: idCaso, aba: (op.aba != null) ? op.aba : 'Skiá', paginas: r.paginas.length, mapa: r.mapa,
+    var cab = _anonCabecalho_({ idCaso: idCaso, aba: (op.aba != null) ? op.aba : 'Incognitus', paginas: r.paginas.length, mapa: r.mapa,
       semTexto: pg.semTexto, historico: [], corpo: corpo, partes: partes, nTranscricoes: 0, truncado: false, chars: texto.length,
       naoConfirmados: naoConf, poucoTexto: pg.poucoTexto, ocr: pg.ocr, ocrPendente: pg.ocrPendente });
-    // Cada página como no corpo do .txt ("===== PÁGINA n =====" e o texto): o PDF do Skiá tem uma página para cada uma.
-    var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([p], i + 1); });
+    // Cada página como no corpo do .txt ("===== PÁGINA n =====" e o texto): o PDF do Incognitus tem uma página para cada
+    // uma. Os carimbos do PJe saem sem os nomes (semCarimbos); o corpo cru (res.corpo, com o mapa) fica como o do Graphé.
+    var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([semCarimbos(p)], i + 1); });
     var res = {
-      api: 2, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + corpo,
+      api: 2, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + semCarimbos(corpo),
       estatisticas: { paginas: r.paginas.length, tokens: Object.keys(r.mapa.tokens).length, pessoas: contarPessoas(r.mapa),
         candidatos: (r.cand || []).length, confirmados: (r.conf || []).length, naoConfirmados: naoConf,
         sobras: (r.sobras && r.sobras.total) || 0, ocr: (pg.ocr && pg.ocr.paginas) ? pg.ocr.paginas.length : 0,
@@ -124,7 +150,7 @@ var SkiaMotor = (function () {
   function lerMapa(mapa) {
     if (typeof mapa === 'string') { try { mapa = JSON.parse(mapa); } catch (e) { mapa = null; } }
     if (!mapa || typeof mapa !== 'object' || !mapa.tokens || typeof mapa.tokens !== 'object') {
-      throw new Error('Este arquivo não é um mapa de anonimização (do Skiá ou do Graphé).');
+      throw new Error('Este arquivo não é um mapa de anonimização (do Incognitus ou do Graphé).');
     }
     return mapa;
   }

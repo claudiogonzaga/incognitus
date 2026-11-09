@@ -1,4 +1,4 @@
-# Σκιά · Skiá — .dmg (macOS universal: Apple Silicon e Intel) e .msi (Windows x64), sem assinatura digital por ora
+# Incognitus — .dmg (macOS universal: Apple Silicon e Intel) e .msi (Windows x64), sem assinatura digital por ora
 # (ver "Como abrir" no README). Roda à mão (Actions → build → Run workflow) ou com uma tag v*; com tag, os
 # instaladores vão também para uma Release em rascunho, junto com o código-fonte do poppler (GPL).
 name: build
@@ -79,19 +79,19 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: skia-${{ matrix.nome }}
+          name: incognitus-${{ matrix.nome }}
           path: |
             src-tauri/target/${{ matrix.alvo }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi
           if-no-files-found: error
 
-      - name: teste de ponta a ponta no Skiá.app empacotado (3 PDFs fictícios)
+      - name: teste de ponta a ponta no Incognitus.app empacotado (3 PDFs fictícios)
         if: matrix.sidecars == 'mac'
         env:
           PYTHONIOENCODING: utf-8
           SKIA_TESTE_DIR: ${{ runner.temp }}/skia-testes
         run: |
-          python testes/e2e.py "src-tauri/target/${{ matrix.alvo }}/release/bundle/macos/Skiá.app/Contents/MacOS/skia"
+          python testes/e2e.py "src-tauri/target/${{ matrix.alvo }}/release/bundle/macos/Incognitus.app/Contents/MacOS/incognitus"
 
       - name: instalar o .msi e rodar o teste de ponta a ponta no app instalado (3 PDFs fictícios)
         if: matrix.sidecars == 'windows'
@@ -102,8 +102,8 @@ jobs:
         run: |
           $msi = Get-ChildItem "src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi" | Select-Object -First 1
           Start-Process msiexec.exe -Wait -ArgumentList "/i `"$($msi.FullName)`" /qn /norestart /l*v msi.log"
-          $exe = Get-ChildItem -Path "$env:ProgramFiles", "$env:LOCALAPPDATA\Programs" -Recurse -Filter skia.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $exe) { Get-Content msi.log -Tail 60; throw "o .msi não instalou o skia.exe" }
+          $exe = Get-ChildItem -Path "$env:ProgramFiles", "$env:LOCALAPPDATA\Programs" -Recurse -Filter incognitus.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { Get-Content msi.log -Tail 60; throw "o .msi não instalou o incognitus.exe" }
           Write-Host "instalado em $($exe.FullName)"
           python testes/e2e.py $exe.FullName
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

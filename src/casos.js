@@ -1,4 +1,4 @@
-// Σκιά · Skiá — os casos de teste do motor: a suíte de regressão do Graphé (testes/anon/regressao.js, 63 casos com
+// Incognitus — os casos de teste do motor: a suíte de regressão do Graphé (testes/anon/regressao.js, 63 casos com
 // dados 100% fictícios), com a mesma conferência, para o build e para o app — que a roda num motor baixado antes de
 // trocar o motor em uso. Caso com uma conferência que este arquivo não conhece conta como falha (não passa calado).
 var SkiaCasos = (function () {

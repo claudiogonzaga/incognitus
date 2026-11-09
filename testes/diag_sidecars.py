@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Σκιά · Skiá — confere os sidecars SEM o app: chama pdftotext, pdftoppm e tesseract como o
+"""Incognitus — confere os sidecars SEM o app: chama pdftotext, pdftoppm e tesseract como o
 src-tauri/src/ferramentas.rs chama (os mesmos argumentos e as mesmas variáveis de ambiente), sobre os PDFs fictícios,
 e mostra o código de saída e o stderr de cada um. Roda no CI antes do build (falha rápido) e serve de diagnóstico.
 Uso: python3 testes/diag_sidecars.py   (depois de scripts/sidecars.py)
@@ -26,7 +26,7 @@ falhou = False
 
 def main():
     global falhou
-    trab = tempfile.mkdtemp(prefix="skia-diag-")
+    trab = tempfile.mkdtemp(prefix="incognitus-diag-")
     # o layout do app em modo de desenvolvimento: ferramentas e lib/ lado a lado (no Mac, o rpath @executable_path/lib)
     pasta = os.path.join(trab, "app")
     os.makedirs(pasta)

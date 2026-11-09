@@ -1,4 +1,4 @@
-//! O motor de anonimização em uso: o embutido no app (src/motor) ou um baixado do repositório público skia-motor.
+//! O motor de anonimização em uso: o embutido no app (src/motor) ou um baixado do repositório público incognitus-motor.
 //! Um motor baixado só entra se (1) a assinatura Ed25519 do manifesto confere com a chave pública embutida no app,
 //! (2) o sha256 do motor.js é o do manifesto, (3) a API é a que este app fala e (4) os casos de teste embutidos passam
 //! — o teste roda no worker do app, entre o `baixar` e o `instalar`. O anterior fica guardado para voltar.
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 const CHAVE_PUBLICA: &str = include_str!("../../motor/chave_publica.txt");
 const MANIFESTO_EMBUTIDO: &str = include_str!("../../src/motor/manifesto.json");
-pub const URL_PADRAO: &str = "https://github.com/claudiogonzaga/skia-motor/releases/latest/download/";
+pub const URL_PADRAO: &str = "https://github.com/claudiogonzaga/incognitus-motor/releases/latest/download/";
 pub const API: u32 = 2;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -97,7 +97,7 @@ pub fn ativo(dir: &Path) -> MotorAtivo {
 
 fn cliente() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .user_agent(concat!("Skia/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("Incognitus/", env!("CARGO_PKG_VERSION")))
         .timeout(std::time::Duration::from_secs(60))
         .build()
         .map_err(|e| e.to_string())
@@ -120,7 +120,7 @@ pub async fn checar(base: &str, em_uso: &Manifesto, recusado: Option<String>) ->
     verificar_assinatura(&manif, &String::from_utf8_lossy(&sig))?;
     let m: Manifesto = serde_json::from_slice(&manif).map_err(|e| format!("manifesto ilegível: {e}"))?;
     if m.api != API {
-        return Err(format!("as regras publicadas pedem um Skiá mais novo (API {})", m.api));
+        return Err(format!("as regras publicadas pedem um Incognitus mais novo (API {})", m.api));
     }
     if Some(&m.sha256) == recusado.as_ref() || !mais_novo(&m, em_uso) {
         return Ok(None);

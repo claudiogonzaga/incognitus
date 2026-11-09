@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Skiá — gera o ícone (figura negra sobre terracota, como os outros apps da família): uma mão grega
+"""Incognitus — gera o ícone (figura negra sobre terracota, como os outros apps da família): uma mão grega
 faz sombra sobre a inscrição de uma coluna jônica e esconde o meio das linhas — o nome sai, a forma fica.
 A moldura de meandro é a do Phylax (mac/icon/gerar_icone.py).
-Uso: python3 scripts/icone/gerar_icone.py  →  scripts/icone/skia.svg e scripts/icone/icone.png (rsvg-convert)
+Uso: python3 scripts/icone/gerar_icone.py  →  scripts/icone/incognitus.svg e scripts/icone/icone.png (rsvg-convert)
 Depois: npx tauri icon scripts/icone/icone.png
 """
 import math
@@ -235,5 +235,5 @@ def gravar(svg, svg_path, png_path):
 
 
 if __name__ == "__main__":
-    gravar(montar(), os.path.join(AQUI, "skia.svg"), os.path.join(AQUI, "icone.png"))
+    gravar(montar(), os.path.join(AQUI, "incognitus.svg"), os.path.join(AQUI, "icone.png"))
     print(os.path.join(AQUI, "icone.png"))

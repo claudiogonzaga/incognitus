@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Skiá — teste de ponta a ponta com os 3 PDFs FICTÍCIOS (texto, escaneado, misto).
+"""Incognitus — teste de ponta a ponta com os 3 PDFs FICTÍCIOS (texto, escaneado, misto).
 
 1. Gera os PDFs (gerar_pdfs.py) e guarda o sha256 e a data de cada original.
 2. Roda o APP DE VERDADE em modo de teste (SKIA_E2E=plano.json; dados e cache numa pasta à parte, SKIA_DADOS): fila,
    pdftotext e OCR pelos sidecars, motor no Web Worker, PDF de saída. O plano pede também a atualização das regras de
-   um servidor local: um motor republicado e assinado com a chave do Skiá (tem de ser instalado depois de passar nos
+   um servidor local: um motor republicado e assinado com a chave do Incognitus (tem de ser instalado depois de passar nos
    casos de teste) e, numa segunda execução, um manifesto adulterado (tem de ser recusado).
 3. Confere: nomes de saída iguais aos de entrada; nenhum dado de pessoa fictícia em claro na saída (PDF e .txt);
    originais intactos; o cabeçalho com a versão do motor; uma folha por página dos autos + a do cabeçalho; fonte
@@ -12,9 +12,9 @@
 4. A reidentificação (na segunda execução), com o mapa que o app gravou: um texto colado, uma minuta .txt e uma .docx
    com um token partido em dois trechos de formatação, no corpo, no cabeçalho e no nome do arquivo. Os nomes voltam,
    nenhum token fica, o que está fora do mapa é apontado, as minutas não mudam e o resto do .docx sai igual.
-5. Compara a extração do Skiá com a do serviço do Graphé (cloudrun-pdftotext/main.py rodando aqui, com as MESMAS
-   ferramentas embutidas no Skiá e o mesmo pedido que o Graphé faz): tem de ser idêntica, byte a byte.
-Uso: python3 testes/e2e.py [executável]   (padrão: src-tauri/target/debug/skia, de `npx tauri build --debug --no-bundle`)
+5. Compara a extração do Incognitus com a do serviço do Graphé (cloudrun-pdftotext/main.py rodando aqui, com as MESMAS
+   ferramentas embutidas no Incognitus e o mesmo pedido que o Graphé faz): tem de ser idêntica, byte a byte.
+Uso: python3 testes/e2e.py [executável]   (padrão: src-tauri/target/debug/incognitus, de `npx tauri build --debug --no-bundle`)
 """
 import hashlib
 import http.server
@@ -37,11 +37,11 @@ import pymupdf
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EXE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(RAIZ, "src-tauri", "target", "debug", "skia" + (".exe" if os.name == "nt" else "")))
+EXE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(RAIZ, "src-tauri", "target", "debug", "incognitus" + (".exe" if os.name == "nt" else "")))
 CHAVE = os.path.join(RAIZ, "_segredo", "motor_ed25519.pem")   # no CI não há a chave: só o teste da recusa
 # No disco interno (o externo já se desmontou no meio de um teste): SKIA_TESTE_DIR troca o lugar.
-BASE = os.environ.get("SKIA_TESTE_DIR") or (os.path.expanduser("~/Library/Caches/skia-testes") if sys.platform == "darwin"
-                                            else os.path.join(tempfile.gettempdir(), "skia-testes"))
+BASE = os.environ.get("SKIA_TESTE_DIR") or (os.path.expanduser("~/Library/Caches/incognitus-testes") if sys.platform == "darwin"
+                                            else os.path.join(tempfile.gettempdir(), "incognitus-testes"))
 SAIDA = os.path.join(BASE, "saida")
 PDFS = os.path.join(BASE, "pdfs")
 MAIN_PY = os.path.join(os.path.dirname(RAIZ), "Graphe", "cloudrun-pdftotext", "main.py")
@@ -127,7 +127,7 @@ def norm(s):
 
 
 def servico_local():
-    """O main.py do Graphé rodando aqui, com as ferramentas embutidas no Skiá à frente do PATH."""
+    """O main.py do Graphé rodando aqui, com as ferramentas embutidas no Incognitus à frente do PATH."""
     venv = os.path.join(RAIZ, ".ferramentas", "venv-servico")
     py = os.path.join(venv, "Scripts", "python.exe") if os.name == "nt" else os.path.join(venv, "bin", "python")
     if not os.path.exists(py):
@@ -254,12 +254,13 @@ def main():
     confere(all(it["etapa"] == "pronto" for it in rel["itens"]) and len(rel["itens"]) == 3, "os 3 arquivos ficaram prontos")
 
     print("2. a saída")
-    pasta = os.path.join(PDFS, "Skiá — anonimizados")   # a saída padrão: ao lado dos originais
-    confere(os.path.isdir(pasta), "a pasta padrão de saída é 'Skiá — anonimizados', ao lado dos originais")
+    pasta = os.path.join(PDFS, "Incognitus — anonimizados")   # a saída padrão: ao lado dos originais
+    confere(os.path.isdir(pasta), "a pasta padrão de saída é 'Incognitus — anonimizados', ao lado dos originais")
     saidas = sorted(f for f in os.listdir(pasta) if f.lower().endswith(".pdf"))
     confere(saidas == sorted(nomes), f"nomes de saída iguais aos de entrada: {saidas}")
     proibidos = list(gerar_pdfs.PESSOAS.values()) + list(gerar_pdfs.IDENT.values()) + \
-        ["PIRAMBOIA", "TESTEFULANO", "TESTEFULANA", "ROSIMEIRE", "ANTONIETA", "GERALDO", "GUIMARAES", "123456789", "998765432"]
+        ["PIRAMBOIA", "TESTEFULANO", "TESTEFULANA", "ROSIMEIRE", "ANTONIETA", "GERALDO", "GUIMARAES", "123456789", "998765432"] + \
+        [gerar_pdfs.ASSINANTE, "HELENA FICTICIA", gerar_pdfs.USUARIO_PJE]   # o rodapé do PJe: quem assina e quem gerou o PDF
     for n in nomes:
         p = os.path.join(pasta, n)
         doc = pymupdf.open(p)
@@ -268,6 +269,9 @@ def main():
         txt = open(os.path.join(pasta, n[:-4] + ".txt"), encoding="utf-8").read()
         achados = [x for x in proibidos if norm(x) in norm(t) or norm(x) in norm(txt) or norm(x).replace(".", "").replace("-", "") in norm(t).replace(".", "").replace("-", "")]
         confere(not achados, f"{n}: nenhum dado de pessoa fictícia em claro" + (f" — ACHEI {achados}" if achados else ""))
+        if n == "texto.pdf":
+            confere("gerado pelo usuário [omitido]" in t and "Assinado eletronicamente por: [omitido] - 15/03/2026" in t and "Num. 1234567 - Pág. 1" in t,
+                    f"{n}: o rodapé do PJe sai sem quem assina e sem quem gerou o PDF (data e Num. ficam)")
         confere(doc.page_count == orig.page_count + 1, f"{n}: {doc.page_count} folhas = {orig.page_count} páginas dos autos + 1 do cabeçalho")
         confere("AUTOS ANONIMIZADOS — GRAPHE v" + rel["motor"] in doc[0].get_text(), f"{n}: cabeçalho de autos anonimizados com a versão do motor ({rel['motor']})")
         tamanhos = {round(s["size"], 1) for pg in doc for b in pg.get_text("dict")["blocks"] for l in b.get("lines", []) for s in l["spans"]}
@@ -305,7 +309,7 @@ def main():
     print("4. a reidentificação, com o mapa que o app gravou")
     conferir_reid(rel2, mm)
 
-    print("5. a extração do Skiá × o serviço do Graphé (main.py aqui, com as mesmas ferramentas)")
+    print("5. a extração do Incognitus × o serviço do Graphé (main.py aqui, com as mesmas ferramentas)")
     if not os.path.exists(MAIN_PY):
         print("  (pulei: sem o main.py do Graphé em " + MAIN_PY + ")")
     else:
@@ -316,7 +320,7 @@ def main():
                 js = extrair_servico(base, it["caminho"], fr)
                 sk = open(os.path.join(plano["extracao"], it["nome"] + ".extracao.txt"), encoding="utf-8").read()
                 igual = js["text"] == sk
-                info = f"OCR do serviço {js.get('ocr', {}).get('paginas') if fr else '—'} × Skiá {it['e2e']['ocr'].get('paginas')}"
+                info = f"OCR do serviço {js.get('ocr', {}).get('paginas') if fr else '—'} × Incognitus {it['e2e']['ocr'].get('paginas')}"
                 confere(igual, f"{it['nome']}: texto idêntico ao do serviço ({len(sk)} caracteres; {info})")
                 if not igual:
                     open(os.path.join(SAIDA, it["nome"] + ".servico.txt"), "w", encoding="utf-8").write(js["text"])

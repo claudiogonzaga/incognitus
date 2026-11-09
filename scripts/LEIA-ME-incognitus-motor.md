@@ -1,6 +1,6 @@
-# skia-motor
+# incognitus-motor
 
-As regras de anonimização que o **Skiá** usa: o motor de anonimização de autos do Graphé, extraído para rodar
+As regras de anonimização que o **Incognitus** usa: o motor de anonimização de autos do Graphé, extraído para rodar
 sozinho, no computador de quem anonimiza. Este repositório só publica as regras; os autos nunca passam por aqui.
 
 | arquivo | o que é |
@@ -11,7 +11,7 @@ sozinho, no computador de quem anonimiza. Este repositório só publica as regra
 | `casos.json` | os casos de teste (dados 100% fictícios) que o motor tem de passar |
 | `chave_publica.txt` | a chave pública que confere a assinatura (a mesma que vai dentro do app) |
 
-O Skiá só troca de motor se a assinatura confere com a chave embutida no app, se o sha256 do `motor.js` é o do
+O Incognitus só troca de motor se a assinatura confere com a chave embutida no app, se o sha256 do `motor.js` é o do
 manifesto e se o motor novo passa em todos os casos de teste. A versão anterior fica guardada no computador para voltar.
 
 Conferir à mão (Node 18+):

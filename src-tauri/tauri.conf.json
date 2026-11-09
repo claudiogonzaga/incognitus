@@ -1,9 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Skiá",
-  "version": "0.2.0",
-  "mainBinaryName": "skia",
-  "identifier": "br.eco.consciencia.skia",
+  "productName": "Incognitus",
+  "version": "0.3.0",
+  "mainBinaryName": "incognitus",
+  "identifier": "br.eco.consciencia.incognitus",
   "build": {
     "frontendDist": "../src"
   },
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Skiá",
+        "title": "Incognitus",
         "width": 1040,
         "height": 760,
         "minWidth": 760,
@@ -47,7 +47,7 @@
     },
     "category": "Productivity",
     "shortDescription": "Anonimização de PDFs em lote, no computador",
-    "longDescription": "Skiá anonimiza autos em PDF com o motor de anonimização do Graphé, sem tirar nada do computador.",
+    "longDescription": "Incognitus anonimiza autos em PDF com o motor de anonimização do Graphé, sem tirar nada do computador.",
     "macOS": {
       "minimumSystemVersion": "13.0",
       "signingIdentity": "-",

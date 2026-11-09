@@ -1,12 +1,12 @@
 [package]
-name = "skia"
-version = "0.2.0"
-description = "Skiá — anonimização de PDFs em lote com o motor do Graphé"
+name = "incognitus"
+version = "0.3.0"
+description = "Incognitus — anonimização de PDFs em lote com o motor do Graphé"
 edition = "2021"
 publish = false
 
 [lib]
-name = "skia_lib"
+name = "incognitus_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

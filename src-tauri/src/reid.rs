@@ -145,7 +145,7 @@ mod testes {
 
     #[test]
     fn docx_ida_e_volta() {
-        let dir = std::env::temp_dir().join(format!("skia-reid-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("incognitus-reid-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let orig = dir.join("minuta.docx");
         {

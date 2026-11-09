@@ -1,16 +1,16 @@
 {
-  "nome": "skia-motor",
+  "nome": "incognitus-motor",
   "versao": "1.9.0",
   "api": 2,
-  "data": "2026-11-06T00:13:26Z",
-  "sha256": "68e667a1c425297f1ef5e439b4ea21f093b8aebce720c8e6722a0412ae5c4a3b",
-  "bytes": 373081,
+  "data": "2026-11-09T15:54:33Z",
+  "sha256": "078c4dcaf531ae07512f0119c04dd8a8ee822e4a107ff9a4a5a963aa6770c23d",
+  "bytes": 374882,
   "casos": {
     "total": 63,
     "sha256": "0a4482949fc5e778bf7b02654eda5558239549c309f917f4c3afe8fcd8b622f4"
   },
   "origem": {
-    "graphe_sha256": "5db12ad39ad5bb97d9a0aa7e0937a19c2d77fe109a323cb0407e470a49040943",
+    "graphe_sha256": "ffb153dd6c15daf30083fa92923185b1aae0658a7fa91e56d4013300d3df91b7",
     "pipeline_sha256": "10f13457937b8ff99ade9e6911ee61ffc74ee0c869bf5d2d26c4729dd2c41155"
   }
 }

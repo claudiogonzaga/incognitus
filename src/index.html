@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Skiá</title>
+<title>Incognitus</title>
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
 <header data-tauri-drag-region>
   <div class="titulo" data-tauri-drag-region>
-    <h1 data-tauri-drag-region>Skiá</h1>
+    <h1 data-tauri-drag-region>Incognitus</h1>
     <span data-tauri-drag-region>anonimização de autos e reidentificação de minutas, no seu computador</span>
   </div>
   <div class="topo-direita">
@@ -33,7 +33,7 @@
     <p class="dica">ou arraste PDFs (ou uma pasta) para a janela</p>
 
     <h2>Saída</h2>
-    <label class="opcao"><input type="radio" name="saida" value="ao_lado" checked> <span>Ao lado de cada original, na pasta <b>Skiá — anonimizados</b></span></label>
+    <label class="opcao"><input type="radio" name="saida" value="ao_lado" checked> <span>Ao lado de cada original, na pasta <b>Incognitus — anonimizados</b></span></label>
     <label class="opcao"><input type="radio" name="saida" value="outra"> <span>Outra pasta:</span></label>
     <div class="linha">
       <input id="pasta_saida" type="text" readonly placeholder="nenhuma escolhida">
@@ -68,7 +68,7 @@
   <section id="reid_lado">
     <h2>Mapa</h2>
     <button id="bt_mapa">Escolher o mapa…</button>
-    <div id="mapa_info" class="dica">É o “… — MAPA (nomes reais).json” que o Skiá grava ao lado de cada PDF anonimizado
+    <div id="mapa_info" class="dica">É o “… — MAPA (nomes reais).json” que o Incognitus grava ao lado de cada PDF anonimizado
       (o mapa do Graphé também serve).</div>
     <details id="dicionario" hidden>
       <summary>Ver o dicionário</summary>
@@ -114,7 +114,7 @@
     <label for="inst">Contatos institucionais que ficam em claro (um por linha: endereço, telefone, CEP ou e-mail da Delegacia, do Fórum, da Promotoria…)</label>
     <textarea id="inst" rows="9" spellcheck="false"></textarea>
     <div class="linha"><button type="button" id="bt_inst_padrao" class="ghost pequeno">Restaurar o padrão</button></div>
-    <label class="opcao"><input id="op_checar" type="checkbox"> <span>Checar atualização das regras ao abrir o Skiá</span></label>
+    <label class="opcao"><input id="op_checar" type="checkbox"> <span>Checar atualização das regras ao abrir o Incognitus</span></label>
 
     <h2>Motor de anonimização</h2>
     <div id="motor_info" class="caixa"></div>

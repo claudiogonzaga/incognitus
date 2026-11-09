@@ -1,4 +1,4 @@
-// Σκιά · Skiá — TRAVA de segurança do motor (o modelo é a do GrapheDemo/scripts/sincronizar_codigo.py: "nenhum ID real
+// Incognitus — TRAVA de segurança do motor (o modelo é a do GrapheDemo/scripts/sincronizar_codigo.py: "nenhum ID real
 // sobrou"). O motor.js vai para um repositório público: não pode levar ID de arquivo do Drive, URL de WebApp, ID de
 // planilha, token ou chave, e-mail, prompt de IA, código do Apps Script nem nome de pessoa. Devolve a lista do que
 // achou (vazia = pode seguir). Os segredos saem cortados (8 caracteres); nomes saem inteiros, para quem conferir.

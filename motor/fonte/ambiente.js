@@ -1,6 +1,6 @@
-// ── Ambiente do Skiá ────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Ambiente do Incognitus ────────────────────────────────────────────────────────────────────────────────────────────────
 // O que no Graphé vem da planilha e do Apps Script vem daqui, sem rede e sem disco:
-//   · VARIAVEIS_GLOBAIS: vazia — os contatos institucionais são o ANON_INST_PADRAO, que os Ajustes do Skiá trocam
+//   · VARIAVEIS_GLOBAIS: vazia — os contatos institucionais são o ANON_INST_PADRAO, que os Ajustes do Incognitus trocam
 //     (SkiaMotor.configurar, no fim deste arquivo);
 //   · equipe: vazia;
 //   · propriedades do script: nenhuma (sem lista branca aprendida, nomes gregos ligados — o padrão do Graphé);

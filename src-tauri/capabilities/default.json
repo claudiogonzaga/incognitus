@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "A janela do Skiá: eventos (arrastar e soltar) e as caixas de abrir arquivo/pasta.",
+  "description": "A janela do Incognitus: eventos (arrastar e soltar) e as caixas de abrir arquivo/pasta.",
   "windows": ["main"],
   "permissions": ["core:default", "dialog:default"]
 }

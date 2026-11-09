@@ -216,7 +216,7 @@ pub fn gerar(cabecalho: &str, paginas: &[String], produtor: &str) -> Result<Resu
         .font_file2(arquivo_fonte);
     let sub_z = comprimir(&sub);
     pdf.stream(arquivo_fonte, &sub_z).filter(Filter::FlateDecode);
-    let mut cmap = pdf_writer::types::UnicodeCmap::new(Name(b"Skia-UTF16"), sistema);
+    let mut cmap = pdf_writer::types::UnicodeCmap::new(Name(b"Incognitus-UTF16"), sistema);
     for (ch, g) in &por_char {
         if face.glyph_index(*ch).is_some() || *ch == '?' {
             cmap.pair(*g, *ch);
@@ -257,7 +257,7 @@ mod testes {
     #[test]
     fn pagina_tem_uma_folha_por_pagina() {
         let p = vec!["===== PÁGINA 1 =====\n     «REU_01» foi ouvido.".to_string(), "===== PÁGINA 2 =====\n".to_string()];
-        let r = gerar("═══ AUTOS ANONIMIZADOS ═══", &p, "Skiá teste").unwrap();
+        let r = gerar("═══ AUTOS ANONIMIZADOS ═══", &p, "Incognitus teste").unwrap();
         let s = String::from_utf8_lossy(&r.bytes);
         assert_eq!(s.matches("/Type /Page").count() - s.matches("/Type /Pages").count(), 3);
         assert_eq!(r.sem_glifo, 0);
