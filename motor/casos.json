@@ -131,6 +131,23 @@
    ]
   },
   {
+   "id": "C10e",
+   "c": "END",
+   "t": "Endereço: Residencial - Dom Bosco Bairro Inventado - Cidadela/MS - 79310080\n",
+   "oculto": [
+    "Dom Bosco",
+    "Inventado",
+    "79310080"
+   ],
+   "claro": [
+    "Cidadela/MS"
+   ],
+   "tokenTipo": [
+    "END",
+    "CEP"
+   ]
+  },
+  {
    "id": "C08a",
    "c": "TEL",
    "t": "contato (65) 99876 - 5432\n",
@@ -370,6 +387,18 @@
    ]
   },
   {
+   "id": "C20c",
+   "c": "ALCUNHA",
+   "t": "HAVIA UM HOMEM APELIDADO \"FICTICIO\", FORAGIDO DA CADEIA PUBLICA. A COMPANHEIRA DELE, APELIDADA “TESTINHA”, FOI OUVIDA.\n",
+   "oculto": [
+    "FICTICIO",
+    "TESTINHA"
+   ],
+   "tokenTipo": [
+    "ALCUNHA"
+   ]
+  },
+  {
    "id": "C13a",
    "c": "AUTORIDADE",
    "t": "Certifico que intimei o réu.\nMARIANA FICTICIA SOUZA\nOficiala de Justiça\n",
@@ -424,6 +453,34 @@
    "t": "Conforme leciona GUILHERME DE SOUZA NUCCI, o dolo é elemento do tipo.\n",
    "claro": [
     "GUILHERME DE SOUZA NUCCI"
+   ]
+  },
+  {
+   "id": "C27a",
+   "c": "VOCATIVO",
+   "t": "EXCELENTÍSSIMO SENHOR JUIZ DE DIREITO\nJOAO TESTEFULANO PIRAMBOIA, brasileiro, vem requerer o prosseguimento do feito.\n",
+   "oculto": [
+    "JOAO TESTEFULANO PIRAMBOIA"
+   ],
+   "claro": [
+    "EXCELENTÍSSIMO SENHOR JUIZ DE DIREITO"
+   ]
+  },
+  {
+   "id": "C27b",
+   "c": "VOCATIVO",
+   "t": "EXCELENTÍSSIMO SENHOR JUIZ DE DIREITO\n\nMARCIANA FICTICIA PITANGUEIRA, brasileira, vem requerer a habilitação nos autos.\n",
+   "oculto": [
+    "MARCIANA FICTICIA PITANGUEIRA"
+   ]
+  },
+  {
+   "id": "C27c",
+   "c": "AUTORIDADE",
+   "t": "Aberta a audiência pelo MM. Juiz de Direito ALBERTO FICTICIO SOUZA, presentes as partes.\nJuiz(a) de Direito:\nTEODORA FICTICIA SOUZA\n",
+   "claro": [
+    "ALBERTO FICTICIO SOUZA",
+    "TEODORA FICTICIA SOUZA"
    ]
   },
   {
@@ -523,12 +580,374 @@
    ]
   },
   {
+   "id": "C24f",
+   "c": "EXCESSO",
+   "t": "Citação por edital. Endereço: em lugar incerto e não sabido.\nProtocolo 79310081 recebido.\n",
+   "claro": [
+    "em lugar incerto e não sabido",
+    "79310081"
+   ]
+  },
+  {
    "id": "C25a",
    "c": "ACENTO",
    "t": "O proprietário JOSE TESTEFULANO GUIMARAES compareceu. O funcionário Pedro Fictício Bandeira, brasileiro, confirmou.\n",
    "oculto": [
     "JOSE TESTEFULANO GUIMARAES",
     "Pedro Fictício Bandeira"
+   ]
+  },
+  {
+   "id": "C28a",
+   "c": "PARTE",
+   "t": "Trata-se de notícia de fato envolvendo o soldado JOAO TESTEFULANO PIRAMBOIA e a aluna de 15 anos.\n",
+   "oculto": [
+    "JOAO TESTEFULANO PIRAMBOIA"
+   ]
+  },
+  {
+   "id": "C28b",
+   "c": "PARTE",
+   "t": "A vítima, o cabo ROBERVAL FICTICIO PITOMBA, disse que foi agredido.\n\f\f\fVítima: ROBERVAL FICTICIO PITOMBA, brasileiro, solteiro.\n",
+   "oculto": [
+    "ROBERVAL FICTICIO PITOMBA"
+   ]
+  },
+  {
+   "id": "C28c",
+   "c": "PARTE",
+   "t": "Testemunha: ROBERVAL FICTICIO LOPES, brasileiro, policial militar.\n\fCONDUTOR: 3º SGT PM ROBERVAL FICTICIO LOPES CPF 123.456.789-09\nROBERVAL FICTICIO LOPES, investigador, qualificado ao ID 123.\n",
+   "oculto": [
+    "ROBERVAL FICTICIO LOPES"
+   ]
+  },
+  {
+   "id": "C28d",
+   "c": "AUTORIDADE",
+   "req": "ALBERTO FICTICIO DA SILVA",
+   "t": "Manifestação do Promotor de Justiça ALBERTO FICTICIO GONZAGA nos autos.\nO réu ALBERTO FICTICIO DA SILVA foi citado.\n",
+   "oculto": [
+    "ALBERTO FICTICIO DA SILVA"
+   ],
+   "claro": [
+    "ALBERTO FICTICIO GONZAGA"
+   ]
+  },
+  {
+   "id": "C28e",
+   "c": "AUTORIDADE",
+   "req": "CARLOS FICTICIO SOUZA",
+   "t": "O 3º SGT PM CARLOS FICTICIO relatou a abordagem.\nO réu CARLOS FICTICIO SOUZA foi preso.\n",
+   "oculto": [
+    "CARLOS FICTICIO SOUZA"
+   ],
+   "claro": [
+    "3º SGT PM CARLOS FICTICIO relatou"
+   ]
+  },
+  {
+   "id": "C29a",
+   "c": "FORMULARIO",
+   "t": "QUALIFICAÇÃO DO CONDUZIDO\n   Nome:........................:   GERVASIO FICTICIO DA SILVA     Alcunha......................: TESTAO\n",
+   "oculto": [
+    "GERVASIO",
+    "TESTAO"
+   ]
+  },
+  {
+   "id": "C29b",
+   "c": "TERMO",
+   "t": "Testemunha: GERVASIO FICTICIO DA SILVA, brasileiro, solteiro.\n\fDECLARAÇÃO Nº 2026.8.217582 - GERVASIO Termo de declarações\nQUE viu tudo.\n",
+   "oculto": [
+    "GERVASIO"
+   ]
+  },
+  {
+   "id": "C29c",
+   "c": "ANDAMENTO",
+   "t": "Movimentações\n05/11/2026 10:00 Recebida a denúncia contra JOAO TESTEFULANO     Decisão     Decisão\n                 PIRAMBOIA\n",
+   "oculto": [
+    "PIRAMBOIA"
+   ]
+  },
+  {
+   "id": "C29d",
+   "c": "ANDAMENTO",
+   "req": "WALDECIR DOS SANTOS PIRILAMPO",
+   "t": "Recebida a denúncia contra WALDECIR DOS Decisão Decisão SANTOS PIRILAMPO\n",
+   "oculto": [
+    "WALDECIR",
+    "PIRILAMPO"
+   ]
+  },
+  {
+   "id": "C29e",
+   "c": "OCR",
+   "t": "Vítima: MARINALVA TESTEFULANA SOUZA, brasileira.\n\fREGISTRO GERAL 1234567\nNOME\nMARItALVA TESTEFULANA SOUZA\n",
+   "oculto": [
+    "TESTEFULANA",
+    "MARItALVA",
+    "MARITALVA"
+   ]
+  },
+  {
+   "id": "C29f",
+   "c": "FILIACAO",
+   "t": "O réu JOAO TESTEFULANO PIRAMBOIA, filho de GERALDO TESTEFULANO PIRAMBOIA.\n\fREGISTRO GERAL 1234567\nFILIAÇÃO\nGERALDO TESTEFULANO PIRAMBOIA            DATA DE EXPEDIÇÃO\nANTONIETA MENDES DA                      03/04/2020\n",
+   "oculto": [
+    "GERALDO",
+    "ANTONIETA",
+    "MENDES"
+   ]
+  },
+  {
+   "id": "C30a",
+   "c": "END",
+   "t": "O réu, domiciliado à Rua 02, casa 20, Qd. 05, bairro Residencial Inventado, município de Cidadela/MT, CEP 78000-000.\n",
+   "oculto": [
+    "Rua 02",
+    "casa 20",
+    "Inventado",
+    "78000-000"
+   ],
+   "claro": [
+    "Cidadela/MT"
+   ],
+   "tokenTipo": [
+    "END",
+    "CEP"
+   ]
+  },
+  {
+   "id": "C30b",
+   "c": "END",
+   "t": "JOAO TESTEFULANO PIRAMBOIA\nRUA DOS TESTES, 0/ QD 12LT 3 - JARDIM FICTICIO\n(CIDADEFICTA/MT CEP 78000000 (AG 7)\n",
+   "oculto": [
+    "DOS TESTES",
+    "QD 12",
+    "JARDIM FICTICIO",
+    "78000000"
+   ],
+   "claro": [
+    "CIDADEFICTA/MT"
+   ],
+   "tokenTipo": [
+    "END",
+    "CEP"
+   ]
+  },
+  {
+   "id": "C30c",
+   "c": "CPF",
+   "t": "FATURA DE ENERGIA\n123.456.789-10\nCPF/CNPJ: XXX XX1-66\n",
+   "oculto": [
+    "123.456.789-10"
+   ],
+   "tokenTipo": [
+    "CPF"
+   ]
+  },
+  {
+   "id": "C30d",
+   "c": "PROSA",
+   "t": "Que é irmão de Pedro Paulo, e através de seu irmão veio a conhecer o réu.\n",
+   "oculto": [
+    "Pedro Paulo"
+   ]
+  },
+  {
+   "id": "C30e",
+   "c": "EXCESSO",
+   "t": "Processo 1000123-45.2026.8.11.0027; CNPJ 12.345.678/0001-90; valor R$ 123.456.789,10. Na Rua das Flores, 12/03/2026, houve a audiência.\n",
+   "claro": [
+    "1000123-45.2026.8.11.0027",
+    "123.456.789,10",
+    "12/03/2026"
+   ]
+  },
+  {
+   "id": "C31a",
+   "c": "PRENOME",
+   "req": "GERVASIO TESTEFULANO DE TAL",
+   "t": "Vítima: ZULEICA TESTEIRA DA SILVA, brasileira, 13 anos.\nInteressado: TEODORO FICTICIO\nQUE ELA CONTOU QUE GERVASIO FICA PASSANDO A MÃO NELA.\n",
+   "oculto": [
+    "GERVASIO"
+   ]
+  },
+  {
+   "id": "C31b",
+   "c": "EXCESSO",
+   "req": "GERVASIO TESTEFULANO DE TAL",
+   "t": "Aplica-se a Lei Maria da Penha. A Escola Estadual Gervásio Fictício fica perto. Na Rua Gervásio Fictício houve a abordagem.\n",
+   "claro": [
+    "Lei Maria da Penha",
+    "Escola Estadual Gervásio Fictício",
+    "Rua Gervásio Fictício"
+   ]
+  },
+  {
+   "id": "C32a",
+   "c": "ALCUNHA",
+   "t": "O réu, vulgo \"TESTÃOZINHO\", foi preso.\nA TESTEMUNHA DISSE QUE ELE FALOU PARA O INQUILINO \"TESTÃOZINHO DE\nTAL\" QUE RESIDE EM FRENTE.\n",
+   "oculto": [
+    "TESTÃOZINHO"
+   ]
+  },
+  {
+   "id": "C32b",
+   "c": "FORMULARIO",
+   "t": "Nome: JOAO TESTEFULANO Data de Nascimento: 03/04/1991\nPIRAMBOIA\nCPF: 123.456.789-09\n",
+   "oculto": [
+    "PIRAMBOIA"
+   ]
+  },
+  {
+   "id": "C32c",
+   "c": "PRECEDENTE",
+   "t": "Nesse sentido:\n\"HABEAS CORPUS. PRISÃO PREVENTIVA. ORDEM DENEGADA.\" (HC 67755, Relator(a): Min. FULANO FICTICIO DE TAL,\njulgado em 26/06/1990, DJ 11-09-1992 PP-14714)\n\nAnte o exposto, a Defensoria Pública requer que JOAO TESTEFULANO seja intimado para constituir advogado.\n",
+   "oculto": [
+    "JOAO TESTEFULANO"
+   ]
+  },
+  {
+   "id": "C32e",
+   "c": "END",
+   "t": "O réu, inscrito no CPF sob o nº 123.456.789-09, residente e domiciliado na Rua Fictícia das\nPitangas, s/n, Bairro, Jardim Inventado, Cidadela/MT, foi citado.\n",
+   "oculto": [
+    "Pitangas",
+    "Inventado"
+   ],
+   "claro": [
+    "Cidadela/MT"
+   ],
+   "tokenTipo": [
+    "END"
+   ]
+  },
+  {
+   "id": "C32d",
+   "c": "TEL",
+   "t": "Ouvida por videochamada (WhatsApp) 66 9123-4567, onde se deu a audiência.\nContato da vítima: + +55 66 9234-5678 a qualquer hora.\n",
+   "oculto": [
+    "9123-4567",
+    "9234-5678"
+   ]
+  },
+  {
+   "id": "C33a",
+   "c": "FILIACAO",
+   "t": "A conselheira tutelar Zulmira Clara Ficticia de Souza, ao descrever o atendimento, relatou os fatos.\nAssinado eletronicamente por: ZULMIRA CLARA FICTICIA DE SOUZA - 17/08/2026 12:58\n\fSituação dos Filhos?\n                                                    ESTA GRAVIDA DE SETE MESES\n                                                    GERALDO PAIFICTO DE ALMEIDA e ZULMIRA CLARA\nFiliação?\n                                                    TESTEIRA DE ALMEIDA\n                                                    Residencial - RUA DOS TESTES, Nº 99 - QDRA 09 LOTE 09\nResidência?\n",
+   "oculto": [
+    "e ZULMIRA CLARA",
+    "TESTEIRA"
+   ],
+   "claro": [
+    "Zulmira Clara Ficticia de Souza"
+   ]
+  },
+  {
+   "id": "C33b",
+   "c": "PARTE",
+   "t": "TERMO DE DEPOIMENTO\nNome:........................: OSVALDO FICTICIO FAVERETO\nProfissão....................: SERVIDOR PÚBLICO MUNICIPAL\n\fRELATÓRIO\nConsta o depoimento do servidor público OSVALDO FICTICIO FAVERETO, cujo conteúdo foi registrado em mídia.\n",
+   "oculto": [
+    "OSVALDO"
+   ]
+  },
+  {
+   "id": "C34a",
+   "c": "ARQUIVO",
+   "req": "GERVASIO TESTEFULANO DE TAL",
+   "t": "Réu: GERVASIO TESTEFULANO DE TAL, brasileiro, solteiro.\n\f1 anexo (40 KB) decisão audiência gervasio.pdf; Boa tarde segue decisão para cumprimento.\n",
+   "oculto": [
+    "gervasio"
+   ]
+  },
+  {
+   "id": "C34b",
+   "c": "ANDAMENTO",
+   "req": "GERVASIO TESTEFULANO DE TAL",
+   "t": "Réu: GERVASIO TESTEFULANO DE TAL, brasileiro, solteiro.\n\f249709359 24/09/2026 09:56 Sem movimento MANDADO GERVASIO Devolução de mandado\n249709362 24/09/2026 10:07 Sem movimento CITAÇÃO GERVASIO Citação\n",
+   "oculto": [
+    "GERVASIO"
+   ]
+  },
+  {
+   "id": "C34c",
+   "c": "PRENOME",
+   "t": "Testemunha: APARECIDO FICTICIO DA SILVA, brasileiro, lavrador.\n\fOs policiais algemaram o réu, enquanto os demais colocaram APARECIDO em outro automóvel e o conduziram à delegacia.\n",
+   "oculto": [
+    "APARECIDO"
+   ]
+  },
+  {
+   "id": "C34d",
+   "c": "TERMO",
+   "t": "Testemunha: APARECIDO FICTICIO DA SILVA, brasileiro, lavrador.\n\fDECLARAÇÃO Nº 2026.8.217582 - APARECIDO            Termo de declarações\nQUE viu tudo.\n",
+   "oculto": [
+    "APARECIDO"
+   ]
+  },
+  {
+   "id": "C34e",
+   "c": "FILIACAO",
+   "t": "Filiação: ROSA XIMENES FICTICIA (mãe) e GERALDO PAIFICTO DE TAL (pai)\n\fRJI: 123456 ROSA (mãe) e GERALDO (pai)\n",
+   "oculto": [
+    "ROSA",
+    "GERALDO"
+   ]
+  },
+  {
+   "id": "C34i",
+   "c": "PRENOME",
+   "t": "Testemunha: APARECIDA FICTICIA DE TAL, brasileira.\n\fEle morou na cidade de APARECIDA por anos e nasceu em APARECIDA, segundo disse. Depois os policiais levaram APARECIDA para a viatura.\n",
+   "oculto": [
+    "levaram APARECIDA"
+   ],
+   "claro": [
+    "cidade de APARECIDA",
+    "nasceu em APARECIDA"
+   ]
+  },
+  {
+   "id": "C34f",
+   "c": "EXCESSO",
+   "t": "Mãe: ROSA XIMENES FICTICIA.\nTestemunha: APARECIDA FICTICIA DE TAL, brasileira.\n\fEla vestia uma blusa rosa e saiu. A festa de Nossa Senhora Aparecida foi ontem.\n",
+   "claro": [
+    "blusa rosa",
+    "Nossa Senhora Aparecida"
+   ]
+  },
+  {
+   "id": "C34g",
+   "c": "EMAIL",
+   "t": "Telefone: (65) 99999-0000 E-mail: gervasio.obs(D gmail.com Pai: GERALDO PAIFICTO DE TAL\nE-mail: clementina.ficta©hotmail.com; Email: aparecido_teste(@yahoo.com.br\n",
+   "oculto": [
+    "gervasio.obs",
+    "gmail.com",
+    "clementina.ficta",
+    "aparecido_teste",
+    "yahoo"
+   ],
+   "tokenTipo": [
+    "EMAIL"
+   ]
+  },
+  {
+   "id": "C34j",
+   "c": "PRECEDENTE",
+   "t": "Nesse sentido:\n\"HABEAS CORPUS. PRISÃO PREVENTIVA. SUBSTITUIÇÃO POR CAUTELARES. ORDEM CONCEDIDA.\" (STJ, HC 818.053/MT, Rel. Min. FULANO FICTICIO DE TAL,\npaciente JOAO TESTEFULANO PIRAMBOIA, julgado em 20/06/2023, DJe 22/06/2023)\n",
+   "claro": [
+    "Rel. Min. FULANO FICTICIO DE TAL",
+    "paciente JOAO TESTEFULANO PIRAMBOIA",
+    "HC 818.053/MT"
+   ]
+  },
+  {
+   "id": "C34h",
+   "c": "INSTITUCIONAL",
+   "t": "E-mail: cartorio.cidadela(D tjmt.jus.br\n",
+   "claro": [
+    "cartorio.cidadela(D tjmt.jus.br"
    ]
   },
   {

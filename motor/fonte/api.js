@@ -86,35 +86,14 @@ var SkiaMotor = (function () {
     return n;
   }
 
-  // ─ Os carimbos do PJe na SAÍDA (pedido do Promotor, 09/11/2026): quem gerou o PDF e quem assina saem do texto. O lote
-  // do Graphé continua lendo o carimbo de assinatura para saber quem é autoridade ou advogado (regra 4: em claro no
-  // corpo); aqui só o carimbo perde o nome. Ficam a data, a hora, o número do documento e o "Num. … - Pág.".
-  var OMITIDO = '[omitido]';
-  // (sem exigir o "Este documento foi" na mesma linha: na página escaneada o OCR o parte, e o CPF mascarado sai torto)
-  var RE_GERADO = /(gerado\s+pelo\s+usu[áa]rio)[ \t]+.+?(?=[ \t]+em[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]*$)/gi;
+  // ─ Os carimbos do PJe na SAÍDA (pedido do Promotor, 09/11/2026): quem gerou o PDF e quem assina saem do texto (a
+  // data, a hora, o número do documento e o "Num. … - Pág." ficam). A função mora no graphe.js (_anonSemCarimbosSaida_,
+  // desde e83bd54: um motor só para os dois); lá ela não está ligada na saída do Graphé, aqui sim. O lote continua lendo o
+  // carimbo para saber quem é autoridade ou advogado (regra 4: em claro no corpo); só a SAÍDA perde o nome.
   // O aviso do cabeçalho do Graphé aponta a revisão humana da planilha ("🔒 Anonimizar autos"), que o Incognitus não tem.
   var RE_AVISO_REVISAO = /\s*\(um humano confere com "[^"]*"\)/;
   var AVISO_INCOGNITUS = ' (o Incognitus não tem essa revisão: quase sempre são termos que não são nomes — exames, remédios, ' +
     'lugares, rótulos de formulário —, mas confira os nomes de pessoas no texto antes de usar)';
-  var RE_ASSINANTE = /(assinad[oa]\s+(?:eletronicamente|digitalmente|de\s+forma\s+digital)\s+por)([ \t]*:?[ \t]*)(.*?)(?::[ \t]*\d{11})?(?=[ \t]+[-–][ \t]+\d|[ \t]*[,;(]|[ \t]+em[ \t]+\d|[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]+(?:documento\s+)?assinad[oa]\s|[ \t]*$)/gi;
-  function semCarimbos(texto) {
-    var ls = String(texto == null ? '' : texto).split('\n'), resto = 0;
-    for (var i = 0; i < ls.length; i++) {
-      var l = ls[i];
-      if (ANON_RE_CARIMBO.test(l)) {
-        l = l.replace(RE_ASSINANTE, function (m, por, sep) { return por + (sep.indexOf(':') >= 0 ? ': ' : ' ') + OMITIDO; });
-        resto = 12;
-      } else if (resto > 0 && /^[ \t]{10,}\S/.test(l) && !/[a-zß-ÿ]{3,}/.test(l)) {
-        // o resto do carimbo que vem na DIAGONAL: o pdftotext -layout o parte em linhas recuadas, só com maiúsculas (o
-        // mesmo critério de _anonSemCarimbos_ do Graphé, que tira essas linhas da colheita de candidatos)
-        ls[i] = '';
-        resto--;
-        continue;
-      } else resto = 0;
-      ls[i] = l.replace(RE_GERADO, '$1 ' + OMITIDO);
-    }
-    return ls.join('\n');
-  }
 
   // O lote automático + o cabeçalho. op: { meta (de aplicarOcr), req, idCaso, aba, incluirMapa }.
   function anonimizar(texto, op) {
@@ -136,10 +115,10 @@ var SkiaMotor = (function () {
       semTexto: pg.semTexto, historico: [], corpo: corpo, partes: partes, nTranscricoes: 0, truncado: false, chars: texto.length,
       naoConfirmados: naoConf, poucoTexto: pg.poucoTexto, ocr: pg.ocr, ocrPendente: pg.ocrPendente }).replace(RE_AVISO_REVISAO, AVISO_INCOGNITUS);
     // Cada página como no corpo do .txt ("===== PÁGINA n =====" e o texto): o PDF do Incognitus tem uma página para cada
-    // uma. Os carimbos do PJe saem sem os nomes (semCarimbos); o corpo cru (res.corpo, com o mapa) fica como o do Graphé.
-    var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([semCarimbos(p)], i + 1); });
+    // uma. Os carimbos do PJe saem sem os nomes (_anonSemCarimbosSaida_); o corpo cru (res.corpo, com o mapa) fica como o do Graphé.
+    var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([_anonSemCarimbosSaida_(p)], i + 1); });
     var res = {
-      api: 2, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + semCarimbos(corpo),
+      api: 2, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + _anonSemCarimbosSaida_(corpo),
       estatisticas: { paginas: r.paginas.length, tokens: Object.keys(r.mapa.tokens).length, pessoas: contarPessoas(r.mapa),
         candidatos: (r.cand || []).length, confirmados: (r.conf || []).length, naoConfirmados: naoConf,
         sobras: (r.sobras && r.sobras.total) || 0, ocr: (pg.ocr && pg.ocr.paginas) ? pg.ocr.paginas.length : 0,

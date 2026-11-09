@@ -42,7 +42,7 @@ const EMBUTIDO = path.join(SKIA, 'src/motor');
 // O que o Incognitus pede pelo nome além do que o pipeline.js e a API chamam (o pedido de 05/11/2026: os pesos do
 // classificador, o limiar e a versão). Se algum não existir no graphe.js, o build para.
 const API_MOTOR = 2;   // a versão da API do SkiaMotor (motor/fonte/api.js); o app só aceita motor da sua API
-const OBRIGATORIOS = ['ANON_VERSAO', 'ANON_BAYES_PESOS', 'ANON_BAYES_LIMIAR', 'ANON_INST_PADRAO', 'ANON_BOILERPLATE'];
+const OBRIGATORIOS = ['ANON_VERSAO', 'ANON_BAYES_PESOS', 'ANON_BAYES_LIMIAR', 'ANON_INST_PADRAO', 'ANON_BOILERPLATE', '_anonSemCarimbosSaida_'];
 
 function parar(msg) { console.error('PAROU: ' + msg); process.exit(1); }
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
@@ -199,6 +199,8 @@ const casos = (() => {
 const casosJson = JSON.stringify(casos, null, 1) + '\n';
 
 const tmp = fs.mkdtempSync(path.join(SKIA, 'motor/.montando-'));
+// a pasta de montagem sai também quando o build PARA (a 0.3.0 levou uma sobra dessas para o git)
+process.on('exit', () => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) { /* já saiu */ } });
 try {
   fs.writeFileSync(path.join(tmp, 'motor.js'), motor);
   fs.writeFileSync(path.join(tmp, 'casos.json'), casosJson);

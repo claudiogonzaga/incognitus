@@ -18,3 +18,4 @@ testes/pdfs/
 .DS_Store
 # instaladores baixados do CI
 dist/
+motor/.montando-*/

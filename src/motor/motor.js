@@ -1,6 +1,6 @@
-// Incognitus — motor de anonimização 1.9.0. Gerado por scripts/extrair_motor.mjs a partir do graphe.js do Graphé
+// Incognitus — motor de anonimização 1.10.0. Gerado por scripts/extrair_motor.mjs a partir do graphe.js do Graphé
 // (as funções do lote automático da anonimização e as dependências delas, pelo nome) e do testes/anon/pipeline.js.
-// Não edite à mão: rode de novo o script. O cabeçalho que este motor escreve diz "GRAPHE v1.9.0": é a versão do motor.
+// Não edite à mão: rode de novo o script. O cabeçalho que este motor escreve diz "GRAPHE v1.10.0": é a versão do motor.
 // ── Ambiente do Incognitus ────────────────────────────────────────────────────────────────────────────────────────────────
 // O que no Graphé vem da planilha e do Apps Script vem daqui, sem rede e sem disco:
 //   · VARIAVEIS_GLOBAIS: vazia — os contatos institucionais são o ANON_INST_PADRAO, que os Ajustes do Incognitus trocam
@@ -41,7 +41,7 @@ var Utilities = {
     });
   }
 };
-// ── Graphé: anonimização (355 declarações) ──
+// ── Graphé: anonimização (388 declarações) ──
 var _TZ_MT_ = 'America/Cuiaba';
 function _pdfPaginasFracas_(texto) {
   var ps = _anonPaginas_(texto), out = [];
@@ -54,7 +54,7 @@ function _pdfOcrFecharMeta_(meta, novo, restantes) {
   for (var i = 0; i < ps.length; i++) if (_anonPaginaSemTexto_(ps[i]) && restantes.indexOf(i + 1) < 0) meta.poucoTexto.push(i + 1);
   return novo;
 }
-var ANON_VERSAO = '1.9.0';
+var ANON_VERSAO = '1.10.0';
 var ANON_PROP_LISTA_BRANCA = 'GRAPHE_ANON_LISTA_BRANCA';
 var ANON_ABRE = '«';
 var ANON_FECHA = '»';
@@ -1111,6 +1111,8 @@ function _anonNormalizarParaCasar_(texto) {
   var s = String(texto == null ? '' : texto);
   s = s.replace(/[“”„]/g, '"').replace(/[‘’‚]/g, "'");
 
+  s = s.replace(/(?<![A-Za-zÀ-ü])([A-ZÀ-Ü]{2,})([a-zà-ü])([A-ZÀ-Ü]+)(?![A-Za-zÀ-ü])/g, function (m, a, b, c) { return a + b.toUpperCase() + c; });
+
   s = s.replace(/(?<![A-Za-zÀ-ü])([A-Za-zÀ-ü]{1,40})-[ \t]*\n[ \t]*([a-zà-ü]{1,40}|[A-ZÀ-Ü]{1,40}(?![a-zà-ü]))/g, function (m, a, b) {
     if ((a === a.toUpperCase()) !== (b === b.toUpperCase())) return m;
     return a + b + '\n';
@@ -1183,6 +1185,7 @@ function _anonCnpjValido_(s) {
   return dv(d, p1) === parseInt(d.charAt(12), 10) && dv(d, p2) === parseInt(d.charAt(13), 10);
 }
 var _ANON_REGRAS_ = null;
+function _anonChaveEmailOcr_(m) { return String(m).toLowerCase().replace(/[ \t]+/g, '').replace(/\(d|\(@|\(a\)|\(©|©/, '@'); }
 function _anonRegras_() {
   if (_ANON_REGRAS_) return _ANON_REGRAS_;
   var placa = function (m) { return m.toUpperCase().replace(/[^A-Z0-9]/g, ''); };
@@ -1196,6 +1199,9 @@ function _anonRegras_() {
     { tipo: 'CPF',   re: new RegExp('\\bCPF(?:\\s*\\/\\s*MF)?\\b[\\s:.\\-]*(?:sob\\s+o\\s+)?(?:n[º°o.˚]*\\s*)?[\\s:.\\-]*(' + ANON_CPF_NUM + ')(?![\\d\\/])', 'gi'),
       grupo: 1, chave: _anonDigitos_, duvidoso: function (a) { return !_anonCpfValido_(a); } },
     { tipo: 'CPF',   re: new RegExp('(?<![\\d.\\/\\-])' + ANON_CPF_NUM + '(?![\\d\\/])', 'g'), ok: _anonCpfValido_, okCtx: _anonCpfSemRotuloOk_, chave: _anonDigitos_ },
+
+    { tipo: 'CPF',   re: /(?<![\d.\/\-])\d{3}\.\d{3}\.\d{3}-\d{2}(?![\d\/\-])/g, chave: _anonDigitos_, duvidoso: function (a) { return !_anonCpfValido_(a); },
+      okCtx: function (a, s, p) { return _anonCpfSemRotuloOk_(a, s, p) && /\bCPF\b/i.test(s.slice(Math.max(0, p - 160), p + a.length + 160)); } },
 
     { tipo: 'CPFMASC', re: /(?<![\w*])[\d*xX]{3}\.[\d*xX]{3}\.[\d*xX]{3}-[\d*xX]{2}(?![\w*])/g,
       ok: function (a) { return /[*xX]/.test(a) && (a.match(/\d/g) || []).length >= 3; }, chave: function (a) { return a.toUpperCase().replace(/X/g, '*'); } },
@@ -1222,10 +1228,14 @@ function _anonRegras_() {
       ok: function (m) { return /[ \t]/.test(m) && !ANON_RE_EMAIL_INSTITUCIONAL.test(m.replace(/[ \t]+/g, '')); },
       chave: function (m) { return m.toLowerCase().replace(/[ \t]+/g, ''); } },
 
+    { tipo: 'EMAIL', re: /(?:\be-?[ \t]?mail|endere[cç]o[ \t]+eletr[oô]nico|correio[ \t]+eletr[oô]nico)[ \t]*:?[ \t]*([\w.+\-]+[ \t]?(?:\(D|\(@|\(a\)|\(©|©)[ \t]?[\w\-]+(?:[ \t]?\.[ \t]?[\w\-]+)*?[ \t]?\.[ \t]?(?:com|net|org|gov|edu|jus|mp|adv|br|info|biz|io|me|pt|us|uk|es|de|it|fr)(?:\.br)?)(?![\w])/gi,
+      grupo: 1, ok: function (m) { return !ANON_RE_EMAIL_INSTITUCIONAL.test(_anonChaveEmailOcr_(m)); }, chave: _anonChaveEmailOcr_ },
+
     { tipo: 'REDE',  re: /(?:https?:\/\/)?(?:www\.|m\.|web\.|mobile\.)?\b(?:instagram\.com|facebook\.com|fb\.com|fb\.me|tiktok\.com|twitter\.com|x\.com|t\.me|kwai\.com|linkedin\.com\/in)\/[^\s,;)\]"'«»<>]+/gi,
       chave: function (m) { return m.toLowerCase().replace(/^https?:\/\//, '').replace(/^(?:www|m|web|mobile)\./, '').replace(/[\/?#.]+$/, ''); } },
     { tipo: 'REDE',  re: /(?<![\w@.\/])@[A-Za-z0-9_](?:[A-Za-z0-9_.]{0,28}[A-Za-z0-9_])?(?![\w@])/g, chave: function (m) { return m.toLowerCase(); },
-      okCtx: function (a, s, p) { return !/^(?:[ \t][\w\-]{1,4})?[ \t]?\.[ \t]?(?:com|net|org|gov|edu|br)(?![A-Za-z])/i.test(s.slice(p + a.length, p + a.length + 14)) &&
+
+      okCtx: function (a, s, p) { return !/\.(?:com|net|org|gov|edu|br)$/i.test(a) && !/^(?:[ \t][\w\-]{1,4})?[ \t]?\.[ \t]?(?:com|net|org|gov|edu|br)(?![A-Za-z])/i.test(s.slice(p + a.length, p + a.length + 14)) &&
         !/[\w.+\-][ \t]$/.test(s.slice(Math.max(0, p - 2), p)); } },
 
     { tipo: 'BANCO', re: new RegExp(ANON_BANCO_AG + '[\\s,;\\/\\-–]*(?:e\\s+)?' + ANON_BANCO_CONTA + '(?!\\d)', 'gi'), chave: _anonDigitos_ },
@@ -1241,12 +1251,13 @@ function _anonRegras_() {
     { tipo: 'GPS',   re: new RegExp('\\blat(?:itude)?\\.?\\s*[:=]?\\s*' + ANON_GPS_COORD + '[NSns]?[\\s,;\\/]*(?:e\\s+)?\\blong?(?:itude)?\\.?\\s*[:=]?\\s*' + ANON_GPS_COORD + '(?:[EOWLeowl](?![A-Za-zÀ-ü]))?', 'gi'), chave: _anonDigitos_ },
     { tipo: 'GPS',   re: new RegExp(ANON_GPS_DMS + '\\s*[NSns]?[\\s,;\\/]{1,4}(?:[EOWLeowl]\\s?)?' + ANON_GPS_DMS + '(?:\\s?[EOWLeowl](?![A-Za-zÀ-ü]))?', 'g'), chave: _anonDigitos_ },
 
-    { tipo: 'TEL',   re: new RegExp(ANON_TEL_ROTULO + '[\\s:.\\-]*(?:n[º°o.]*\\s*)?[\\s:.\\-]*(' + ANON_TEL_NUM + ')(?!\\d)', 'gi'), grupo: 1, chave: _anonChaveTel_ },
+    { tipo: 'TEL',   re: new RegExp(ANON_TEL_ROTULO + '[\\s:.\\-)]*(?:n[º°o.]*\\s*)?[\\s:.\\-]*(' + ANON_TEL_NUM + ')(?!\\d)', 'gi'), grupo: 1, chave: _anonChaveTel_ },
     { tipo: 'TEL',   re: new RegExp('(?:\\+\\s?55\\s?)?\\(\\s?[1-9]\\d\\s?\\)\\s?9?[\\s.]?\\d{4}[\\s.\\-]?(?:\\d{4}|\\d{3}\\s\\d)(?!\\d)', 'g'), okCtx: _anonTelCtxOk_, chave: _anonChaveTel_ },
     { tipo: 'TEL',   re: /(?<![\d.,\/\-])(?:\+\s?55\s?)?[1-9][1-9][ \t]*[.\-]?[ \t]*(?:9[ \t.\-]?)?9[ \t.]?\d{4}[ \t]*[.\-]?[ \t]*\d{4}(?![\d\/])/g, okCtx: _anonTelCtxOk_, chave: _anonChaveTel_ },
     { tipo: 'TEL',   re: new RegExp(ANON_TEL_ROTULO + '[\\s:.\\-]*(?:n[º°o.]*\\s*)?[\\s:.\\-]*(' + ANON_TEL_NUM_QUEBRADO + ')(?!\\d)', 'gi'), grupo: 1, bloco: true,
       ok: function (a) { var d = _anonDigitos_(a).length; return d >= 8 && d <= 13; }, chave: _anonChaveTel_ },
-    { tipo: 'TEL',   re: /\+\s?55\s?\(?[1-9][1-9]\)?[\s.\-]?[2-5]\d{3}[\s.\-]?\d{4}(?!\d)/g, chave: _anonChaveTel_ },
+
+    { tipo: 'TEL',   re: /\+\s?55\s?\(?[1-9][1-9]\)?[\s.\-]?[2-9]\d{3}[\s.\-]?\d{4}(?!\d)/g, chave: _anonChaveTel_ },
 
     { tipo: 'CNPJ',  re: /(?<=[A-ZÀ-Ü]{2}:)\d{14}(?!\d)/g, okCtx: _anonNumeroDoCertificadoOk_, chave: _anonDigitos_, duvidoso: function (a) { return !_anonCnpjValido_(a); } },
     { tipo: 'CPF',   re: /(?<=[A-ZÀ-Ü]{2}:)\d{11}(?!\d)/g, okCtx: _anonNumeroDoCertificadoOk_, chave: _anonDigitos_, duvidoso: function (a) { return !_anonCpfValido_(a); } },
@@ -1254,6 +1265,8 @@ function _anonRegras_() {
 
     { tipo: 'CEP',   re: /(?<![\d.,\/\-])\d{2}\.?\d{3}-\d{3}(?![\d\-\/])(?!\s\d(?!\d))/g,
       okCtx: function (a, s, p) { return !ANON_RE_ROTULO_TEL.test(_anonLinhaEm_(s, p)); }, chave: _anonDigitos_ },
+
+    { tipo: 'CEP',   re: /(?<![\d.,\/])(?<!\d-)\d{8}(?![\d\-\/])/g, okCtx: _anonCepSemHifenCtxOk_, chave: _anonDigitos_ },
     { tipo: 'PLACA', re: /\b[A-Z]{3}-?\d[A-Z]\d{2}\b|\b[A-Z]{3}-\d{4}\b/g, okCtx: _anonPlacaCtxOk_, chave: placa },
     { tipo: 'PLACA', re: /\bplacas?\b[\s:nº°.]*([A-Z]{3}[ \t]*-?[ \t]*\n?[ \t]*\d[A-Z0-9]\d{2})\b/gi, grupo: 1, chave: placa },
 
@@ -1271,10 +1284,22 @@ function _anonRegras_() {
     { tipo: 'END',   re: new RegExp('(?<![A-Za-zÀ-ü])(R\\.\\s?(?:d[aeo]s?\\s+)?(?!' + ANON_END_R_NAO + ')[A-ZÀ-Ü][^\\n,;]{0,59}?,?\\s*' + ANON_END_NUMERO + ANON_END_COMPL + ANON_END_BAIRRO + ')', 'g'),
       grupo: 1, ok: _anonEndOk_, okCtx: _anonEndRCtxOk_, chave: _anonChave_ },
 
+    { tipo: 'END',   bloco: true, re: new RegExp('(?<![A-Za-zÀ-ü])((?:Rua|Av\\.|Avenida|Travessa|Alameda|Estrada|Pra[cç]a)[ \\t]+[^\\n,;]{1,50}?[ \\t]*\\n[ \\t]*[^\\n,;]{1,40}?,?[ \\t]*' +
+        ANON_END_NUMERO + ANON_END_COMPL + ANON_END_BAIRRO + ')', 'gi'), grupo: 1, ok: _anonEndOk_, okCtx: _anonEndMoradiaAntes_, chave: _anonChave_ },
+
     { tipo: 'END',   re: new RegExp('(?<![A-Za-zÀ-ü])(' + ANON_END_RURAL_PREF + '\\s+' + ANON_END_RURAL_NOME + ')', 'g'), grupo: 1, okCtx: _anonEndRuralCtxOk_, chave: _anonChave_ },
 
     { tipo: 'END',   re: /(?<![A-Za-zÀ-ü])((?:(?:Rodovia|RODOVIA|Rod\.|ROD\.)\s*)?(?:BR|MT|MS|GO|RO|PA|SP|PR|MG|TO|BA)[-\s]?\d{3}\s*,?\s*(?:[-–]\s*)?(?:km|Km|KM)\.?\s*\d{1,4}(?:[.,]\d{1,3})?)/g,
-      grupo: 1, okCtx: _anonEndMoradiaAntes_, chave: _anonChave_ }
+      grupo: 1, okCtx: _anonEndMoradiaAntes_, chave: _anonChave_ },
+
+    { tipo: 'END',   re: new RegExp('\\bEndere[cç]o(?:\\s+(?:residencial|completo|atual))?[ \\t]*\\.*[ \\t]*:[ \\t]*' +
+        '(?:(?:residencial|comercial|rural|trabalho)[ \\t]*[-–:][ \\t]*)?([^\\n:;«\\s][^\\n:;«]{2,89}?)(?=' +
+        '[ \\t]*[,\\-–][ \\t]*[A-ZÀ-Ü][^\\n,;:\\/\\-–\\d«]{1,40}?[ \\t]*[\\/\\-–][ \\t]*' + ANON_UF_FONTE + '(?![A-Za-zÀ-ü])' +
+        '|[ \\t]*[,;\\-–]?[ \\t]*(?:CEP(?![A-Za-zÀ-ü])|«|(?<!\\d)\\d{2}\\.?\\d{3}-?\\d{3}(?!\\d))' +
+        '|[ \\t]*[,;\\-–]?[ \\t]*(?:N[uú]mero|Bairro|Complemento|Compl|Munic[ií]pio|Cidade|UF|Ponto(?:\\s+de\\s+refer[eê]ncia)?|Refer[eê]ncia|' +
+        'Telefones?|Tel|Fone|Cel(?:ular)?|E-?mail)[ \\t]*\\.*[ \\t]*:' +
+        '|[ \\t]{3,}|[ \\t]*[,;.]?[ \\t]*(?:\\n|$))', 'gi'),
+      grupo: 1, ok: _anonEndFormOk_, chave: _anonChave_ }
   ];
   return _ANON_REGRAS_;
 }
@@ -1336,10 +1361,10 @@ function _anonNascPlausivel_(alvo) {
 var ANON_END_PROXIMIDADE = '(?:pr[oó]xim[oa]s?|perto|ao\\s+lado|em\\s+frente|defronte|atr[aá]s|nas\\s+proximidades|esquina|nesta\\s+cidade|neste\\s+munic[ií]pio|nesta\\s+comarca)';
 var ANON_END_FIM_SEG = '(?=\\s*(?:[,;()\\n]|\\s[-–]\\s|$)|(?<!(?:^|[^A-Za-zÀ-ü])(?:[A-Za-z]|Sr|Sra|Sto|Sta|Dr|Dra|Pres|Gov|Cel|Mal|Prof|Gal|Ten|Cap|Maj|Pe|Fr|Jd|Vl|Res|Pq|Cond|St|Sen|Dep|Ver|Eng|Des|Min|Cmte|Brig|Alm|Gen|Sgt|Cb|Sd|Pde|Dom))\\.\\s+[A-ZÀ-Ü][a-zà-ü]{2,}\\s+[a-zà-ü]|\\s+' + ANON_END_PROXIMIDADE + ')';
 var ANON_END_NOME = '(?:(?!\\b(?:ID|mov|art|fls?|processo|autos|evento|num)\\b\\.?\\s*(?:n[\\u00ba\\u00b0.o]*\\s*)?\\d)[^\\n,;]){1,60}?';
-var ANON_END_NUMERO = '(?:(?:n[\\u00ba\\u00b0.o\\u02da]*\\s*)?(?<![\\d.\\/\\-])\\d{1,5}[A-Za-z]?(?![\\d\\/A-Za-z])|s\\s?\\/\\s?n(?:[\\u00ba\\u00b0o]|\\.)?(?![A-Za-zÀ-ü])|s\\.\\s?n\\.|sem\\s+n[uú]mero|(?:Quadra|Qd\\.?|Q\\.)\\s*(?:n[\\u00ba\\u00b0.o]*\\s*)?\\d{1,4}[A-Za-z]?(?![\\dA-Za-z])|(?:Lote|Lt\\.?)\\s*\\d{1,4}[A-Za-z]?(?![\\dA-Za-z])|km\\s*\\d{1,4}(?:[.,]\\d{1,3})?)';
-var ANON_END_COMPL = '(?:\\s*[,\\-–]?\\s*(?:(?:ap(?:to|artamento)?\\.?|casa|bloco|bl\\.?|quadra|qd\\.?|lote|lt\\.?|sala|sl\\.?|km|conjunto|cj\\.?|torre|kitnet|box)\\s*(?:n[\\u00ba\\u00b0.o]*\\s*)?(?:\\d{1,5}[A-Za-z]?|[A-Za-z](?![A-Za-zÀ-ü]))(?![\\d])|fundos))*';
+var ANON_END_NUMERO = '(?:(?:n[\\u00ba\\u00b0.o\\u02da]*\\s*)?(?<![\\d.\\/\\-])\\d{1,5}[A-Za-z]?(?![\\dA-Za-z])(?!\\/\\S)|s\\s?\\/\\s?n(?:[\\u00ba\\u00b0o]|\\.)?(?![A-Za-zÀ-ü])|s\\.\\s?n\\.|sem\\s+n[uú]mero|(?:Quadra|Qd\\.?|Q\\.)\\s*(?:n[\\u00ba\\u00b0.o]*\\s*)?\\d{1,4}(?:[A-Za-z]?(?![\\dA-Za-z])|(?=L[Tt]?\\.?\\s*\\d))|(?:Lote|Lt\\.?)\\s*\\d{1,4}[A-Za-z]?(?![\\dA-Za-z])|(?:casa|cs\\.)\\s*(?:n[\\u00ba\\u00b0.o]*\\s*)?\\d{1,5}[A-Za-z]?(?![\\dA-Za-z])|km\\s*\\d{1,4}(?:[.,]\\d{1,3})?)';
+var ANON_END_COMPL = '(?:\\s*[,\\-–\\/]?\\s*(?:(?:ap(?:to|artamento)?\\.?|casa|bloco|bl\\.?|quadra|qd\\.?|lote|lt\\.?|sala|sl\\.?|km|conjunto|cj\\.?|torre|kitnet|box)\\s*(?:n[\\u00ba\\u00b0.o]*\\s*)?(?:\\d{1,5}(?:[A-Za-z](?![A-Za-z]))?|[A-Za-z](?![A-Za-zÀ-ü]))(?![\\d])|fundos))*';
 var ANON_END_BAIRRO = '(?:\\s*[,\\-–]\\s*(?:' +
-    '(?:Bairro|B\\.|Jardim|Jd\\.?|Vila|Vl\\.|Setor|St\\.|Residencial|Res\\.|Loteamento|Parque|Pq\\.|Conjunto|Condom[ií]nio|Cond\\.|N[uú]cleo)\\s+(?:(?!\\s*' + ANON_END_PROXIMIDADE + ')(?:[^\\n,;()\\-–]|(?<=[A-Za-zÀ-ü])-(?![A-Z]{2}(?![A-Za-zÀ-ü]))(?=[A-Za-zÀ-ü])))*?[^\\s,;()\\-–]' + ANON_END_FIM_SEG +
+    '(?:Bairro[ \\t]*[,:]?|B\\.|Jardim|Jd\\.?|Vila|Vl\\.|Setor|St\\.|Residencial|Res\\.|Loteamento|Parque|Pq\\.|Conjunto|Condom[ií]nio|Cond\\.|N[uú]cleo)\\s+(?:(?!\\s*' + ANON_END_PROXIMIDADE + ')(?:[^\\n,;()\\-–]|(?<=[A-Za-zÀ-ü])-(?![A-Z]{2}(?![A-Za-zÀ-ü]))(?=[A-Za-zÀ-ü])))*?[^\\s,;()\\-–]' + ANON_END_FIM_SEG +
     '|(?!\\s*' + ANON_END_PROXIMIDADE + ')(?!(?:Centro|CENTRO|Zona\\s+Rural|ZONA\\s+RURAL)(?![A-Za-zÀ-ü]))[^\\n,;()\\-–\\d]{3,30}?(?=\\s*[,\\-–]\\s*[^\\n,;()\\-–\\d]{2,40}?\\s*[-\\/]\\s*[A-Z]{2}(?![A-Za-zÀ-ü]))' +
   '))?';
 var ANON_RE_END_FONTE = '\\b(' +
@@ -1354,6 +1379,8 @@ function _anonEndFormOk_(alvo) {
   var a = String(alvo || '').trim(), sem = a.replace(/^(?:residencial|comercial|rural|trabalho)\s*[-–:]\s*/i, '');
   if (!/[A-Za-zÀ-ü]{3}/.test(sem)) return false;
   if (/^(?:bairro\s+)?(?:n[ãa]o\s+(?:informad[oa]s?|consta|sabe(?:\s+informar)?|possui|h[aá]|encontrad[oa]s?|declarad[oa])|ignorad[oa]|desconhecid[oa]|sem\s+endere[cç]o|centro|zona\s+rural|rural|s\/?n|\*+|-+|idem)(?:$|[\s.,;])/i.test(sem)) return false;
+
+  if (/^(?:em\s+)?(?:(?:lugar|local)\s+incerto|situa[cç][aã]o\s+de\s+rua|morador[a]?\s+de\s+rua|sem\s+resid[eê]ncia|o\s+mesmo|a\s+mesma)(?:$|[\s.,;])/i.test(sem)) return false;
 
   if (ANON_RE_INSTITUCIONAL.test(sem) || /(?:^|[^A-Za-zÀ-ü])(?:batalh|quartel|penitenci|pres[ií]dio|cadeia|npm|pelot[aã]o|bpm|cipm|f[oó]rum)/i.test(sem)) return false;
   return !_anonEhMunicipio_(sem);
@@ -1373,6 +1400,12 @@ function _anonEndMoradiaAntes_(alvo, s, p) { return ANON_RE_MORADIA_ANTES.test(s
 function _anonEndRuralCtxOk_(alvo, s, p, m) {
   var depois = s.slice(p + m.length, p + m.length + 30);
   return /^\s*,?\s*[-–]?\s*zona\s+rural\b/i.test(depois) || _anonEndMoradiaAntes_(alvo, s, p);
+}
+function _anonCepSemHifenCtxOk_(alvo, s, p) {
+  var antes = s.slice(Math.max(0, p - 40), p);
+  if (new RegExp('[A-Za-zÀ-ü][ \\t]*[\\/\\-–][ \\t]*' + ANON_UF_FONTE + '[ \\t]*[,\\-–]?[ \\t]*$').test(antes)) return !/\bOAB[ \t]*[\/\-–][ \t]*[A-Z]{2}[ \t]*[,\-–]?[ \t]*$/i.test(antes);
+  var ini = s.lastIndexOf('\n', p - 1) + 1;
+  return !ANON_RE_ROTULO_TEL.test(_anonLinhaEm_(s, p)) && /\bendere[cç]o(?:\s+(?:residencial|completo|atual))?[ \t]*\.*[ \t]*:/i.test(s.slice(ini, p));
 }
 function _anonEndRCtxOk_(alvo, s, p) {
   if (/(?:^|[^A-Za-zÀ-ü])(?:[oa]|d[oa]|pel[oa]|ao|à)\s+$/i.test(s.slice(Math.max(0, p - 8), p))) return false;
@@ -1643,7 +1676,8 @@ function _anonSanearMapa_(mapa) {
     if (e.tipo === 'TEST') e.tipo = 'TESTEMUNHA';
     if (_anonAnotarDifusa_(mapa, e.valor)) { _anonDescartarToken_(mapa, t); n++; continue; }
     if (e.tipo === 'ADV') { _anonMarcarEmClaro_(mapa, e.valor); _anonDescartarToken_(mapa, t); n++; continue; }
-    if (_anonEhPedacoDeEmClaro_(mapa, _anonChaveSig_(e.valor))) { _anonDescartarToken_(mapa, t); n++; continue; }
+
+    if (!_anonTokenEhForte_(e) && _anonEhPedacoDeEmClaro_(mapa, _anonChaveSig_(e.valor))) { _anonDescartarToken_(mapa, t); n++; continue; }
     var limpo = _anonNomeLimpoParaRegistro_(e.valor);
     if (!limpo || _anonPalavrasSignificativas_(limpo).length < 2 || _anonClassificarNome_(limpo) === 'publico' || _anonClassificarNome_(limpo) === 'juridica') {
       _anonDescartarToken_(mapa, t); n++; continue;
@@ -1722,6 +1756,7 @@ function _anonRegistrarAscendentes_(mapa, texto) {
 function _anonMarcarEmClaro_(mapa, nome) {
   mapa.emClaro = mapa.emClaro || [];
   var k = _anonChaveSig_(nome);
+  if (_anonTokenForteDaChave_(mapa, k)) return;
   if (k && mapa.emClaro.indexOf(k) < 0) mapa.emClaro.push(k);
 }
 function _anonFundirTokens_(mapa, de, em) {
@@ -1834,7 +1869,12 @@ function _anonRegistrarNome_(mapa, nome, papel, opts) {
   if (!nome || _anonPalavrasSignificativas_(nome).length < 2 || _anonDigitos_(nome).length >= 6) return null;
   var cls = _anonClassificarNome_(nome);
   if (cls === 'publico' || cls === 'juridica') return null;
-  if (_anonEhPedacoDeEmClaro_(mapa, _anonChaveSig_(nome))) return null;
+
+  var kReg = _anonChaveSig_(nome);
+  if (ANON_PAPEIS_FORTES[papel === 'TEST' ? 'TESTEMUNHA' : papel] || opts.qualificado) {
+    ['emClaro', 'autoridadesIa'].forEach(function (c) { if ((mapa[c] || []).indexOf(kReg) >= 0) mapa[c] = mapa[c].filter(function (x) { return x !== kReg; }); });
+  }
+  if (_anonEhPedacoDeEmClaro_(mapa, kReg)) return null;
 
   if (papel === 'ADV') { _anonMarcarEmClaro_(mapa, nome); return null; }
   if (papel === 'TEST') papel = 'TESTEMUNHA';
@@ -1860,11 +1900,13 @@ function _anonRegistrarNome_(mapa, nome, papel, opts) {
     _anonVariantesDeNome_(nome, isolada && !!ANON_PAPEIS_ISOLADA[ex.tipo]).forEach(function (v) { if (ex.variantes.indexOf(v) < 0) ex.variantes.push(v); });
     ex.variantes.sort(function (a, b) { return b.length - a.length; });
     if (isolada && ex.tipo === 'PES') ex.comIsolada = true;
+    if (opts.qualificado) ex.qualificado = true;
     return { token: existente, variantes: ex.variantes };
   }
   var vs = _anonVariantesDeNome_(nome, isolada);
   var token = _anonToken_(mapa, tipo, nome.toUpperCase(), _anonChaveSig_(nome), vs, opts.genero);
   if (isolada && tipo === 'PES') mapa.tokens[token].comIsolada = true;
+  if (opts.qualificado) mapa.tokens[token].qualificado = true;
   if (opts.genero) { mapa.tokens[token].genero = opts.genero; mapa.tokens[token].generoInformado = true; }
   if (opts.idade) mapa.tokens[token].idade = opts.idade;
   _anonAnotarIdadeVista_(mapa.tokens[token], opts.idade);
@@ -2029,7 +2071,8 @@ function _anonMascaraPrecedente_(linhas) {
     k = 0;
     for (j = i + 1; j < n && k < 2; j++) {
       if (!linhas[j].trim()) continue;
-      if (_anonLinhaEncerraFrase_(ult) || ANON_RE_LINHA_DE_PESSOA.test(linhas[j])) break;
+
+      if (_anonLinhaEncerraFrase_(ult) || /\)\s*$/.test(ult) || ANON_RE_LINHA_DE_PESSOA.test(linhas[j])) break;
       mascara[j] = true; k++; ult = linhas[j];
     }
   }
@@ -2081,6 +2124,85 @@ function _anonSemCarimbos_(texto) {
   }
   return out.join('\n');
 }
+var ANON_OMITIDO = '[omitido]';
+var ANON_RE_CARIMBO_GERADO = /(gerado\s+pelo\s+usu[áa]rio)[ \t]+.+?(?=[ \t]+em[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]*$)/gi;
+var ANON_RE_CARIMBO_ASSINANTE = /(assinad[oa]\s+(?:eletronicamente|digitalmente|de\s+forma\s+digital)\s+por)([ \t]*:?[ \t]*)(?![ \t]*meio\s)(.*?)(?::[ \t]*\d{11})?(?=[ \t]+[-–][ \t]+\d|[ \t]*[,;(]|[ \t]+em[ \t]+\d|[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]+(?:documento\s+)?assinad[oa]\s|[ \t]*$)/gi;
+var ANON_RE_CARIMBO_NOME_HORA = /(^|[:;][ \t]*|[ \t]{2,})([A-ZÀ-Ý][A-ZÀ-Ý'´]+(?:[ \t]+[A-ZÀ-Ý][A-ZÀ-Ý'´]*){1,7})(?=[ \t]+-[ \t]+\d{2}\/\d{2}\/\d{4}[ \t]+\d{2}:\d{2}:\d{2})/g;
+var ANON_RE_CARIMBO_POR_SOLTO = /((?:[Dd]igitalmente|[Ee]letronicamente)[ \t]+por[ \t]*:?[ \t]*)([A-ZÀ-Ý][A-Za-zÀ-ÿ'´]+(?:[ \t]+(?:d[aeo]s?|D[AEO]S?|e|E|[A-ZÀ-Ý][A-Za-zÀ-ÿ'´]+)){0,6})/g;
+var ANON_RE_CARIMBO_RESTO = /^[ \t]*(?:https?:\/\/\S+|\d{15,})[ \t]*$/;
+var ANON_RE_CARIMBO_SO_MAIUSC = /^[ \t]{2,}[A-ZÀ-Ý][A-ZÀ-Ý'´]+(?:[ \t]+[A-ZÀ-Ý][A-ZÀ-Ý'´]*){0,4}[ \t]*$/;
+function _anonCarimboSemNomeAntes_(ls, i) {
+  var cand = [], resto = false;
+  for (var j = i - 1; j >= Math.max(0, i - 6); j--) {
+    if (!ls[j].trim()) continue;
+    if (ANON_RE_CARIMBO_RESTO.test(ls[j])) { resto = true; continue; }
+    if (ANON_RE_CARIMBO_SO_MAIUSC.test(ls[j]) && !/\[omitido\]/.test(ls[j])) { cand.push(j); continue; }
+    break;
+  }
+  if (resto) cand.forEach(function (j) { ls[j] = ''; });
+}
+function _anonSemCarimbosSaida_(texto) {
+  var ls = String(texto == null ? '' : texto).split('\n'), resto = 0;
+  for (var i = 0; i < ls.length; i++) {
+    var l = ls[i];
+    if (ANON_RE_CARIMBO.test(l)) {
+      l = l.replace(ANON_RE_CARIMBO_ASSINANTE, function (m, por, sep) { return por + (sep.indexOf(':') >= 0 ? ': ' : ' ') + ANON_OMITIDO; });
+      _anonCarimboSemNomeAntes_(ls, i);
+      resto = 12;
+    } else if (resto > 0 && /^[ \t]{10,}\S/.test(l) && !/[a-zß-ÿ]{3,}/.test(l)) {
+
+      ls[i] = '';
+      resto--;
+      continue;
+    } else resto = 0;
+    ls[i] = l.replace(ANON_RE_CARIMBO_GERADO, '$1 ' + ANON_OMITIDO).replace(ANON_RE_CARIMBO_NOME_HORA, '$1' + ANON_OMITIDO).replace(ANON_RE_CARIMBO_POR_SOLTO, '$1' + ANON_OMITIDO);
+  }
+  _anonSemAssinaturaIcp_(ls);
+  return ls.join('\n');
+}
+var ANON_RE_ICP = /assinad[oa]\s+(?:digitalmente|de\s+forma\s+digital)|\bDN:\s*(?:C=|CN=)|\bDados:\s*\d{4}[.\/-]\d{2}[.\/-]\d{2}/i;
+var ANON_RE_ICP2 = /[Aa]ssinad[oa][ \t]+de[ \t]+forma[ \t]*$|\b[Dd]igital[ \t]+por[ \t]+[A-ZÀ-Ý]/;
+var ANON_RE_ICP_DUPLA = /^[ \t]*([A-ZÀ-Ý][A-ZÀ-Ý'´]{2,})[ \t]+\1(?::[ \t]*\d+)?[ \t]*$/;
+var ANON_RE_ICP_NOME_DIGITOS = /([A-ZÀ-Ý][A-ZÀ-Ý'´]{2,}):[ \t]*\d{4,}/g;
+var ANON_RE_ICP_LINHA_MAIUSC = /^[ \t]*[A-ZÀ-Ý][A-ZÀ-Ý'´]+(?:[ \t]+[A-ZÀ-Ý][A-ZÀ-Ý'´]*){0,3}[ \t]*$/;
+var ANON_RE_ICP_NOME = /(?:^[ \t]*por[ \t]+|digital[ \t]+por[ \t]+|\bCN=)([A-ZÀ-Ý][A-Za-zÀ-ÿ'´]*(?:[ \t]+(?:d[aeo]s?|D[AEO]S?|e|E|[A-ZÀ-Ý][A-Za-zÀ-ÿ'´]*))*)/g;
+var ANON_ICP_LIGA = { DA: 1, DE: 1, DO: 1, DAS: 1, DOS: 1, E: 1 };
+function _anonSemAssinaturaIcp_(ls) {
+  for (var i = 0; i < ls.length; i++) {
+    if (!ANON_RE_ICP.test(ls[i]) && !ANON_RE_ICP2.test(ls[i])) continue;
+    var de = Math.max(0, i - 3), ate = Math.min(ls.length - 1, i + 4), palavras = {}, j, m;
+    for (j = de; j <= ate; j++) {
+      ANON_RE_ICP_NOME.lastIndex = 0;
+      while ((m = ANON_RE_ICP_NOME.exec(ls[j])) !== null) {
+        m[1].split(/[ \t]+/).forEach(function (w) { var k = w.toUpperCase(); if (k.length >= 3 && !ANON_ICP_LIGA[k]) palavras[k] = 1; });
+      }
+      if ((m = ANON_RE_ICP_DUPLA.exec(ls[j])) !== null) palavras[m[1]] = 1;
+      ANON_RE_ICP_NOME_DIGITOS.lastIndex = 0;
+      while ((m = ANON_RE_ICP_NOME_DIGITOS.exec(ls[j])) !== null) if (m[1] !== 'DADOS' && m[1] !== 'DATA') palavras[m[1]] = 1;
+    }
+
+    for (var volta = 0; volta < 2; volta++) {
+      for (j = de; j <= ate; j++) {
+        if (!ANON_RE_ICP_LINHA_MAIUSC.test(ls[j])) continue;
+        var ws = ls[j].trim().split(/[ \t]+/);
+        if (ws.some(function (w) { return palavras[w]; })) ws.forEach(function (w) { if (w.length >= 3 && !ANON_ICP_LIGA[w]) palavras[w] = 1; });
+      }
+    }
+    var formas = [];
+    Object.keys(palavras).forEach(function (k) { formas.push(_anonPadraoTokenLiteral_(k), _anonPadraoTokenLiteral_(k.charAt(0) + k.slice(1).toLowerCase())); });
+    var reFormas = formas.length ? new RegExp('(?<![A-Za-zÀ-ÿ])(?:' + formas.join('|') + ')(?![A-Za-zÀ-ÿ])', 'g') : null;
+    for (j = de; j <= ate; j++) {
+      var l = ls[j]
+        .replace(/\bCN=[^,\n]*/g, 'CN=' + ANON_OMITIDO)
+        .replace(/(?!Dados\b|Data\b)[A-ZÀ-Ý][A-Za-zÀ-ÿ'´]*:[ \t]*\d{4,}/g, ANON_OMITIDO)
+        .replace(/^([ \t]*)(?:[A-ZÀ-Ý][A-Za-zÀ-ÿ'´]*[ \t]+){1,6}(?=DN:)/, '$1' + ANON_OMITIDO + ' ')
+        .replace(/^([ \t]*)(?:(?:d[aeo]s?|e)[ \t]+|[A-ZÀ-Ý][A-Za-zÀ-ÿ'´]*[ \t]+){1,9}(?=Dados:)/, '$1' + ANON_OMITIDO + ' ')
+        .replace(/(^[ \t]*por[ \t]+|digital[ \t]+por[ \t]+)[A-ZÀ-Ý][^\n]*?(?=[ \t]{2,}|$)/, '$1' + ANON_OMITIDO);
+      if (reFormas) l = l.replace(reFormas, ANON_OMITIDO);
+      ls[j] = l.replace(/\[omitido\](?:[ \t]+\[omitido\])+/g, ANON_OMITIDO);
+    }
+  }
+}
 function _anonColherFiliacao_(texto, mapa) {
   var re = /\bfilh[oa]\s+de\s+([A-Z\u00c0-\u00dc][^,;]{3,80}?)\s+e\s+(?:de\s+)?([A-Z\u00c0-\u00dc][^,;.]{3,80}?)(?=\s*[,;.]|\s+residente|\s+natural|\s+portador|\s+inscrit|\s+nascid|\s+domicili|\s+brasileir)/g;
   var m, n = 0;
@@ -2093,14 +2215,60 @@ function _anonColherFiliacao_(texto, mapa) {
   while ((m = re1.exec(texto)) !== null) {
     if (_anonRegistrarAscendente_(mapa, m[1])) n++;
   }
+
+  var reF = /(?:^|[^A-Za-zÀ-ü])(?:FILIA[ÇC][ÃA]O|Filia[çc][ãa]o)(?![A-Za-zÀ-ü])[ \t]*[:?.\-]?[ \t]*/g, mf, lexP = _anonPrenomesSet_();
+  var reFormaNome = /^[A-ZÀ-Ü][A-Za-zÀ-ü'’]+(?:[ \t]+(?:(?:d[aeo]s?|D[AEO]S?|e|E)[ \t]+)?[A-ZÀ-Ü][A-Za-zÀ-ü'’]+)+(?:[ \t]+(?:d[aeo]s?|D[AEO]S?))?$/;
+  while ((mf = reF.exec(texto)) !== null) {
+    var linhasF = texto.slice(mf.index + mf[0].length, mf.index + mf[0].length + 400).split('\n').slice(0, 3), achados = [];
+
+    var acimaF = (texto.slice(Math.max(0, mf.index - 300), mf.index + 1).split('\n').slice(-2)[0] || '').trim().split(/[ \t]{3,}/).pop() || '';
+    var abaixoF = (linhasF[1] || '').replace(/^[ \t]+/, '').split(/[ \t]{3,}/)[0].trim();
+    if (!(linhasF[0] || '').trim() && /\s[eE]\s+[A-ZÀ-Ü][A-Za-zÀ-ü'’]+(?:\s+[A-ZÀ-Ü][A-Za-zÀ-ü'’]+)*$/.test(acimaF) && abaixoF && reFormaNome.test(abaixoF) &&
+        !lexP[_anonSemAcento_(abaixoF.split(/\s+/)[0]).toUpperCase()] && reFormaNome.test(acimaF + ' ' + abaixoF)) {
+      linhasF = [acimaF + ' ' + abaixoF];
+    }
+    for (var li = 0; li < linhasF.length && achados.length < 2; li++) {
+      var seg = linhasF[li].replace(/^[ \t]+/, '').split(/[ \t]{3,}/)[0].trim();
+      if (!seg) continue;
+      if (!reFormaNome.test(seg) || !lexP[_anonSemAcento_(seg.split(/\s+/)[0]).toUpperCase()]) break;
+      _anonPartirPaiEMae_(seg, lexP).forEach(function (nm) { if (achados.length < 2) achados.push(nm); });
+    }
+    achados.forEach(function (nm) { if (_anonRegistrarAscendente_(mapa, nm)) n++; });
+  }
   return n;
 }
+function _anonPartirPaiEMae_(seg, lexP) {
+  var porE = seg.split(/\s+[eE]\s+(?=[A-ZÀ-Ü])/);
+  if (porE.length === 2 && porE.every(function (x) { return _anonPalavrasSignificativas_(x).length >= 2; })) return porE;
+  var ws = seg.split(/\s+/);
+  for (var i = 2; i < ws.length - 1; i++) {
+    if (!lexP[_anonSemAcento_(ws[i]).toUpperCase()] || lexP[_anonSemAcento_(ws[i - 1]).toUpperCase()] || ANON_CONECTIVOS[_anonChave_(ws[i - 1])]) continue;
+    var a = ws.slice(0, i).join(' '), b = ws.slice(i).join(' ');
+    if (_anonPalavrasSignificativas_(a).length >= 2 && _anonPalavrasSignificativas_(b).length >= 2) return [a, b];
+  }
+  return [seg];
+}
 function _anonRegistrarAscendente_(mapa, nome) {
-  var r = _anonRegistrarNome_(mapa, nome, 'PES');
+  var r = _anonRegistrarNome_(mapa, nome, 'PES', { qualificado: true });
   if (r && mapa.tokens[r.token] && mapa.tokens[r.token].tipo === 'PES') mapa.tokens[r.token].ascendente = true;
   return r;
 }
 var ANON_RE_AUTORIDADE_ANTES = /(?:inclu[ií]d[oa]|juntad[oa]|certificad[oa]|conferid[oa]|protocolad[oa]|expedid[oa]|lavrad[oa]|digitad[oa]|elaborad[oa]|movimentad[oa])\s+por\s*:?\s*$|\b(?:SD|CB|[123][º°o]?\s*SGT|SGT|SUBTEN|ST|ASP|[12][º°o]?\s*TEN|TEN|CAP|MAJ|TC|CEL)\.?\s*(?:PM|BM|QOPM|QPPM)\s*$|\b(?:[123][º°o]\s*SGT|SUBTEN|[12][º°o]\s*TEN|MAJ)\.?\s*$|\b(?:policial\s+(?:militar|civil|penal|federal|rodovi[aá]rio)|agente\s+(?:penitenci[aá]ri[oa]|de\s+pol[ií]cia|de\s+tr[aâ]nsito|prisional|socioeducativ[oa])|guarda\s+municipal|conciliador[a]?|mediador[a]?|tabeli[ãa]o?|oficial\s+de\s+registro|rel\.|relator[a]?|min\.|des\.|conselheir[oa]\s+tutelar)\s*[:,\-\u2013]?\s*$|\b(dr[a]?\.?|ju[i\u00ed]z[a]?|promotor[a]?|procurador[a]?|desembargador[a]?|ministr[oa]|escriv[a\u00e3][o]?|gestor[a]?|analista|t[e\u00e9]cnic[oa]|oficial|delegad[oa]|defensor[a]?|servidor[a]?|assessor[a]?|estagi[a\u00e1]ri[oa]|secret[a\u00e1]ri[oa]|investigador[a]?|agente|perit[oa]|m[e\u00e9]dic[oa])(?:\s*\(\s*[a\u00e3o]\s*\))?(?:\s+(?:de\s+justi[c\u00e7]a|de\s+direito|plantonista|substitut[oa]|judici[a\u00e1]ri[oa]|p[u\u00fa]blic[oa]|de\s+pol[i\u00ed]cia|titular|auxiliar|federal|estadual|legista|oficial|criminal|forense|judicial|m[eé]dic[oa]|civil|militar|penal|ambiental))*\s*[:,\-–]?\s*$|assinado\s+eletronicamente\s+por\s*:\s*$|assinatura\s*:\s*$|\b(?:SD|CB|SGT|SUBTEN|TEN|CAP|MAJ|CEL|ASP|sargento|subtenente|tenente|capit[aã]o|major|coronel|soldado|cabo)\.?\s*$|(?:\b(?:como|conforme|segundo|consoante|bem|j[aá])\s+(?:bem\s+)?(?:ensina|explica|adverte|pontua|assevera|observa|destaca|esclarece)[m]?|\b(?:leciona|preleciona)[m]?|\bdoutrina\s+de|\bli[cç][aã]o\s+de|\bmagist[eé]rio\s+de|\besc[oó]lio\s+de|\bapud|\bnas\s+palavras\s+de)\s*:?\s*$/i;
+var ANON_RE_VOCATIVO_ANTES = /(?:^\S*\s+|(?:^|\n)[ \t]*)(?:(?:a|ao|à)\s+)?(?:(?:excelent[ií]ssim[oa]|exm[oaªº]|ex\.m[oaªº]|merit[ií]ssim[oa]|mm[ªa]?|ilustr[ií]ssim[oa]|ilm[oaªº]|ilustre|eminente|senhor[a]?|sr[a]?|doutor[a]?|dr[a]?)(?:\s*\(\s*[aoã]\s*\))?\.?\s+)+(?:ju[ií]z[a]?|promotor[a]?|procurador[a]?|desembargador[a]?|delegad[oa]|defensor[a]?|ministr[oa]|relator[a]?|conselheir[oa])(?:\s*\(\s*[aoã]\s*\))?(?:\s+(?:d[aeo]\s+)?(?:direito|justi[cç]a|pol[ií]cia|plantonista|substitut[oa]|judici[aá]ri[oa]|p[uú]blic[oa]|titular|auxiliar|federal|estadual|criminal|civil|militar|penal|relator[a]?|tutelar|presidente|corregedor[a]?|geral|rep[uú]blica|estado)(?:\s*\(\s*[aoã]\s*\))?)*[ \t]*[:,.\-–]?[ \t]*\n\s*$/i;
+function _anonAutoridadeAntes_(antes) { return ANON_RE_AUTORIDADE_ANTES.test(antes) && !ANON_RE_VOCATIVO_ANTES.test(antes); }
+var ANON_PAPEIS_FORTES = { AUTOR: 1, REU: 1, VITIMA: 1, TESTEMUNHA: 1 };
+function _anonTokenEhForte_(e) { return !!(e && (ANON_PAPEIS_FORTES[e.tipo] || e.qualificado)); }
+var ANON_RE_JUDICIAL_ANTES = /\b(?:ju[ií]z[a]?|magistrad[oa]|desembargador[a]?|ministr[oa]|promotor[a]?|procurador[a]?|delegad[oa]|defensor[a]?|escriv[aã]o?|escriv[ãa]|oficial[a]?\s+de\s+justi[cç]a|analista\s+judici[aá]ri[oa]|t[eé]cnic[oa]\s+judici[aá]ri[oa]|gestor[a]?\s+judici[aá]ri[oa]|relator[a]?|conciliador[a]?|mediador[a]?|MM\.?|Exm[oa]\.?|Excelent[ií]ssim[oa]|Merit[ií]ssim[oa])(?:\s*\(\s*[aãoe]\s*\))?(?:\s+(?:de\s+direito|de\s+justi[cç]a|de\s+pol[ií]cia(?:\s+civil|\s+judici[aá]ria)?|p[uú]blic[oa]|substitut[oa]|plantonista|titular|federal|estadual|relator[a]?|do\s+estado|da\s+rep[uú]blica))*\s*(?:Dr[a]?\.?\s*)?[:,\-–]?\s*$/i;
+var ANON_RE_JUDICIAL_DEPOIS = /^\s*[,\-–(]?\s*(?:ju[ií]z[a]?\s+(?:de\s+direito|substitut|plantonist|federal|estadual)|promotor[a]?\s+de\s+justi[cç]a|procurador[a]?\s+(?:de\s+justi[cç]a|d[ao]\s+rep[uú]blica)|desembargador|delegad[oa]\s+de\s+pol|defensor[a]?\s+p[uú]blic|escriv[aã]|oficial[a]?\s+de\s+justi|analista\s+judici|t[eé]cnic[oa]\s+judici|gestor[a]?\s+judici|ministr[oa]\s+d[oa])/i;
+function _anonTokenForteDaChave_(mapa, k) {
+  if (!k) return '';
+  for (var t in mapa.tokens) {
+    var e = mapa.tokens[t];
+    if (!_anonTokenEhForte_(e)) continue;
+    if (_anonChaveSig_(e.valor) === k || (k.indexOf(' ') > 0 && (e.variantes || []).indexOf(k) >= 0)) return t;
+  }
+  return '';
+}
 var ANON_RE_CARGO_NO_INICIO = /^(?:(?:[123][º°o]?\s*)?(?:SD|CB|SGT|SUBTEN|TEN|CAP|MAJ|CEL|ASP|TC)\.?(?:\s*(?:PM|BM|QOPM|QPPM))?|PM|BM|Investigador[a]?|Delegad[oa]|Escriv[ãa]o?|Agente|Policial|Perit[oa]|Soldado|Cabo|Sargento|Subtenente|Tenente|Capit[ãa]o|Major|Coronel|Magistrad[oa]|Ju[ií]z[a]?|Promotor[a]?|Defensor[a]?|Procurador[a]?|Desembargador[a]?|Ministr[oa]|Oficial[a]?|Escrevente|Analista|T[eé]cnic[oa]|Assessor[a]?|Servidor[a]?|Conselheir[oa]|Prefeit[oa]|Vereador[a]?|Secret[áa]ri[oa]|Militar|Comandante)(?:\s+(?:d[aeo]\s+)?(?:Pol[ií]cia|Justi[çc]a|Direito|Civil|Militar|PM|BM|Judici[áa]ri[oa]|Criminal|Oficial|Penal|Municipal|Tutelar|Federal|Estadual))*\s+(?=[A-ZÀ-Ü])/i;
 var ANON_RE_CARGO_LINHA_DE_BAIXO = /^[ \t]*\n[ \t]*(?:assistente\s+social|psic[oó]log[oa]|prefeit[oa]|vice-?prefeit[oa]|secret[aá]ri[oa]|vereador[a]?|conselheir[oa]|diretor[a]?|coordenador[a]?|enfermeir[oa]|m[eé]dic[oa]|comandante|subcomandante|chefe\s+d[aeo]|pedagog[oa]|inspetor[a]?|auditor[a]?|fiscal\s+d[aeo]|agente|servidor[a]?|t[eé]cnic[oa]|analista|oficial[a]?|escriv[aã]o?|escrevente|assessor[a]?|estagi[aá]ri[oa]|perit[oa])(?![A-Za-zÀ-ü])/i;
 var ANON_RE_CARGO_DEPOIS = /^\s*[,\-–(]?\s*((?:[123][º°o]?\s*)?(?:SD|CB|SGT|SUBTEN|TEN(?:\s+CEL)?|CAP|MAJ|CEL|TC|ASP)\.?\s*(?:PM|BM|QOPM|QPPM)\b|mat(?:r)?\.\s*(?:n[º°o.]*\s*)?:?\s*\d|matr[ií]cula\s+(?:funcional|n[º°o.]*\s*\d)|policial\s+(?:militar|civil|penal)|conciliador[a]?\b|mediador[a]?\b|delegad[oa]\b|escriv[a\u00e3][o]?\b|escrevente\b|investigador[a]?\b|perit[oa]\b|estagi[a\u00e1]ri[oa]\b|oab\b|ju[i\u00ed]z[a]?\s+de\s+direito|ju[i\u00ed]z[a]?\s+(?:substitut|plantonist|federal|estadual)|promotor[a]?\s+de\s+justi[c\u00e7]a|procurador[a]?\s+(?:de\s+justi[c\u00e7]a|d[ao]\s+rep[u\u00fa]blica|do\s+munic|do\s+estado)|desembargador|defensor[a]?\s+p[u\u00fa]blic|escriv[a\u00e3]|gestor[a]?\s+judici|analista\s+judici|t[e\u00e9]cnic[oa]\s+judici|oficial[a]?\s+de\s+justi|delegad[oa]\s+de\s+pol|ministr[oa]\s+d[oa]|investigador[a]?\s+de\s+pol|m[e\u00e9]dic[oa]\s+legista|perit[oa]\s+(?:criminal|oficial)|cr[mp](?:\s*[\/\-]\s*[A-Z]{2})?\s*(?:n[º°o.]*\s*)?:?\s*\d|cress\b|coren\b|(?:psic[oó]log[oa]|assistente\s+social|enfermeir[oa]|m[e\u00e9]dic[oa])[^\n]{0,24}\b(?:crp|cress|coren|crm)\b)/i;
@@ -2123,7 +2291,7 @@ function _anonColherAutoridades_(mapa, texto) {
     while (corte < palavrasSeq.length) { var kw = _anonChave_(palavrasSeq[corte]); if (kw && (stop[_anonSemAcento_(kw).toUpperCase()] || ANON_CONECTIVOS[kw])) corte++; else break; }
     if (corte > 0 && corte < palavrasSeq.length) antes += palavrasSeq.slice(0, corte).join(' ') + ' ';
     if (/\b(?:bastante|seu|sua)\s+procurador[a]?\s*[:,\-]?\s*$/i.test(antes)) continue;
-    var eh = ANON_RE_ASSINADO.test(antes) || ANON_RE_AUTORIDADE_ANTES.test(antes) || _anonCargoDepois_(depois) || ANON_RE_OAB_DEPOIS.test(depois);
+    var eh = ANON_RE_ASSINADO.test(antes) || _anonAutoridadeAntes_(antes) || _anonCargoDepois_(depois) || ANON_RE_OAB_DEPOIS.test(depois);
     if (!eh) continue;
 
     var ps = palavrasSeq.slice(corte).filter(function (w) { var k = _anonChave_(w); return k && !stop[_anonSemAcento_(k).toUpperCase()]; });
@@ -2167,6 +2335,7 @@ function _anonAplicarNomes_(texto, mapa, opts) {
   function guardar(trecho) { guard.push(trecho); return SEP + 'G' + (guard.length - 1) + SEP; }
 
   if (opts.transcricao) texto = String(texto || '').replace(ANON_RE_ROTULO_FALA, function (m0, esp, rot) { return esp + guardar(rot); });
+
   var linhasT = String(texto || '').split('\n'), mascaraP = _anonMascaraPrecedente_(linhasT);
   for (var li = 0; li < linhasT.length; li++) if (mascaraP[li] && linhasT[li].trim()) linhasT[li] = guardar(linhasT[li]);
   texto = linhasT.join('\n');
@@ -2174,13 +2343,13 @@ function _anonAplicarNomes_(texto, mapa, opts) {
   texto = texto.replace(ANON_RE_TRECHO_INLINE, function (m0) { return m0.indexOf(SEP) >= 0 ? m0 : guardar(m0); });
   var claros = Object.keys(autIa).sort(function (a, b) { return b.length - a.length; });
   for (var c = 0; c < claros.length; c++) {
-    if (claros[c].split(' ').length < 2) continue;
+    if (claros[c].split(' ').length < 2 || _anonTokenForteDaChave_(mapa, claros[c])) continue;
     texto = texto.replace(_anonRegexDeNome_(claros[c]), function () { return arguments[1] + guardar(arguments[2]); });
   }
   for (var t in mapa.tokens) {
     var e = mapa.tokens[t];
     if (ANON_TIPOS_IDENT[e.tipo] || e.tipo === 'ALIAS' || e.tipo === 'PRENOME') continue;
-    if (autIa[_anonChaveSig_(e.valor)] || _anonEhPedacoDeEmClaro_(mapa, _anonChaveSig_(e.valor))) continue;
+    if (!_anonTokenEhForte_(e) && (autIa[_anonChaveSig_(e.valor)] || _anonEhPedacoDeEmClaro_(mapa, _anonChaveSig_(e.valor)))) continue;
     var vs = (e.variantes && e.variantes.length) ? e.variantes : [_anonChaveSig_(e.valor)];
     for (var i = 0; i < vs.length; i++) {
       if (!vs[i]) continue;
@@ -2204,12 +2373,21 @@ function _anonAplicarNomes_(texto, mapa, opts) {
       if (ANON_RE_LUGAR_TITULO_ANTES.test(str.slice(Math.max(0, pos - 60), pos + pre.length))) return m;
 
       var procuradorParticular = /\b(?:bastante|seu|sua|como|por)\s+procurador[a]?\s*[:,\-]?\s*$/i.test(antes);
-      if (!procuradorParticular && (ANON_RE_AUTORIDADE_ANTES.test(antes) || _anonCargoDepois_(depois))) return m;
+      if (!procuradorParticular && (_anonAutoridadeAntes_(antes) || _anonCargoDepois_(depois))) {
+
+        var eF = mapa.tokens[token], vF = itens[k].v, prox = /^[ \t]+(?:(?:d[aeo]s?|D[AEO]S?)[ \t]+)?([A-ZÀ-Ü][A-Za-zÀ-ü'’]+)/.exec(depois);
+        var proxK = prox ? _anonSemAcento_(prox[1]).toUpperCase() : '';
+        var continua = !!proxK && !!_anonLexicoSet_()[proxK] && _anonSemAcento_(' ' + (eF && eF.valor || '') + ' ').toUpperCase().indexOf(' ' + proxK + ' ') < 0;
+        var judicial = ANON_RE_JUDICIAL_ANTES.test(antes) || ANON_RE_JUDICIAL_DEPOIS.test(depois) || ANON_RE_ASSINADO.test(antes);
+        if (!(_anonTokenEhForte_(eF) && vF.indexOf(' ') > 0 && (vF === _anonChaveSig_(eF.valor) || eF.tipo === 'TESTEMUNHA') && !judicial && !continua)) return m;
+      }
       return pre + token;
     });
   }
 
   if (opts.transcricao) texto = _anonAplicarPrenomesFala_(texto, mapa, autIa);
+
+  if (!opts.transcricao) texto = _anonPrenomesSoltos_(texto, mapa);
 
   if (!opts.transcricao) texto = _anonAplicarTratamentoParte_(texto, mapa);
 
@@ -2313,7 +2491,7 @@ function _anonAplicarPrenomesFala_(texto, mapa, autIa) {
     texto = texto.replace(_anonRegexChamadaFala_(chave), function (m, pre, nome, pos, str) {
       var ini = pos + pre.length, fim = ini + nome.length;
       var antes = str.slice(Math.max(0, ini - 60), ini), depois = str.slice(fim, fim + 60);
-      if (ANON_RE_AUTORIDADE_ANTES.test(antes)) return m;
+      if (_anonAutoridadeAntes_(antes)) return m;
       var mTrat = antes.match(/(?:^|[^A-Za-zÀ-ü])([A-Za-zÀ-ü]+)\.?[ \t]{1,3}$/);
       var prevAny = mTrat ? _anonSemAcento_(mTrat[1]).toLowerCase() : '';
       var trat = !!ANON_TRATAMENTOS_FALA[prevAny], artigo = !!ANON_ARTIGOS_FALA[prevAny];
@@ -2366,6 +2544,13 @@ function _anonAbsorverSobras_(texto, mapa) {
       return _anonEhPalavraDoNome_(_anonChave_(palavra), palavras) ? pre + t : m0;
     });
 
+    texto = texto.replace(new RegExp(tokRe + '((?:[ \\t]+(?:d[aeo]s?|D[AEO]S?))?(?:[ \\t]+' + ANON_COLUNAS_PJE + '){1,4})([ \\t]*\\n?[ \\t]*)' +
+      '((?:(?:d[aeo]s?|D[AEO]S?)[ \\t]+)?[A-ZÀ-Ü][' + ANON_LETRA + ']+(?:[ \\t]+(?:(?:d[aeo]s?|D[AEO]S?)[ \\t]+)?[A-ZÀ-Ü][' + ANON_LETRA + ']+){0,4})', 'g'),
+      function (m0, colunas, quebra, resto) {
+        var ws = resto.split(/[ \t]+/).map(_anonChave_).filter(function (k) { return k && !ANON_CONECTIVOS[k]; });
+        return ws.length && ws.every(function (k) { return _anonEhPalavraDoNome_(k, palavras); }) ? t + colunas + (quebra.indexOf('\n') >= 0 ? '\n' : '') : m0;
+      });
+
     aprendidas.forEach(function (w) {
       var kw = _anonChave_(w);
       if (_anonPalavrasSignificativas_(e.valor).indexOf(kw) >= 0) return;
@@ -2377,6 +2562,9 @@ function _anonAbsorverSobras_(texto, mapa) {
   }
   return texto;
 }
+var ANON_COLUNAS_PJE = '(?:Decis[ãa]o|DECIS[ÃA]O|Despacho|DESPACHO|Senten[çc]a|SENTEN[ÇC]A|Certid[ãa]o|CERTID[ÃA]O|Peti[çc][ãa]o|PETI[ÇC][ÃA]O|' +
+  'Intima[çc][ãa]o|INTIMA[ÇC][ÃA]O|Mandado|MANDADO|Of[íi]cio|OF[ÍI]CIO|Documento|DOCUMENTO|Manifesta[çc][ãa]o|MANIFESTA[ÇC][ÃA]O|Parecer|PARECER|' +
+  'Juntada|JUNTADA|Termo|TERMO|Den[úu]ncia|DEN[ÚU]NCIA|Ato\\s+Ordinat[óo]rio|ATO\\s+ORDINAT[ÓO]RIO)(?![A-Za-zÀ-ü])';
 var ANON_NAO_SOBRENOME = {};
 ('DISSE DIZ FEZ FAZ TEM TEVE TINHA ESTAVA ESTA ESTEVE ERA FOI FORAM SERIA VEIO DEU POIS QUANDO ONDE COMO TAMBEM NAO SIM ' +
  'AINDA ENTAO MAS PORQUE RELATA NARRA INFORMA ALEGA AFIRMA DECLARA CONFIRMA NEGA QUE QUAL QUEM SEU SUA SEUS SUAS ELE ELA ' +
@@ -2422,6 +2610,7 @@ function _anonAplicarTratamentoParte_(texto, mapa) {
   return texto;
 }
 var ANON_RE_LINHA_DE_ARQUIVO = /\.(?:pdf|jpe?g|png|mp[34]|docx?|odt|txt|ogg|opus)\b/i;
+var ANON_RE_NOME_DE_ARQUIVO = /[^\n;:()\[\]|<>"“”]{1,80}?\.(?:pdf|jpe?g|png|mp[34]|docx?|odt|txt|ogg|opus)(?![A-Za-z])/gi;
 function _anonPrenomesEmNomeDeArquivo_(texto, mapa, autIa) {
   if (!ANON_RE_LINHA_DE_ARQUIVO.test(texto)) return texto;
   var idx = {}, stop = _anonStopSet_();
@@ -2434,10 +2623,98 @@ function _anonPrenomesEmNomeDeArquivo_(texto, mapa, autIa) {
     if (p0.length >= 4 && !ANON_PRENOME_AMBIGUO[p0] && !stop[p0.toUpperCase()]) (idx[p0] = idx[p0] || []).push(t);
   }
   var re = new RegExp('(^|[^' + ANON_LETRA + '«])([A-ZÀ-Ü][' + ANON_LETRA + ']{3,})(?![' + ANON_LETRA + '»])', 'g');
+
+  var reMin = new RegExp('(^|[^' + ANON_LETRA + '«@])([a-zà-ü][' + ANON_LETRA + ']{3,})(?![' + ANON_LETRA + '»])(?![\\w.+\\-]*@)', 'g');
+
+  function troca(m0, pre, w) {
+    var k = _anonChave_(w), a = idx[k];
+    if (!a) return m0;
+    var tok = a.length === 1 ? a[0] : (a.filter(function (t) { return _anonChaveSig_(mapa.tokens[t].valor) === k; })[0] || _anonTokenDaChamada_(mapa, k, a));
+    return tok ? pre + tok : m0;
+  }
   return texto.split('\n').map(function (l) {
     if (!ANON_RE_LINHA_DE_ARQUIVO.test(l)) return l;
-    return l.replace(re, function (m0, pre, w) { var a = idx[_anonChave_(w)]; return (a && a.length === 1) ? pre + a[0] : m0; });
+    return l.replace(re, troca).replace(ANON_RE_NOME_DE_ARQUIVO, function (arq) { return arq.replace(reMin, troca); });
   }).join('\n');
+}
+var ANON_RE_TITULO_DOC_ANTES = /(?:^|[^A-Za-zÀ-ü])(?:TERMO|DEPOIMENTO|DECLARA[ÇC][ÃA]O|DECLARA[ÇC][ÕO]ES|INTERROGAT[ÓO]RIO|OITIVA|QUALIFICA[ÇC][ÃA]O|MANDADO|INTIMA[ÇC][ÃA]O|CITA[ÇC][ÃA]O|NOTIFICA[ÇC][ÃA]O|OF[ÍI]CIO|CERTID[ÃA]O|CONTATO)(?:[ \t]+N[º°o.]*[ \t]*\d[\d.\/\-]*)?[ \t]*[-–]?[ \t]*$/;
+function _anonContextoDeNome_(w, antes, depois) {
+  if (/^[ \t]*\((?:m[ãa]e|pai|genitor[a]?|madrasta|padrasto|av[óôo])\)/i.test(depois)) return true;
+  if (w !== w.toUpperCase()) return false;
+  var linhaAntes = antes.slice(antes.lastIndexOf('\n') + 1), linhaDepois = depois.split('\n')[0];
+  if (ANON_RE_TITULO_DOC_ANTES.test(linhaAntes) && /^(?:[ \t]*$|[ \t]{2,}|[ \t]+[A-ZÀ-Ü][a-zà-ü]|[ \t]*[-–])/.test(linhaDepois)) return true;
+
+  if (/(?:natural|naturalidade|comarca|cidade|munic[ií]pio|distrito|estado|bairro|localidade|regi[ãa]o)[ \t]+(?:de|d[aeo]s?)[ \t]*$|(?:^|[^A-Za-zÀ-ü])em[ \t]*$/i.test(antes)) return false;
+  var a = antes.match(/([A-Za-zÀ-ü]+)[ \t]*,?[ \t]*\n?[ \t]*$/), d = depois.match(/^[ \t]*,?[ \t]*\n?[ \t]*([A-Za-zÀ-ü]+|[.;:!?)])/);
+  return !!(a && d && /^[a-zà-ü]+$/.test(a[1]) && /^(?:[a-zà-ü]+|[.;:!?)])$/.test(d[1]));
+}
+function _anonPrenomesSoltos_(texto, mapa) {
+  var idx = {}, idxAmb = {}, stop = _anonStopSet_(), lexP = _anonPrenomesSet_(), lex = _anonLexicoSet_(), comum = _anonCaixaComumSet_();
+  var minus = _anonMinusculasDoTexto_(texto), proprias = {};
+  for (var t in mapa.tokens) {
+    var e = mapa.tokens[t];
+
+    if (e.tipo === 'ALCUNHA' && e.variantes) {
+      e.variantes.forEach(function (v) {
+        if (!v || v.length < 3) return;
+        var fonte = v.split(' ').map(function (w) { return _anonFonteRegexDuasCaixas_(w); }).join('[ \\t]+');
+        texto = String(texto).replace(new RegExp('(["\'])(' + fonte + ')(?![' + ANON_LETRA + '])', 'g'), function (m0, q) { return q + t; });
+      });
+      continue;
+    }
+    if (!e.variantes || e.tipo === 'ALIAS' || e.tipo === 'PRENOME' || ANON_TIPOS_IDENT[e.tipo] || _anonEhSoIniciais_(e.valor)) continue;
+    var sig = _anonPalavrasSignificativas_(e.valor), p0 = sig[0] || '', P0 = _anonSemAcento_(p0).toUpperCase();
+    if (sig.length < 2) continue;
+    proprias[t] = {};
+    sig.forEach(function (w) { proprias[t][_anonSemAcento_(w).toUpperCase()] = 1; });
+    if (p0.length >= 4 && !ANON_PRENOME_AMBIGUO[p0] && !stop[P0] && !comum[P0] && lexP[P0] && !minus[p0]) (idx[p0] = idx[p0] || []).push(t);
+
+    else if (p0.length >= 4 && !stop[P0] && !comum[P0] && lexP[P0]) (idxAmb[p0] = idxAmb[p0] || []).push(t);
+
+    sig.slice(1).forEach(function (w) {
+      var W = _anonSemAcento_(w).toUpperCase();
+      if (w.length >= 5 && !lex[W] && !stop[W] && !comum[W] && !minus[w] && !ANON_SOBRENOMES_COMUNS[w] && (idx[w] || []).indexOf(t) < 0) (idx[w] = idx[w] || []).push(t);
+    });
+  }
+  if (!Object.keys(idx).length && !Object.keys(idxAmb).length) return texto;
+  var re = new RegExp('(^|[^' + ANON_LETRA + '«\\u0001])([A-ZÀ-Ü][' + ANON_LETRA + ']{3,})(?![' + ANON_LETRA + '»])', 'g');
+  return String(texto).replace(re, function (m0, pre, w, pos, str) {
+    var lista = idx[_anonChave_(w)], amb = !lista && idxAmb[_anonChave_(w)];
+    if (!lista && !amb) return m0;
+    var ini = pos + pre.length, fim = ini + w.length, antes = str.slice(Math.max(0, ini - 60), ini), depois = str.slice(fim, fim + 60);
+    if (amb) { if (!_anonContextoDeNome_(w, antes, depois)) return m0; lista = amb; }
+    if (_anonAutoridadeAntes_(antes) || _anonCargoDepois_(depois) || ANON_RE_LUGAR_TITULO_ANTES.test(antes)) return m0;
+    if (/^\s*[\/\-]\s*[A-Z]{2}(?![A-Za-zÀ-ü])/.test(depois)) return m0;
+    var mAnt = antes.match(/([A-Za-zÀ-ü'’]+)[ \t]+(?:(?:d[aeo]s?|D[AEO]S?)[ \t]+)?$/), mPro = depois.match(/^[ \t]+(?:(?:d[aeo]s?|D[AEO]S?)[ \t]+)?([A-Za-zÀ-ü'’]+)/);
+    var donos = lista.length === 1 ? proprias[lista[0]] : {};
+
+    var depoisNome = depois, mOwn, reOwn = /^[ \t]+(?:(?:d[aeo]s?|D[AEO]S?)[ \t]+)?([A-ZÀ-Ü][A-Za-zÀ-ü'’]+)/;
+    while ((mOwn = reOwn.exec(depoisNome)) && donos[_anonSemAcento_(mOwn[1]).toUpperCase()]) depoisNome = depoisNome.slice(mOwn[0].length);
+    if (depoisNome !== depois && _anonCargoDepois_(depoisNome)) return m0;
+
+    var antesNome = antes, mOwnA, reOwnA = /([A-ZÀ-Ü][A-Za-zÀ-ü'’]+)[ \t]+(?:(?:d[aeo]s?|D[AEO]S?)[ \t]+)?$/;
+    while ((mOwnA = reOwnA.exec(antesNome)) && donos[_anonSemAcento_(mOwnA[1]).toUpperCase()]) antesNome = antesNome.slice(0, mOwnA.index);
+    if (antesNome !== antes && (_anonAutoridadeAntes_(antesNome) || ANON_RE_LUGAR_TITULO_ANTES.test(antesNome))) return m0;
+
+    if (lista.length === 1) {
+      var tokL = _anonPadraoTokenLiteral_(lista[0]);
+      if (new RegExp('^\\s*,?\\s*(?:(?:d[aeo]s?|D[AEO]S?)\\s+)?' + tokL).test(depois) || new RegExp(tokL + '\\s*,?\\s*(?:(?:d[aeo]s?|D[AEO]S?)\\s+)?$').test(antes)) return m0;
+    }
+
+    var cauda = antes.match(/(?:[A-ZÀ-Ü][A-Za-zÀ-ü'’.]*[ \t]+(?:(?:d[aeo]s?|D[AEO]S?)[ \t]+)?){1,4}$/);
+    if (cauda && cauda[0].split(/[ \t]+/).some(function (x) { var X = _anonSemAcento_(x.replace(/\.$/, '')).toUpperCase(); return ANON_LUGAR_SET[X] || /^(?:UNIDADE|FORUM|INSTITUTO|CLINICA|LEI|OPERACAO|FUNDACAO|ASSOCIACAO|PAROQUIA|CEMITERIO|GINASIO|ESTADIO)$/.test(X); })) return m0;
+    function outroNome(x, depoisDele) {
+      if (!x || !/^[A-ZÀ-Ü]/.test(x)) return false;
+      var X = _anonSemAcento_(x).toUpperCase();
+      if (donos[X] || comum[X] || stop[X]) return false;
+
+      if (x !== x.toUpperCase() && depoisDele && w !== w.toUpperCase()) return true;
+      return !!lex[X];
+    }
+    if (outroNome(mAnt && mAnt[1], false) || outroNome(mPro && mPro[1], true)) return m0;
+    var tok = lista.length === 1 ? lista[0] : _anonTokenDaChamada_(mapa, _anonChave_(w), lista);
+    return tok ? pre + tok : m0;
+  });
 }
 function _anonPadraoTokenLiteral_(token) { return String(token).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 var ANON_RE_INSTITUCIONAL = /\b(DELEGACIA|PROMOTORIA|MINIST[EÉ]RIO\s+P[UÚ]BLICO|F[OÓ]RUM|VARA\b|COMARCA\s+DE|PREFEITURA|C[AÂ]MARA\s+MUNICIPAL|TRIBUNAL|JU[IÍ]ZO|DEFENSORIA|PROCURADORIA|SECRETARIA\s+(?:MUNICIPAL|ESTADUAL|DE)|CONSELHO\s+TUTELAR|CREAS|CRAS\b|POL[IÍ]CIA\s+(?:JUDICI[AÁ]RIA|CIVIL|MILITAR)|HOSPITAL|UNIDADE\s+DE\s+SA[UÚ]DE|POSTO\s+DE\s+SA[UÚ]DE|ESCOLA\s+(?:MUNICIPAL|ESTADUAL)|CENTRO\s+DE\s+REFER|GABINETE|CARTÓRIO|CART[OÓ]RIO|SEMA\b|INSS\b|DETRAN|SEFAZ|SEJUS|SEJUDH|SES\b|SEDUC|SME\b|POLITEC|PER[IÍ]CIA\s+OFICIAL|CORPO\s+DE\s+BOMBEIROS|PENITENCI[AÁ]RIA|CADEIA\s+P[UÚ]BLICA|UNIDADE\s+PRISIONAL|CENTRAL\s+DE\s+MONITORAMENTO|MONITORA[CÇ][AÃ]O\s+ELETR[OÔ]NICA|JUIZADO|SERVENTIA|OF[IÍ]CIO\s+DE\s+REGISTRO|LABORAT[OÓ]RIO|FACULDADE|UNIVERSIDADE|SINDICATO|ASSEMBLEIA\s+LEGISLATIVA|RECEITA\s+(?:FEDERAL|ESTADUAL)|INCRA|FUNAI|IBAMA|INDEA|ENERGISA|[AÁ]GUAS\s+DE\s)/i;
@@ -2786,7 +3063,7 @@ function _anonBayesTracos_(nome, n, ocorrencias, doc) {
     if (/\.{3,}\s*:|\.{2,}\s*:/.test(o.linha)) c.form++;
     if (ANON_RE_CTX_PESSOA_ANTES.test(o.antes.slice(-40))) c.ctxA++;
     if (ANON_RE_CTX_PESSOA_DEPOIS.test(o.depoisLongo.slice(0, 60))) c.ctxD++;
-    if (ANON_RE_AUTORIDADE_ANTES.test(o.antes)) c.autA++;
+    if (_anonAutoridadeAntes_(o.antes)) c.autA++;
     if (_anonCargoDepois_(o.depoisLongo)) c.autD++;
     if (ANON_RE_CARIMBO.test(o.linha) || ANON_RE_CARIMBO.test(o.linhaAnt)) c.carimbo++;
     if (ANON_RE_OAB_DEPOIS.test(o.depoisLongo)) c.oab++;
@@ -2851,7 +3128,7 @@ function _anonCandidatosNome_(texto, mapa, listaBrancaSet, textoTodo) {
   var reLugar = /(natural|naturalidade|comarca|cidade|munic[i\u00ed]pio|bairro|distrito|vila|fazenda|s[i\u00ed]tio|rua|avenida|av\.|pra[c\u00e7]a|residente|domiciliad[oa])\s+(?:e\s+domiciliad[oa]\s+)?(?:em|d[eao]s?|n[ao]s?)\s*$|\b(rua|avenida|av\.|travessa|alameda|pra[c\u00e7]a|rodovia|estrada|bairro|jardim|vila|residencial|condom[i\u00ed]nio|edif[i\u00ed]cio)\s*$/i;
 
   var reLei = /\b(lei|opera[c\u00e7][a\u00e3]o|caso|projeto|programa|escola|hospital|col[e\u00e9]gio|unidade|posto|f[o\u00f3]rum|edif[i\u00ed]cio)\s+(?:n[\u00ba\u00b0o.]*\s*[\d.\/\-]+\s*)?$/i;
-  var reAutoridade = ANON_RE_AUTORIDADE_ANTES, reCargoDepois = ANON_RE_CARGO_DEPOIS;
+  var reCargoDepois = ANON_RE_CARGO_DEPOIS;
 
   var autoridades = {};
   while ((m = reSeq.exec(texto)) !== null) {
@@ -2863,7 +3140,7 @@ function _anonCandidatosNome_(texto, mapa, listaBrancaSet, textoTodo) {
     if (ANON_RE_LUGAR_TITULO_ANTES.test(antes) || ANON_RE_UF_DEPOIS.test(depois)) continue;
 
     if (ANON_RE_CNPJ_DEPOIS.test(depois)) continue;
-    var ehAutoridade = reAutoridade.test(antes) || _anonCargoDepois_(depois) || ANON_RE_CARGO_NO_INICIO.test(m[2].replace(/\s+/g, ' '));
+    var ehAutoridade = _anonAutoridadeAntes_(antes) || _anonCargoDepois_(depois) || ANON_RE_CARGO_NO_INICIO.test(m[2].replace(/\s+/g, ' '));
 
     var pedacos = [];
     _anonCortarNaQuebra_(m[2]).forEach(function (tr) { pedacos = pedacos.concat(tr.replace(/\s+/g, ' ').split(/\s+[eE]\s+/)); });
@@ -2909,6 +3186,16 @@ function _anonCandidatosNome_(texto, mapa, listaBrancaSet, textoTodo) {
     if (_anonEhPedacoDeEmClaro_(mapa, k)) continue;
 
     var tokParecido = _anonTokenDeNomeExistente_(mapa, seq, { caixaAlta: seq === seq.toUpperCase() && /[A-Z]/.test(seq) });
+
+    if (tokParecido) {
+      var propTp = _anonPalavrasSignificativas_(mapa.tokens[tokParecido].valor);
+      var extrasTp = sig.filter(function (w) { return propTp.indexOf(w) < 0; }).join(' ');
+      if (extrasTp.indexOf(' ') > 0 && Object.keys(mapa.tokens).some(function (t2) {
+        var e2 = mapa.tokens[t2];
+        if (t2 === tokParecido || !e2 || !e2.variantes || ANON_TIPOS_IDENT[e2.tipo] || e2.tipo === 'ALIAS') return false;
+        return [_anonChaveSig_(e2.valor)].concat(e2.variantes).some(function (v) { return v && v.indexOf(' ') > 0 && (' ' + extrasTp + ' ').indexOf(' ' + v + ' ') >= 0; });
+      })) continue;
+    }
     if (tokParecido) {
       var kTp = _anonChaveSig_(mapa.tokens[tokParecido].valor);
       if (_anonAcrescentarVariantes_(mapa, tokParecido, [seq], null)) _anonAnotarFusao_(mapa, tokParecido, _anonMotivoFusao_(kTp, k), [kTp, k]);
@@ -3158,6 +3445,12 @@ var ANON_BOILERPLATE = [
   'Documento\\s+assinado\\s+digitalmente[^\\n]*',
   '[Vv]erifique\\s+a\\s+autenticidade[^\\n]*',
   'c[óo]digo\\s+verificador[^\\n]*',
+
+  'Este\\s+arquivo\\s+foi\\s+gerado\\s+atrav[ée]s[^\\n]*',
+  'N[úu]mero\\s+[úu]nico\\s+PJe[^\\n]*',
+  'Este\\s+documento\\s+[ée]\\s+c[óo]pia\\s+do\\s+original[^\\n]*',
+  '(?:Para\\s+acessar\\s+os\\s+autos\\s*)?processuais,\\s+acesse\\s+o\\s+site[^\\n]*',
+  'Liberado\\s+nos\\s+autos\\s+digitais[^\\n]*',
   'Minist[ée]rio\\s+P[úu]blico\\s+do\\s+Estado\\s+de\\s+Mato\\s+Grosso',
   'Tribunal\\s+de\\s+Justi[çc]a\\s+do\\s+Estado\\s+de\\s+Mato\\s+Grosso',
   'Poder\\s+Judici[áa]rio\\s+do\\s+Estado\\s+de\\s+Mato\\s+Grosso',
@@ -3645,7 +3938,8 @@ function _anonValoresDaTabela_(rotulos, linha) {
 }
 function _anonCamposDeFormulario_(texto) {
   var ls = String(texto || '').split('\n'), out = [], i, m;
-  var reCampo = /(?:^|[\t ]{2,}|[;|])[\t ]*([A-Za-zÀ-ü][A-Za-zÀ-ü.\/º° ]{0,60}?)[\t ]*:[\t ]*([^\n]*?)(?=[\t ]{3,}[A-Za-zÀ-ü][A-Za-zÀ-ü.\/º° ]{0,60}:|[;|]|$)/g;
+
+  var reCampo = /(?:^|[\t ]{2,}|[;|])[\t ]*([A-Za-zÀ-ü](?:[A-Za-zÀ-ü.\/º°]| {1,2}(?=[A-Za-zÀ-ü.\/º°])){0,60}?)[\t ]*:[\t ]*([^\n]*?)(?=[\t ]{3,}[A-Za-zÀ-ü](?:[A-Za-zÀ-ü.\/º°]| {1,2}(?=[A-Za-zÀ-ü.\/º°])){0,60}[\t ]*:|[;|]|$)/g;
   for (i = 0; i < ls.length; i++) {
     var l = ls[i];
     reCampo.lastIndex = 0;
@@ -3694,7 +3988,7 @@ function _anonColherCamposDeFormulario_(texto, mapa) {
       var genitores = valor.split(/\s+[eE]\s+(?=[A-ZÀ-Ü])/);
       if (genitores.length === 2 && genitores.every(function (g) { return !_anonValorNaoENome_(g) && _anonPalavrasSignificativas_(g).length >= 2; })) {
         genitores.forEach(function (g) {
-          var rg = _anonRegistrarNome_(mapa, g, 'PES', {});
+          var rg = _anonRegistrarNome_(mapa, g, 'PES', { qualificado: true });
           if (!rg) return;
           n++;
           var eg = mapa.tokens[rg.token];
@@ -3706,7 +4000,8 @@ function _anonColherCamposDeFormulario_(texto, mapa) {
     if (_anonValorNaoENome_(valor) || _anonPalavrasSignificativas_(valor).length < 2) return;
     if (ANON_RE_PATENTE.test(ls[c.linha] || '') && (c.tipo === 'TESTEMUNHA' || c.tipo === 'NOME')) { _anonMarcarEmClaro_(mapa, valor); return; }
     var papel = (c.tipo === 'MAE' || c.tipo === 'PAI') ? 'PES' : (c.tipo === 'NOME' ? _anonPapelDaSecao_(ls, c.linha) : c.tipo);
-    var r = _anonRegistrarNome_(mapa, valor, papel, c.tipo === 'MAE' ? { genero: 'F' } : (c.tipo === 'PAI' ? { genero: 'M' } : {}));
+
+    var r = _anonRegistrarNome_(mapa, valor, papel, c.tipo === 'MAE' ? { genero: 'F', qualificado: true } : (c.tipo === 'PAI' ? { genero: 'M', qualificado: true } : {}));
     if (!r) return;
     n++;
     var e = mapa.tokens[r.token];
@@ -3714,10 +4009,10 @@ function _anonColherCamposDeFormulario_(texto, mapa) {
     else { dono = r.token; donoLinha = c.linha; }
   });
 
-  var reV = /\b(?:[vV]ulgo|VULGO|[cC]onhecid[oa]\s+(?:como|por)|CONHECID[OA]\s+(?:COMO|POR)|[aA]pelidad[oa]\s+(?:de|como)|APELIDAD[OA]\s+(?:DE|COMO)|[aA]lcunha(?:\s+de)?|ALCUNHA(?:\s+DE)?|[aA]pelido\s+de|APELIDO\s+DE)[ \t]*[:\-]?[ \t]*["“'‘]?([A-ZÀ-Ü][A-Za-zÀ-ü'’\-]+(?:[ \t]+(?:d[aeo]s?[ \t]+)?[A-ZÀ-Ü][A-Za-zÀ-ü'’\-]+){0,2})["”'’]?/g, mv;
+  var reV = /\b(?:[vV]ulgo|VULGO|[cC]onhecid[oa]\s+(?:como|por)|CONHECID[OA]\s+(?:COMO|POR)|[aA]pelidad[oa](?:\s+(?:de|como)|(?=[ \t]*["“'‘]))|APELIDAD[OA](?:\s+(?:DE|COMO)|(?=[ \t]*["“'‘]))|[aA]lcunha(?:\s+de)?|ALCUNHA(?:\s+DE)?|[aA]pelido\s+de|APELIDO\s+DE)[ \t]*[:\-]?[ \t]*["“'‘]?([A-ZÀ-Ü][A-Za-zÀ-ü'’\-]+(?:[ \t]+(?:d[aeo]s?[ \t]+)?[A-ZÀ-Ü][A-Za-zÀ-ü'’\-]+){0,2})["”'’]?/g, mv;
   while ((mv = reV.exec(String(texto || ''))) !== null) {
 
-    if (!/ulgo|alcunha|apelido\s+de/i.test(mv[0]) && !ANON_RE_ALCUNHA_DE_GENTE.test(String(texto).slice(Math.max(0, mv.index - 30), mv.index))) continue;
+    if (!/ulgo|alcunha|apelido\s+de|apelidad[oa][ \t]+(?:(?:de|como)[ \t]+)?["“'‘]/i.test(mv[0]) && !ANON_RE_ALCUNHA_DE_GENTE.test(String(texto).slice(Math.max(0, mv.index - 30), mv.index))) continue;
     if (ANON_RE_SEM_ALCUNHA.test(mv[1].trim())) continue;
     var alc = ANON_RE_PESSOA_JURIDICA.test(mv[1]) ? mv[1].split(/\s+/)[0] : mv[1];
     var k = _anonChave_(alc), p0 = _anonSemAcento_(k.split(' ')[0]).toUpperCase();
@@ -3733,8 +4028,8 @@ function _anonPapelDaSecao_(ls, i) {
     var l = ls[k];
     if (/:\s*\S/.test(l) || l.length > 70) continue;
     if (/\bv[ií]tima/i.test(l)) return 'VITIMA';
-    if (/\b(?:testemunha|declarante|comunicante)/i.test(l)) return 'TESTEMUNHA';
-    if (/\b(?:autuad[oa]|conduzid[oa]|investigad[oa]|indiciad[oa]|autor\s+do\s+fato|suspeit[oa])/i.test(l)) return 'REU';
+    if (/\b(?:testemunha|declarante|comunicante|depoente|depoimento|declara[cç][õo]es|oitiva)/i.test(l)) return 'TESTEMUNHA';
+    if (/\b(?:autuad[oa]|conduzid[oa]|investigad[oa]|indiciad[oa]|autor\s+do\s+fato|suspeit[oa]|interrogat[óo]rio|interrogad[oa])/i.test(l)) return 'REU';
   }
   return 'PES';
 }
@@ -3770,7 +4065,13 @@ var ANON_CAIXA_COMUM = ['O', 'A', 'OS', 'AS', 'UM', 'UMA', 'UNS', 'UMAS', 'DE', 
   'ENTREGOU', 'ESTEVE', 'FICOU', 'FORAM', 'FUGIU', 'LIGOU', 'MOSTROU', 'NEGOU', 'PASSOU', 'PEDIU', 'PEGOU', 'RECEBEU', 'TENTOU', 'VEIO',
   'VOLTOU', 'MORA', 'RESIDE', 'TRABALHA', 'TRABALHAVA', 'DIRIGIA', 'CONDUZIA', 'PORTAVA', 'TRAZIA', 'LEVAVA', 'LEVOU', 'AGREDIU',
   'AMEACOU', 'AMEAÇOU', 'FURTOU', 'ROUBOU', 'SUBTRAIU', 'EFETUOU', 'REALIZOU', 'PERMANECEU', 'ATENDIDO', 'ATENDIDA', 'PRESO', 'PRESA',
-  'CONDUZIDO', 'CONDUZIDA', 'ABORDADO', 'ABORDADA', 'OUVIDO', 'OUVIDA', 'QUANDO', 'TERIA', 'TERIAM', 'IRIA', 'ESTARIA', 'SERIA', 'DEVERIA'];
+  'CONDUZIDO', 'CONDUZIDA', 'ABORDADO', 'ABORDADA', 'OUVIDO', 'OUVIDA', 'QUANDO', 'TERIA', 'TERIAM', 'IRIA', 'ESTARIA', 'SERIA', 'DEVERIA',
+
+  'VULGO', 'ALCUNHA', 'APELIDO', 'APELIDADO', 'APELIDADA',
+
+  'TERMO', 'DEPOIMENTO', 'DECLARAÇÃO', 'DECLARACAO', 'DECLARAÇÕES', 'DECLARACOES', 'INTERROGATÓRIO', 'INTERROGATORIO', 'DECISÃO',
+  'DECISAO', 'DESPACHO', 'SENTENÇA', 'SENTENCA', 'CERTIDÃO', 'CERTIDAO', 'PETIÇÃO', 'PETICAO', 'INTIMAÇÃO', 'INTIMACAO', 'MANDADO',
+  'OFÍCIO', 'OFICIO', 'DOCUMENTO', 'MANIFESTAÇÃO', 'MANIFESTACAO', 'PARECER', 'JUNTADA', 'DENÚNCIA', 'DENUNCIA'];
 var ANON_TRATAMENTO_NAO_NOME = {};
 ('DOUTOR DOUTORA DR DRA COMANDANTE SUBCOMANDANTE PRESIDENTE DIRETOR DIRETORA PREFEITO PREFEITA VEREADOR VEREADORA SECRETARIO ' +
  'SECRETARIA GERENTE CHEFE COORDENADOR COORDENADORA MAJOR CORONEL TENENTE CAPITAO SARGENTO CABO SOLDADO PADRE PASTOR PASTORA ' +
@@ -3796,8 +4097,10 @@ function _anonCaixaComumSet_() {
   if (!ANON_CAIXA_COMUM_SET_) { ANON_CAIXA_COMUM_SET_ = {}; ANON_CAIXA_COMUM.forEach(function (w) { ANON_CAIXA_COMUM_SET_[_anonSemAcento_(w)] = 1; }); }
   return ANON_CAIXA_COMUM_SET_;
 }
+var ANON_RE_NAO_PROSA = /[\w.+\-]+[ \t]?(?:@|\(D|\(@|\(a\)|©)[ \t]?[\w\-]+(?:\.[\w\-]+)+|(?:https?:\/\/|www\.)[^\s]+/gi;
 function _anonMinusculasDoTexto_(texto) {
-  var s = {}, re = /(?:^|[^A-Za-zÀ-ü])([a-zà-ü]{2,})(?![A-Za-zÀ-ü])/g, m, t = String(texto || '');
+  var s = {}, re = /(?:^|[^A-Za-zÀ-ü])([a-zà-ü]{2,})(?![A-Za-zÀ-ü])/g, m;
+  var t = String(texto || '').replace(ANON_RE_NAO_PROSA, ' ').replace(ANON_RE_NOME_DE_ARQUIVO, ' ');
   while ((m = re.exec(t)) !== null) { var w = _anonSemAcento_(m[1]); s[w] = (s[w] || 0) + 1; }
   return s;
 }
@@ -3811,7 +4114,12 @@ function _anonColherGatilhosNarrativos_(texto, mapa) {
     var parente = 'nora|genro|esposa|marido|companheir[oa]|namorad[oa]|entead[oa]|cunhad[oa]|sogr[oa]|sobrinh[oa]|vizinh[oa]|irm[ãa]o?|prim[oa]|' +
       'amig[oa]|filh[oa](?!\\s+d[eao](?![A-Za-zÀ-ü]))|NORA|GENRO|ESPOSA|MARIDO|COMPANHEIR[OA]|NAMORAD[OA]|ENTEAD[OA]|CUNHAD[OA]|SOGR[OA]|' +
       'SOBRINH[OA]|VIZINH[OA]|IRM[ÃA]O?|PRIM[OA]|AMIG[OA]|FILH[OA](?!\\s+D[EAO](?![A-Za-zÀ-ü]))';
-    ANON_RE_GATILHO_NARRATIVO_ = new RegExp('(?:^|[^A-Za-zÀ-ü])(?:(' + forte + ')|(' + parente + ')[ \\t]*,?|((?:casa|CASA|Casa)[ \\t]+(?:d[oa]|D[OA])))[ \\t]+(' + nome + ')', 'g');
+
+    var parenteDe = 'irm[ãa]o?|IRM[ÃA]O?|prim[oa]|PRIM[OA]|ti[oa]|TI[OA]|cunhad[oa]|CUNHAD[OA]|sogr[oa]|SOGR[OA]|genro|GENRO|nora|NORA|' +
+      'entead[oa]|ENTEAD[OA]|padrasto|PADRASTO|madrasta|MADRASTA|companheir[oa]|COMPANHEIR[OA]|espos[oa]|ESPOS[OA]|marido|MARIDO|' +
+      'namorad[oa]|NAMORAD[OA]|am[áa]si[oa]|AM[ÁA]SI[OA]|net[oa]|av[ôóo]';
+    ANON_RE_GATILHO_NARRATIVO_ = new RegExp('(?:^|[^A-Za-zÀ-ü])(?:(' + forte + ')|(' + parente + ')[ \\t]*,?|((?:casa|CASA|Casa)[ \\t]+(?:d[oa]|D[OA])|' +
+      '(?:' + parenteDe + ')[ \\t]+(?:d[eoa]|D[EOA])(?![A-Za-zÀ-ü])))[ \\t]+(' + nome + ')', 'g');
   }
   var stop = _anonStopSet_(), comum = _anonCaixaComumSet_(), lexP = _anonPrenomesSet_(), lex = _anonLexicoSet_(), minus = _anonMinusculasDoTexto_(s);
   var temMinusculas = Object.keys(minus).length >= 3, n = 0, m, voltas = 0;
@@ -3824,7 +4132,9 @@ function _anonColherGatilhosNarrativos_(texto, mapa) {
       var k = _anonChave_(ws[i]), up = _anonSemAcento_(k).toUpperCase();
       if (!k) break;
       if (ANON_CONECTIVOS[k]) { keep.push(ws[i]); continue; }
-      if (stop[up] || comum[up] || ANON_LUGAR_SET[up] || ANON_TRATAMENTO_NAO_NOME[up] || ((minus[k] || 0) >= 1 && !lexP[up])) break;
+
+      var compostoK = i > 0 && lex[up] && lexP[_anonSemAcento_(_anonChave_(ws[i - 1])).toUpperCase()];
+      if ((stop[up] && !compostoK) || comum[up] || ANON_LUGAR_SET[up] || ANON_TRATAMENTO_NAO_NOME[up] || ((minus[k] || 0) >= 1 && !lexP[up])) break;
 
       if (caixaAlta && i > 0 && !lex[up]) break;
       keep.push(ws[i]);
@@ -4216,35 +4526,14 @@ var SkiaMotor = (function () {
     return n;
   }
 
-  // ─ Os carimbos do PJe na SAÍDA (pedido do Promotor, 09/11/2026): quem gerou o PDF e quem assina saem do texto. O lote
-  // do Graphé continua lendo o carimbo de assinatura para saber quem é autoridade ou advogado (regra 4: em claro no
-  // corpo); aqui só o carimbo perde o nome. Ficam a data, a hora, o número do documento e o "Num. … - Pág.".
-  var OMITIDO = '[omitido]';
-  // (sem exigir o "Este documento foi" na mesma linha: na página escaneada o OCR o parte, e o CPF mascarado sai torto)
-  var RE_GERADO = /(gerado\s+pelo\s+usu[áa]rio)[ \t]+.+?(?=[ \t]+em[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]*$)/gi;
+  // ─ Os carimbos do PJe na SAÍDA (pedido do Promotor, 09/11/2026): quem gerou o PDF e quem assina saem do texto (a
+  // data, a hora, o número do documento e o "Num. … - Pág." ficam). A função mora no graphe.js (_anonSemCarimbosSaida_,
+  // desde e83bd54: um motor só para os dois); lá ela não está ligada na saída do Graphé, aqui sim. O lote continua lendo o
+  // carimbo para saber quem é autoridade ou advogado (regra 4: em claro no corpo); só a SAÍDA perde o nome.
   // O aviso do cabeçalho do Graphé aponta a revisão humana da planilha ("🔒 Anonimizar autos"), que o Incognitus não tem.
   var RE_AVISO_REVISAO = /\s*\(um humano confere com "[^"]*"\)/;
   var AVISO_INCOGNITUS = ' (o Incognitus não tem essa revisão: quase sempre são termos que não são nomes — exames, remédios, ' +
     'lugares, rótulos de formulário —, mas confira os nomes de pessoas no texto antes de usar)';
-  var RE_ASSINANTE = /(assinad[oa]\s+(?:eletronicamente|digitalmente|de\s+forma\s+digital)\s+por)([ \t]*:?[ \t]*)(.*?)(?::[ \t]*\d{11})?(?=[ \t]+[-–][ \t]+\d|[ \t]*[,;(]|[ \t]+em[ \t]+\d|[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]+(?:documento\s+)?assinad[oa]\s|[ \t]*$)/gi;
-  function semCarimbos(texto) {
-    var ls = String(texto == null ? '' : texto).split('\n'), resto = 0;
-    for (var i = 0; i < ls.length; i++) {
-      var l = ls[i];
-      if (ANON_RE_CARIMBO.test(l)) {
-        l = l.replace(RE_ASSINANTE, function (m, por, sep) { return por + (sep.indexOf(':') >= 0 ? ': ' : ' ') + OMITIDO; });
-        resto = 12;
-      } else if (resto > 0 && /^[ \t]{10,}\S/.test(l) && !/[a-zß-ÿ]{3,}/.test(l)) {
-        // o resto do carimbo que vem na DIAGONAL: o pdftotext -layout o parte em linhas recuadas, só com maiúsculas (o
-        // mesmo critério de _anonSemCarimbos_ do Graphé, que tira essas linhas da colheita de candidatos)
-        ls[i] = '';
-        resto--;
-        continue;
-      } else resto = 0;
-      ls[i] = l.replace(RE_GERADO, '$1 ' + OMITIDO);
-    }
-    return ls.join('\n');
-  }
 
   // O lote automático + o cabeçalho. op: { meta (de aplicarOcr), req, idCaso, aba, incluirMapa }.
   function anonimizar(texto, op) {
@@ -4266,10 +4555,10 @@ var SkiaMotor = (function () {
       semTexto: pg.semTexto, historico: [], corpo: corpo, partes: partes, nTranscricoes: 0, truncado: false, chars: texto.length,
       naoConfirmados: naoConf, poucoTexto: pg.poucoTexto, ocr: pg.ocr, ocrPendente: pg.ocrPendente }).replace(RE_AVISO_REVISAO, AVISO_INCOGNITUS);
     // Cada página como no corpo do .txt ("===== PÁGINA n =====" e o texto): o PDF do Incognitus tem uma página para cada
-    // uma. Os carimbos do PJe saem sem os nomes (semCarimbos); o corpo cru (res.corpo, com o mapa) fica como o do Graphé.
-    var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([semCarimbos(p)], i + 1); });
+    // uma. Os carimbos do PJe saem sem os nomes (_anonSemCarimbosSaida_); o corpo cru (res.corpo, com o mapa) fica como o do Graphé.
+    var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([_anonSemCarimbosSaida_(p)], i + 1); });
     var res = {
-      api: 2, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + semCarimbos(corpo),
+      api: 2, versao: ANON_VERSAO, cabecalho: cab, paginas: paginas, texto: cab + '\n\n' + _anonSemCarimbosSaida_(corpo),
       estatisticas: { paginas: r.paginas.length, tokens: Object.keys(r.mapa.tokens).length, pessoas: contarPessoas(r.mapa),
         candidatos: (r.cand || []).length, confirmados: (r.conf || []).length, naoConfirmados: naoConf,
         sobras: (r.sobras && r.sobras.total) || 0, ocr: (pg.ocr && pg.ocr.paginas) ? pg.ocr.paginas.length : 0,

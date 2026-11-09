@@ -7,8 +7,9 @@
 Aplicativo de computador (Mac e Windows) que **anonimiza autos em PDF, em lote**, com o **mesmo motor de anonimização
 do Graphé** — o mesmo fluxo do lote automático (preparar → classificador bayesiano → concluir), as mesmas regras, o
 mesmo cabeçalho de autos anonimizados — e **reidentifica as minutas** que a IA devolve, com o mapa de cada processo,
-como o 🔓 do Graphé. **Tudo roda no computador**: nenhum PDF, texto ou mapa sai dele, e não há telemetria. A única
-conexão é a checagem das regras (só leitura de um repositório público), que os Ajustes desligam.
+como o 🔓 do Graphé. **Tudo roda no computador**: nenhum PDF, texto ou mapa sai dele, e não há telemetria. As únicas
+conexões são, ao abrir, a procura por versão nova do app e das regras (só leitura do GitHub público), que os Ajustes
+desligam.
 
 
 ## Como usar
@@ -63,13 +64,28 @@ Graphé), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar
 
 ## Baixar
 
-Cada versão (tag `v*`) publica no GitHub uma release, a mais nova, com os instaladores em **nome fixo** — o link
-não muda de uma versão para outra:
+Página do app: **https://consciencia.eco.br/incognitus/**. Os instaladores têm endereço fixo, que baixa sempre a versão
+mais recente:
 
-- Mac: `https://github.com/claudiogonzaga/incognitus/releases/latest/download/Incognitus-macOS.dmg`
-- Windows: `https://github.com/claudiogonzaga/incognitus/releases/latest/download/Incognitus-Windows.msi`
+- Mac (universal, macOS 13+): `https://consciencia.eco.br/incognitus/mac`
+- Windows (64 bits): `https://consciencia.eco.br/incognitus/windows`
 
-Com o repositório **privado**, esses links só baixam para quem entra no GitHub com acesso a ele (ver Pendências).
+Esses endereços são funções da Cloudflare no portal (repositório `claudiogonzaga/consciencia`, `functions/incognitus/`)
+que entregam o arquivo da release mais nova do GitHub: a **rede do MPMT bloqueia o github.com** ("Violação de Filtro
+Web"), e o consciencia.eco.br abre. A seção Downloads de graphe.consciencia.eco.br aponta para os mesmos endereços. Fora
+da rede do MPMT, os do GitHub também servem:
+
+- `https://github.com/claudiogonzaga/incognitus/releases/latest/download/Incognitus-macOS.dmg`
+- `https://github.com/claudiogonzaga/incognitus/releases/latest/download/Incognitus-Windows.msi`
+
+Cada versão (tag `v*`) publica no GitHub uma release, a mais nova, com os instaladores nesse nome fixo; o portal passa a
+entregá-la sozinho (guarda 10 minutos). O repositório é **público** desde 09/11/2026 (decisão do Promotor).
+
+**Atualizar**: ao abrir (se ligado nos Ajustes) ou em **Ajustes → Procurar versão nova**, o app pergunta pela versão mais
+nova, como o Comentora — primeiro ao portal (`consciencia.eco.br/incognitus/versao`, que lê o GitHub do lado da
+Cloudflare), depois direto ao GitHub. Se houver, uma faixa no alto oferece **Atualizar agora**: baixa o instalador para a
+pasta Downloads e o abre — no Mac, arrasta-se o Incognitus para Aplicativos (Substituir); no Windows, o `.msi` troca a
+versão instalada. As regras continuam com a atualização própria, assinada (ver "O motor").
 
 ## Como abrir (o app ainda não tem assinatura digital)
 
@@ -85,9 +101,12 @@ Com o repositório **privado**, esses links só baixam para quem entra no GitHub
 `motor/motor.js` é gerado por **`scripts/extrair_motor.mjs`** a partir do `graphe.js` (pasta irmã `../Graphe`):
 
 - tira **só** o que o app usa — as funções que o `testes/anon/pipeline.js` do Graphé chama, mais o cabeçalho do
-  `anonConcluir`, a escolha das páginas para o OCR e a reidentificação do 🔓 (`_anonReidentificarTexto_`,
-  `_anonReidTitulo_`, `_anonSobrasReid_`) — e, **pelo nome** (nunca por número de linha), tudo de que elas dependem
-  (355 declarações na 1.9.0). O `pipeline.js` vai junto, sem alteração;
+  `anonConcluir`, a escolha das páginas para o OCR, a reidentificação do 🔓 (`_anonReidentificarTexto_`,
+  `_anonReidTitulo_`, `_anonSobrasReid_`) e os carimbos do PJe na saída (`_anonSemCarimbosSaida_`) — e, **pelo nome**
+  (nunca por número de linha), tudo de que elas dependem. O `pipeline.js` vai junto, sem alteração;
+- **um motor só** (pedido do Promotor, 09/11/2026): toda regra mora no `graphe.js`, inclusive a dos carimbos (que lá
+  não está ligada na saída do Graphé); o número do motor (`ANON_VERSAO`) é o mesmo nos dois, e no Graphé ele não manda
+  refazer nada (o gatilho de refazer é a `ANON_VERSAO_REFAZER`);
 - o que no Graphé vem da planilha e do Apps Script (VARIAVEIS_GLOBAIS, equipe, propriedades, Logger) é o
   `motor/fonte/ambiente.js`: equipe vazia, contatos institucionais pelos Ajustes. A API do app é `motor/fonte/api.js`
   (versão 2, a da reidentificação: o app só aceita motor da sua versão de API);
@@ -99,7 +118,8 @@ Com o repositório **privado**, esses links só baixam para quem entra no GitHub
 - **suíte** (`scripts/regressao_motor.cjs`): o `testes/anon/regressao.js` do Graphé (63 casos fictícios), **sem
   alteração**, rodando sobre o `motor.js` num contexto limpo, sem nada do Apps Script; depois os mesmos casos pela
   API do Incognitus — cada um com a **volta**: os autos anonimizados, reidentificados com o próprio mapa, não podem guardar
-  token nem sobra —, e a paridade caso a caso com o `pipeline.js`. Só aceita o motor com **"0 falhas"** e **63/63**.
+  token nem sobra —, a paridade caso a caso com o `pipeline.js` e os testes dos carimbos na saída. Só aceita o motor
+  com **"0 falhas"** em tudo (94 casos em 09/11/2026).
 
 ```bash
 node scripts/extrair_motor.mjs            # monta motor/ e o motor embutido no app (src/motor/)
@@ -175,26 +195,27 @@ Nunca use dados reais de processos em testes, exemplos, commits ou logs.
 
 ## Pendências (09/11/2026)
 
-- **Repositório público das regras** (`claudiogonzaga/incognitus-motor`): não criado — espera a confirmação do Promotor, porque o
-  código das regras fica visível a qualquer pessoa. Depois: `gh repo create claudiogonzaga/incognitus-motor --public` e
-  `scripts/publicar_motor.sh`. Até lá, o app usa o motor embutido e a checagem ao abrir só não acha nada.
+- **Regras que atualizam sem reinstalar**: o repositório público só das regras (`claudiogonzaga/incognitus-motor`) não
+  foi criado. As regras já estão públicas, no repositório do app, e hoje chegam com a versão nova dele (botão Atualizar).
+  Para as regras atualizarem sozinhas, entre uma versão e outra do app: `gh repo create claudiogonzaga/incognitus-motor
+  --public` e `scripts/publicar_motor.sh` (pede a confirmação do Promotor).
 - **Assinatura digital**: sem Developer ID da Apple nem certificado de código para Windows, ficam os avisos do Gatekeeper
   e do SmartScreen (ver "Como abrir"). Ao assinar e notarizar no Mac, religar o *hardened runtime* exige também assinar
   as dylibs dos sidecars com a mesma equipe (ou o direito `com.apple.security.cs.disable-library-validation`).
 - **Licença** do próprio Incognitus e do motor publicado: não definida.
-- **Links públicos e atualização do app**: release de repositório privado não baixa sem login no GitHub, e o app não
-  consegue perguntar pela versão nova. Para o link fixo no site e o botão de atualizar (como no Comentora, que lê
-  `releases/latest` de um repositório público), os instaladores precisam estar num lugar público — decisão do Promotor.
-- **Teste com 5 autos reais** (09/11/2026, 186 páginas, nada gravado fora do computador): os 261 carimbos de assinatura
-  saíram com [omitido]; os telefones e e-mails em claro eram institucionais; dos 166 "candidatos a nome" que o
-  classificador deixou em claro, quase todos eram exames, remédios, anatomia, rótulos e ruído de OCR. Dois vazamentos
-  de verdade, os dois do motor do Graphé: a **alcunha entre aspas** depois de "apelidado" e o **endereço** de uma
-  linha "Endereço:" sem rua (bairro, cidade e CEP sem hífen).
-- **Achado no motor do Graphé** (09/11/2026, com texto fictício): quando o vocativo da petição termina em "JUIZ DE
-  DIREITO" ("EXCELENTÍSSIMO SENHOR JUIZ DE DIREITO", mesmo com linha em branco antes do parágrafo seguinte), o nome
-  que abre o parágrafo seguinte fica **em claro** — a regra das autoridades (`ANON_RE_AUTORIDADE_ANTES`) o lê como o
-  nome do juiz. Com a vara depois ("…JUIZ DE DIREITO DA 1ª VARA…") a parte vira token. A correção é no `graphe.js`;
-  depois, `node scripts/extrair_motor.mjs` traz para cá.
+- **Bateria com autos reais** (09/11/2026, pedido do Promotor; tudo no computador, na pasta temporária da sessão, apagado
+  no fim; nada real em teste, commit ou log). Rodadas: 5 autos de Downloads, 10 casos da φ.26 (os de mais erros na coluna
+  ERROS_ANONIMIZACAO) e 2 lotes de 5 autos inéditos; cada padrão de vazamento foi para o `graphe.js`, com exemplo
+  fictício, e voltou por extração (d749ec4 → 10b1120: a suíte foi de 69 a 104 casos). Os maiores: o **prenome sozinho**
+  de quem tem token na prosa (um réu ficava 31 vezes em claro); a parte com patente ou função antes do nome; o
+  formulário pontilhado; o cabeçalho de termo e o andamento do PJe com o prenome; a filiação partida em colunas; a
+  página escaneada do e-SAJ que não ia ao OCR (47 páginas sumiam sem aviso). Na camada do Incognitus: os carimbos
+  ICP-Brasil em várias linhas, na diagonal e estropiados pelo OCR (hoje no `graphe.js`, `_anonSemCarimbosSaida_`).
+  **Prova final**: um lote de 5 autos inéditos (339 páginas), guardado sem olhar até o motor final, saiu **sem nome de
+  parte, vítima ou testemunha em claro** — o que sobra em claro é autoridade (regra 4), lugar e precedente citado (que
+  não se mascara, decisão do Promotor). Ficaram para a versão seguinte: o endereço partido pela quebra de linha depois
+  do "n.°" e o carimbo com o "eletronicamente" cortado; e o motor não tem como pegar o prenome de quem nunca aparece
+  com o nome inteiro (ex.: "as amigas FULANA e BELTRANA").
 - **Nome**: o app se chamava Skiá até a 0.2.0; o repositório virou `claudiogonzaga/incognitus` em 09/11/2026 (o nome
   antigo redireciona). A pasta (`CODIGO/Skia`), as variáveis de teste (`SKIA_E2E`, `SKIA_DADOS`…) e a API do motor
   (`SkiaMotor`) ficaram com o nome antigo, de propósito (são internas).

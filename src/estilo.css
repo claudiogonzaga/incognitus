@@ -95,3 +95,8 @@ details summary { margin-top:8px; cursor:pointer; font-size:12px; color:var(--in
 #dic_tabela td:first-child { font:11px Menlo, Consolas, monospace; white-space:nowrap; }
 #dic_tabela td:last-child { color:var(--ink-soft); font-size:11px; }
 #reid_lista { list-style:none; margin:10px 0 0; padding:0; display:grid; gap:8px; max-height:calc(100vh - 260px); overflow-y:auto; }
+.novidade { display:flex; flex-wrap:wrap; align-items:center; gap:10px; width:calc(100% - 40px); max-width:1140px; margin:10px auto 0;
+  padding:8px 12px; border:1px solid var(--pompeia); border-radius:10px; background:rgba(142,42,30,.08); font-size:13px; }
+.novidade button { width:auto; margin:0; }
+.novidade details { flex-basis:100%; font-size:12px; }
+.novidade .notas { margin-top:4px; white-space:pre-wrap; color:var(--ink-soft); -webkit-user-select:text; user-select:text; }

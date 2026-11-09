@@ -104,7 +104,9 @@ def publicar_motor_teste(pasta, adulterar=False):
 def rodar_app(plano, url_motor, dados):
     caminho = os.path.join(SAIDA, "plano-" + uuid.uuid4().hex[:6] + ".json")
     json.dump(plano, open(caminho, "w", encoding="utf-8"), ensure_ascii=False)
-    env = dict(os.environ, SKIA_E2E=caminho, SKIA_DADOS=dados, SKIA_MOTOR_URL=url_motor)
+    env = dict(os.environ, SKIA_E2E=caminho, SKIA_DADOS=dados, SKIA_MOTOR_URL=url_motor,
+               SKIA_APP_URL=url_motor + "release.json", SKIA_DOWNLOADS=os.path.join(SAIDA, "downloads"))
+    os.makedirs(env["SKIA_DOWNLOADS"], exist_ok=True)
     t0 = time.time()
     r = subprocess.run([EXE], env=env, capture_output=True, timeout=900)
     log = r.stderr.decode("utf-8", "replace")
@@ -297,9 +299,17 @@ def main():
         print("  (sem a chave privada aqui: a instalação de um motor assinado não é testada, só a recusa)")
         confere(a.get("trocou") is False and "assinatura" in (a.get("erro") or ""), f"assinatura inválida recusada ({a.get('erro')})")
     publicar_motor_teste(pub, adulterar=True)
+    # uma "versão nova" do app servida aqui, como a release do GitHub: o app tem de achá-la e baixar o instalador certo
+    instalador = "Incognitus-Windows.msi" if os.name == "nt" else "Incognitus-macOS.dmg"
+    for n in ("Incognitus-Windows.msi", "Incognitus-macOS.dmg"):
+        open(os.path.join(pub, n), "wb").write(b"instalador ficticio " + n.encode())
+    json.dump({"tag_name": "v99.0.0", "body": "notas da versao ficticia", "html_url": url + "pagina", "draft": False, "prerelease": False,
+               "assets": [{"name": n, "browser_download_url": url + n, "size": 30} for n in ("Incognitus-Windows.msi", "Incognitus-macOS.dmg")]},
+              open(os.path.join(pub, "release.json"), "w", encoding="utf-8"))
     mm = minutas(os.path.join(pasta, "texto — MAPA (nomes reais).json"))
     plano2 = {"arquivos": [], "relatorio": os.path.join(SAIDA, "relatorio2.json"), "atualizar": True, "extracao": os.path.join(SAIDA, "extracao"),
-              "reidentificar": {"mapa": os.path.join(pasta, "texto — MAPA (nomes reais).json"), "texto": mm["texto"], "arquivos": [mm["txt"], mm["docx"]]}}
+              "reidentificar": {"mapa": os.path.join(pasta, "texto — MAPA (nomes reais).json"), "texto": mm["texto"], "arquivos": [mm["txt"], mm["docx"]]},
+              "atualizacaoApp": True}
     shutil.rmtree(os.path.join(dados, "dados", "motor"), ignore_errors=True)   # volta ao embutido
     rel2 = rodar_app(plano2, url, dados)
     a2 = rel2.get("atualizacao") or {}
@@ -308,6 +318,12 @@ def main():
 
     print("4. a reidentificação, com o mapa que o app gravou")
     conferir_reid(rel2, mm)
+    ap = rel2.get("app") or {}
+    nova, baixado = ap.get("nova") or {}, ap.get("baixado") or ""
+    confere(nova.get("versao") == "99.0.0" and nova.get("url", "").endswith(instalador),
+            f"versão nova do app achada, com o instalador deste sistema ({nova.get('versao')} · {os.path.basename(nova.get('url', ''))} {ap.get('erro') or ''})")
+    confere(os.path.isfile(baixado) and open(baixado, "rb").read() == b"instalador ficticio " + instalador.encode()
+            and os.path.dirname(baixado) == os.path.join(SAIDA, "downloads"), f"o instalador baixou inteiro, na pasta de teste ({os.path.basename(baixado)})")
 
     print("5. a extração do Incognitus × o serviço do Graphé (main.py aqui, com as mesmas ferramentas)")
     if not os.path.exists(MAIN_PY):

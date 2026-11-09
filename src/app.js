@@ -466,6 +466,46 @@ async function salvarTxt() {
   catch (e) { avisar('Não consegui gravar: ' + ((e && e.message) || e)); }
 }
 
+// ── versão nova do app ────────────────────────────────────────────────────────────────────────────────────────────
+// Como no Comentora: a release mais nova do repositório público; se for mais nova, a faixa no alto oferece atualizar.
+async function checarApp(manual) {
+  try {
+    estado.novaVersao = await invoke('app_checar');
+    mostrarNovidade();
+    if (manual) $('app_msg').textContent = estado.novaVersao ? 'Há uma versão nova: ' + estado.novaVersao.versao + '.' : 'Esta já é a versão mais nova.';
+  } catch (e) {
+    if (manual) $('app_msg').textContent = 'Não consegui procurar: ' + ((e && e.message) || e);
+  }
+}
+
+function mostrarNovidade() {
+  const n = estado.novaVersao, el = $('novidade');
+  el.hidden = !n || !!estado.novidadeAdiada;
+  if (!n) return;
+  el.innerHTML = '<span>Versão nova do Incognitus: <b>' + esc(n.versao) + '</b>' + (n.tamanho ? ' (' + Math.round(n.tamanho / 1048576) + ' MB)' : '') + '.</span>' +
+    '<button id="bt_app_atualizar" class="pequeno">Atualizar agora</button><button id="bt_app_depois" class="ghost pequeno">Depois</button>' +
+    (n.notas ? '<details><summary>O que mudou</summary><div class="notas">' + esc(n.notas) + '</div></details>' : '');
+  $('bt_app_atualizar').onclick = atualizarApp;
+  $('bt_app_depois').onclick = () => { estado.novidadeAdiada = true; mostrarNovidade(); };
+}
+
+async function atualizarApp() {
+  const n = estado.novaVersao, b = $('bt_app_atualizar');
+  if (estado.rodando) { avisar('Espere a fila terminar antes de atualizar.'); return; }
+  b.disabled = true; b.textContent = 'Baixando…';
+  try {
+    const caminho = await invoke('app_baixar', { url: n.url, versao: n.versao });
+    b.textContent = 'Abrindo o instalador…';
+    await T.dialog.message(/Mac/.test(navigator.platform)
+      ? 'O instalador da versão ' + n.versao + ' vai abrir. Arraste o Incognitus para Aplicativos, confirme "Substituir" e abra o app de novo. O Incognitus fecha agora.'
+      : 'O instalador da versão ' + n.versao + ' vai abrir e trocar a versão instalada. O Incognitus fecha agora.', { title: 'Incognitus', kind: 'info' });
+    await invoke('app_instalar', { caminho });
+  } catch (e) {
+    b.disabled = false; b.textContent = 'Atualizar agora';
+    avisar('Não consegui atualizar: ' + ((e && e.message) || e) + (n.pagina ? '\n\nDá para baixar pela página da versão: ' + n.pagina : ''));
+  }
+}
+
 // ── início ────────────────────────────────────────────────────────────────────────────────────────────────────────
 function ligar() {
   $('aba_bt_anon').onclick = () => mostrarAba('anon');
@@ -516,6 +556,7 @@ function ligar() {
   $('bt_ajustes_cancelar').onclick = () => $('dlg_ajustes').close();
   $('dlg_ajustes').querySelector('form').onsubmit = (ev) => { ev.preventDefault(); salvarAjustes().then(() => $('dlg_ajustes').close()); };
   $('bt_atualizar').onclick = async () => { $('bt_atualizar').disabled = true; try { await atualizarRegras(true); } finally { $('bt_atualizar').disabled = false; } };
+  $('bt_app_checar').onclick = () => checarApp(true);
   $('bt_voltar').onclick = async () => {
     try { await invoke('motor_voltar'); await carregarMotor(); $('motor_msg').textContent = 'Em uso agora: ' + estado.motor.manifesto.versao + '.'; }
     catch (e) { $('motor_msg').textContent = String(e); }
@@ -543,12 +584,13 @@ async function iniciar() {
   desenharReid();
   invoke('info_app').then((info) => {
     const f = info.ferramentas;
+    $('versao_app').textContent = 'Incognitus ' + info.versao;
     $('ferramentas_info').textContent = 'Incognitus ' + info.versao + ' · ' + (f.Ok ? f.Ok.join(' · ') : 'PROBLEMA nas ferramentas: ' + f.Err);
     if (f.Err) avisar('As ferramentas embutidas (pdftotext, pdftoppm, tesseract) não rodaram: ' + f.Err);
   });
   estado.e2e = await invoke('e2e_plano');
   if (estado.e2e) return testeDePontaAPonta(estado.e2e);
-  if (estado.ajustes.checarAoAbrir !== false) atualizarRegras(false);
+  if (estado.ajustes.checarAoAbrir !== false) { atualizarRegras(false); checarApp(false); }
 }
 
 /** Modo de teste (SKIA_E2E): enfileira, roda, confere a atualização das regras e grava o relatório. */
@@ -572,6 +614,13 @@ async function testeDePontaAPonta(p) {
         await reidArquivos(q.arquivos);
         rel.reid.arquivos = estado.reid.itens.map((i) => ({ caminho: i.caminho, etapa: i.etapa, erro: i.erro, saida: i.saida, n: i.n, sobras: i.sobras }));
       }
+    }
+    if (p.atualizacaoApp) {
+      try {
+        const n = await invoke('app_checar');
+        rel.app = { nova: n };
+        if (n) rel.app.baixado = await invoke('app_baixar', { url: n.url, versao: n.versao });
+      } catch (e) { rel.app = { erro: String((e && e.message) || e) }; }
     }
     if (p.atualizar) rel.atualizacao = await atualizarRegras(true);
     rel.motorFinal = estado.motor.manifesto.versao + ' (' + estado.motor.origem + ', ' + estado.motor.manifesto.data + ')';

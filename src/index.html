@@ -22,6 +22,7 @@
   <button id="aba_bt_anon" class="aba ativa" role="tab">Anonimizar</button>
   <button id="aba_bt_reid" class="aba" role="tab">Reidentificar</button>
 </nav>
+<div id="novidade" class="novidade" hidden></div>
 
 <main id="aba_anon">
   <section id="lado">
@@ -114,7 +115,7 @@
     <label for="inst">Contatos institucionais que ficam em claro (um por linha: endereço, telefone, CEP ou e-mail da Delegacia, do Fórum, da Promotoria…)</label>
     <textarea id="inst" rows="9" spellcheck="false"></textarea>
     <div class="linha"><button type="button" id="bt_inst_padrao" class="ghost pequeno">Restaurar o padrão</button></div>
-    <label class="opcao"><input id="op_checar" type="checkbox"> <span>Checar atualização das regras ao abrir o Incognitus</span></label>
+    <label class="opcao"><input id="op_checar" type="checkbox"> <span>Procurar atualizações ao abrir o Incognitus (do aplicativo e das regras)</span></label>
 
     <h2>Motor de anonimização</h2>
     <div id="motor_info" class="caixa"></div>
@@ -126,6 +127,10 @@
 
     <h2>Ferramentas</h2>
     <div id="ferramentas_info" class="caixa suave"></div>
+
+    <h2>Aplicativo</h2>
+    <div class="linha"><span id="versao_app" class="suave"></span><button type="button" id="bt_app_checar" class="ghost pequeno">Procurar versão nova</button></div>
+    <div id="app_msg" class="suave"></div>
     <p class="dica">pdftotext e pdftoppm (poppler, GPL) e tesseract (Apache-2.0) vêm dentro do app. As licenças e onde
       está o código-fonte: pasta LICENCAS-terceiros, dentro do aplicativo.</p>
 

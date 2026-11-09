@@ -4,6 +4,7 @@
 //! (embutido ou baixado e assinado). A anonimização e a reidentificação rodam no front, num Web Worker, com o motor.js.
 //! Nada sai do computador: a única conexão é a checagem das regras (só leitura do repositório público incognitus-motor), que
 //! os Ajustes desligam.
+mod atualizar;
 mod ferramentas;
 mod motor;
 mod pdf;
@@ -298,6 +299,36 @@ async fn gravar_texto(caminho: String, texto: String) -> Result<(), String> {
     em_segundo_plano(move || gravar_atomico(Path::new(&caminho), texto.as_bytes())).await
 }
 
+// ── versão nova do app ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// A release mais nova (pelo portal, senão pelo GitHub), se for mais nova que esta (SKIA_APP_URL troca o endereço nos testes).
+#[tauri::command]
+async fn app_checar() -> Result<Option<atualizar::NovaVersao>, String> {
+    match std::env::var("SKIA_APP_URL") {
+        Ok(url) => atualizar::checar(&url, env!("CARGO_PKG_VERSION")).await,
+        Err(_) => atualizar::checar_padrao(env!("CARGO_PKG_VERSION")).await,
+    }
+}
+
+/// Baixa o instalador da versão nova para a pasta Downloads.
+#[tauri::command]
+async fn app_baixar(app: tauri::AppHandle, url: String, versao: String) -> Result<String, String> {
+    // SKIA_DOWNLOADS (só para testes): baixa numa pasta à parte, não na Downloads do usuário.
+    let pasta = match std::env::var_os("SKIA_DOWNLOADS") {
+        Some(d) => PathBuf::from(d),
+        None => app.path().download_dir().map_err(|e| format!("sem a pasta Downloads: {e}"))?,
+    };
+    atualizar::baixar(&url, &versao, &pasta).await.map(|p| p.to_string_lossy().to_string())
+}
+
+/// Abre o instalador e fecha o app (no Windows o .msi troca a versão; no Mac, arrasta-se o app novo para Aplicativos).
+#[tauri::command]
+fn app_instalar(app: tauri::AppHandle, caminho: String) -> Result<(), String> {
+    atualizar::abrir(Path::new(&caminho))?;
+    app.exit(0);
+    Ok(())
+}
+
 #[tauri::command]
 fn revelar(caminho: String) -> Result<(), String> {
     let p = PathBuf::from(&caminho);
@@ -450,6 +481,9 @@ pub fn run() {
             docx_partes,
             gravar_reidentificado,
             gravar_texto,
+            app_checar,
+            app_baixar,
+            app_instalar,
             revelar,
             ajustes_ler,
             ajustes_gravar,
