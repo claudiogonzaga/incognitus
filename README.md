@@ -84,7 +84,7 @@ entregá-la sozinho (guarda 10 minutos). O repositório é **público** desde 09
 **Atualizar**: ao abrir (se ligado nos Ajustes) ou em **Ajustes → Procurar versão nova**, o app pergunta pela versão mais
 nova, como o Comentora — primeiro ao portal (`consciencia.eco.br/incognitus/versao`, que lê o GitHub do lado da
 Cloudflare), depois direto ao GitHub. Se houver, uma faixa no alto oferece **Atualizar agora**: baixa o instalador para a
-pasta Downloads e o abre — no Mac, arrasta-se o Incognitus para Aplicativos (Substituir); no Windows, o `.msi` troca a
+pasta Downloads (se a conexão cair, tenta de novo e retoma de onde parou) e o abre — no Mac, arrasta-se o Incognitus para Aplicativos (Substituir); no Windows, o `.msi` troca a
 versão instalada. As regras continuam com a atualização própria, assinada (ver "O motor").
 
 ## Como abrir (o app ainda não tem assinatura digital)

@@ -151,20 +151,90 @@ pub async fn checar_padrao(atual: &str) -> Result<Option<NovaVersao>, String> {
     }
 }
 
+fn tamanho(p: &Path) -> u64 {
+    std::fs::metadata(p).map(|m| m.len()).unwrap_or(0)
+}
+
 /// Baixa o instalador para `pasta` (Downloads), com o número da versão no nome; grava em .parcial e renomeia no fim.
+/// A rede do MPMT derruba de vez em quando as conexões ao portal (09/11/2026): se a conexão cai, tenta de novo (até 6
+/// vezes) e retoma de onde parou (Range, que o portal aceita); no fim, confere o tamanho.
 pub async fn baixar(url: &str, versao: &str, pasta: &Path) -> Result<PathBuf, String> {
+    use std::io::Write;
     let ext = Path::new(INSTALADOR).extension().and_then(|e| e.to_str()).unwrap_or("bin");
     let destino = pasta.join(format!("Incognitus-{versao}.{ext}"));
     let parcial = pasta.join(format!(".Incognitus-{versao}.{ext}.parcial"));
     let quem = servidor(url);
-    let r = cliente(900)?.get(url).send().await.map_err(|e| format!("sem conexão com {quem} ({e})"))?;
-    if !r.status().is_success() {
-        return Err(format!("{quem} respondeu {}", r.status().as_u16()));
+    let cli = cliente(900)?;
+    let _ = std::fs::remove_file(&parcial);
+    let mut erro = String::from("o download não começou");
+    for tentativa in 0..6u64 {
+        if tentativa > 0 {
+            std::thread::sleep(Duration::from_millis(700 * tentativa));
+        }
+        let ja = tamanho(&parcial);
+        let mut req = cli.get(url);
+        if ja > 0 {
+            req = req.header("Range", format!("bytes={ja}-"));
+        }
+        let mut r = match req.send().await {
+            Ok(r) => r,
+            Err(e) => {
+                erro = format!("sem conexão com {quem} ({e})");
+                continue;
+            }
+        };
+        let st = r.status().as_u16();
+        if st != 200 && st != 206 {
+            erro = format!("{quem} respondeu {st}");
+            if (400..500).contains(&st) && st != 408 && st != 429 {
+                break;
+            }
+            continue;
+        }
+        let anexar = st == 206 && ja > 0;
+        let total = if st == 206 {
+            r.headers()
+                .get("content-range")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.rsplit('/').next())
+                .and_then(|n| n.trim().parse::<u64>().ok())
+        } else {
+            r.content_length()
+        };
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(anexar)
+            .truncate(!anexar)
+            .open(&parcial)
+            .map_err(|e| format!("não consegui gravar em {}: {e}", pasta.display()))?;
+        let mut parou = None;
+        loop {
+            match r.chunk().await {
+                Ok(Some(c)) => f.write_all(&c).map_err(|e| format!("não consegui gravar em {}: {e}", pasta.display()))?,
+                Ok(None) => break,
+                Err(e) => {
+                    parou = Some(format!("o download parou: {e}"));
+                    break;
+                }
+            }
+        }
+        drop(f);
+        let feito = tamanho(&parcial);
+        match (parou, total) {
+            (Some(e), _) => erro = e,
+            (None, Some(t)) if feito > t => {
+                let _ = std::fs::remove_file(&parcial);
+                erro = "o arquivo veio maior que o esperado".into();
+            }
+            (None, Some(t)) if feito < t => erro = "o download veio incompleto".into(),
+            (None, _) => {
+                std::fs::rename(&parcial, &destino).map_err(|e| e.to_string())?;
+                return Ok(destino);
+            }
+        }
     }
-    let dados = r.bytes().await.map_err(|e| format!("o download parou: {e}"))?;
-    std::fs::write(&parcial, &dados).map_err(|e| format!("não consegui gravar em {}: {e}", pasta.display()))?;
-    std::fs::rename(&parcial, &destino).map_err(|e| e.to_string())?;
-    Ok(destino)
+    Err(format!("{erro} (tentei 6 vezes; tente de novo)"))
 }
 
 /// Abre o instalador: no Mac, o .dmg (arrastar o Incognitus para Aplicativos); no Windows, o .msi, que troca a versão.
@@ -196,6 +266,21 @@ mod testes {
         let gh = serde_json::json!({ "tag_name": "v99.0.0", "body": "b", "html_url": "h", "draft": false, "prerelease": false,
             "assets": [ { "name": INSTALADOR, "browser_download_url": "https://exemplo.invalid/x", "size": 5 } ] });
         assert_eq!(interpretar(gh, "0.4.0", "o GitHub").unwrap().expect("nova").url, "https://exemplo.invalid/x");
+    }
+
+    /// Baixa de verdade pelo portal (rede; à mão): cargo test -- --ignored baixa_do_portal
+    #[test]
+    #[ignore]
+    fn baixa_do_portal() {
+        let pasta = std::env::temp_dir().join("incognitus-baixa-teste");
+        let _ = std::fs::remove_dir_all(&pasta);
+        std::fs::create_dir_all(&pasta).unwrap();
+        let so = if cfg!(target_os = "windows") { "windows" } else { "mac" };
+        let nova = tauri::async_runtime::block_on(checar(URL_PADRAO, "0.0.1")).unwrap().expect("há versão no portal");
+        assert!(nova.url.ends_with(so));
+        let p = tauri::async_runtime::block_on(baixar(&nova.url, &nova.versao, &pasta)).unwrap();
+        assert_eq!(std::fs::metadata(&p).unwrap().len(), nova.tamanho);
+        let _ = std::fs::remove_dir_all(&pasta);
     }
 
     #[test]
