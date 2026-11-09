@@ -2,9 +2,9 @@
   "nome": "incognitus-motor",
   "versao": "1.9.0",
   "api": 2,
-  "data": "2026-11-09T15:54:33Z",
-  "sha256": "078c4dcaf531ae07512f0119c04dd8a8ee822e4a107ff9a4a5a963aa6770c23d",
-  "bytes": 374882,
+  "data": "2026-11-09T16:23:54Z",
+  "sha256": "4d15d2fb5fe4a98677d6cb1f26b4342848b89e9c20aca1c2704a141b5868acd2",
+  "bytes": 375454,
   "casos": {
     "total": 63,
     "sha256": "0a4482949fc5e778bf7b02654eda5558239549c309f917f4c3afe8fcd8b622f4"

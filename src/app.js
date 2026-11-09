@@ -167,7 +167,7 @@ function desenhar() {
     if (i.paginas) det.push('<b>' + i.paginas + '</b> página' + (i.paginas > 1 ? 's' : ''));
     if (i.fracas != null) det.push(i.fracas ? i.fracas + ' fraca(s) → OCR' : 'nenhuma página para OCR');
     if (i.stats) det.push('<b>' + i.stats.pessoas + '</b> pessoa(s) · ' + i.stats.tokens + ' token(s)' +
-      (i.stats.naoConfirmados ? ' · ' + i.stats.naoConfirmados + ' nome(s) provável(is) em claro (ver cabeçalho)' : ''));
+      (i.stats.naoConfirmados ? ' · ' + i.stats.naoConfirmados + ' candidato(s) a nome em claro — quase sempre termos que não são nomes; confira' : ''));
     if (i.segundos) det.push(i.segundos + ' s');
     if (i.motor) det.push('motor ' + i.motor);
     return '<li class="item' + (trab ? ' ativo' : '') + (i.etapa === 'erro' ? ' erro' : '') + '">' +

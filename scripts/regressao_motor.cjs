@@ -85,6 +85,7 @@ if (temGraphe) {
     ['carimbo ICP-Brasil: o CPF some', !/12345678909/.test(r.texto)],
     ['as páginas do PDF também', r.paginas.join('\n').indexOf('TESTEJUIZ') < 0 && r.paginas.join('\n').indexOf('[omitido]') >= 0],
     ['as partes continuam em token', !/TESTEFULANO|TESTEBELTRANA/.test(r.texto)],
+    ['o OCR partiu a linha de quem gerou o PDF', !/020\.\*\*\*/.test(M.anonimizar(texto.replace('Este documento foi gerado pelo usuário 123.***.***-45', 'Este documento foi i\n\ngerado pelo usuário 020.***.***. 55'), {}).texto)],
   ];
   const ruins = casos.filter((c) => !c[1]);
   ruins.forEach((c) => console.log('✗ carimbo: ' + c[0]));

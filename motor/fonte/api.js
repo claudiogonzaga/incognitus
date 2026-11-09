@@ -90,7 +90,12 @@ var SkiaMotor = (function () {
   // do Graphé continua lendo o carimbo de assinatura para saber quem é autoridade ou advogado (regra 4: em claro no
   // corpo); aqui só o carimbo perde o nome. Ficam a data, a hora, o número do documento e o "Num. … - Pág.".
   var OMITIDO = '[omitido]';
-  var RE_GERADO = /(Este\s+documento\s+foi\s+gerado\s+pelo\s+usu[áa]rio)[ \t]+.+?(?=[ \t]+em[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]*$)/gi;
+  // (sem exigir o "Este documento foi" na mesma linha: na página escaneada o OCR o parte, e o CPF mascarado sai torto)
+  var RE_GERADO = /(gerado\s+pelo\s+usu[áa]rio)[ \t]+.+?(?=[ \t]+em[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]*$)/gi;
+  // O aviso do cabeçalho do Graphé aponta a revisão humana da planilha ("🔒 Anonimizar autos"), que o Incognitus não tem.
+  var RE_AVISO_REVISAO = /\s*\(um humano confere com "[^"]*"\)/;
+  var AVISO_INCOGNITUS = ' (o Incognitus não tem essa revisão: quase sempre são termos que não são nomes — exames, remédios, ' +
+    'lugares, rótulos de formulário —, mas confira os nomes de pessoas no texto antes de usar)';
   var RE_ASSINANTE = /(assinad[oa]\s+(?:eletronicamente|digitalmente|de\s+forma\s+digital)\s+por)([ \t]*:?[ \t]*)(.*?)(?::[ \t]*\d{11})?(?=[ \t]+[-–][ \t]+\d|[ \t]*[,;(]|[ \t]+em[ \t]+\d|[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]+(?:documento\s+)?assinad[oa]\s|[ \t]*$)/gi;
   function semCarimbos(texto) {
     var ls = String(texto == null ? '' : texto).split('\n'), resto = 0;
@@ -129,7 +134,7 @@ var SkiaMotor = (function () {
     var idCaso = (op.idCaso != null) ? op.idCaso : ((r.paginas.slice(0, ANON_PAGINAS_CAPA).join('\n').match(RE_CNJ) || [''])[0]);
     var cab = _anonCabecalho_({ idCaso: idCaso, aba: (op.aba != null) ? op.aba : 'Incognitus', paginas: r.paginas.length, mapa: r.mapa,
       semTexto: pg.semTexto, historico: [], corpo: corpo, partes: partes, nTranscricoes: 0, truncado: false, chars: texto.length,
-      naoConfirmados: naoConf, poucoTexto: pg.poucoTexto, ocr: pg.ocr, ocrPendente: pg.ocrPendente });
+      naoConfirmados: naoConf, poucoTexto: pg.poucoTexto, ocr: pg.ocr, ocrPendente: pg.ocrPendente }).replace(RE_AVISO_REVISAO, AVISO_INCOGNITUS);
     // Cada página como no corpo do .txt ("===== PÁGINA n =====" e o texto): o PDF do Incognitus tem uma página para cada
     // uma. Os carimbos do PJe saem sem os nomes (semCarimbos); o corpo cru (res.corpo, com o mapa) fica como o do Graphé.
     var paginas = r.paginasAnon.map(function (p, i) { return _anonCorpoPaginas_([semCarimbos(p)], i + 1); });

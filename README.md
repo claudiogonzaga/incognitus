@@ -61,6 +61,16 @@ colado volta na tela, com **Copiar** e **Salvar como .txt…**.
 **Ajustes**: os **contatos institucionais** que ficam em claro (um por linha; o padrão é o `ANON_INST_PADRAO` do
 Graphé), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar regras** e **Voltar à versão anterior**.
 
+## Baixar
+
+Cada versão (tag `v*`) publica no GitHub uma release, a mais nova, com os instaladores em **nome fixo** — o link
+não muda de uma versão para outra:
+
+- Mac: `https://github.com/claudiogonzaga/incognitus/releases/latest/download/Incognitus-macOS.dmg`
+- Windows: `https://github.com/claudiogonzaga/incognitus/releases/latest/download/Incognitus-Windows.msi`
+
+Com o repositório **privado**, esses links só baixam para quem entra no GitHub com acesso a ele (ver Pendências).
+
 ## Como abrir (o app ainda não tem assinatura digital)
 
 - **Mac**: abra o `.dmg`, arraste o Incognitus para Aplicativos. Na primeira vez, o macOS avisa que não pode verificar o
@@ -133,6 +143,12 @@ Licenças: o poppler é **GPL**; o tesseract, Apache-2.0. Os textos das licença
 versões e onde está o código-fonte vão dentro do app (`LICENCAS-terceiros/LEIA-ME.txt`). O workflow anexa o código-fonte
 do poppler aos instaladores. A fonte do PDF é a DejaVu Sans Mono (licença livre, `recursos/fontes/LICENSE_DEJAVU`).
 
+**O tema** (09/11/2026, romano): travertino, tinta sépia e vermelho pompeiano; os títulos na **Cinzel**, as capitais das
+inscrições romanas (SIL Open Font License, `src/fontes/OFL-Cinzel.txt`; a Trajan, que inspirou o pedido, é paga e não
+pode ir dentro do app); ao fundo, as colunas do Fórum em aquarela com a inscrição NOMEN · ABIT · FORMA · MANET ("o nome
+sai, a forma fica") e o NOMEN raspado a cinzel, como na *damnatio memoriae*, com uma sombra caindo sobre ele
+(`scripts/fundo/gerar_fundo.py` → `src/fundo.webp`).
+
 ## Desenvolvimento
 
 ```bash
@@ -166,14 +182,22 @@ Nunca use dados reais de processos em testes, exemplos, commits ou logs.
   e do SmartScreen (ver "Como abrir"). Ao assinar e notarizar no Mac, religar o *hardened runtime* exige também assinar
   as dylibs dos sidecars com a mesma equipe (ou o direito `com.apple.security.cs.disable-library-validation`).
 - **Licença** do próprio Incognitus e do motor publicado: não definida.
+- **Links públicos e atualização do app**: release de repositório privado não baixa sem login no GitHub, e o app não
+  consegue perguntar pela versão nova. Para o link fixo no site e o botão de atualizar (como no Comentora, que lê
+  `releases/latest` de um repositório público), os instaladores precisam estar num lugar público — decisão do Promotor.
+- **Teste com 5 autos reais** (09/11/2026, 186 páginas, nada gravado fora do computador): os 261 carimbos de assinatura
+  saíram com [omitido]; os telefones e e-mails em claro eram institucionais; dos 166 "candidatos a nome" que o
+  classificador deixou em claro, quase todos eram exames, remédios, anatomia, rótulos e ruído de OCR. Dois vazamentos
+  de verdade, os dois do motor do Graphé: a **alcunha entre aspas** depois de "apelidado" e o **endereço** de uma
+  linha "Endereço:" sem rua (bairro, cidade e CEP sem hífen).
 - **Achado no motor do Graphé** (09/11/2026, com texto fictício): quando o vocativo da petição termina em "JUIZ DE
   DIREITO" ("EXCELENTÍSSIMO SENHOR JUIZ DE DIREITO", mesmo com linha em branco antes do parágrafo seguinte), o nome
   que abre o parágrafo seguinte fica **em claro** — a regra das autoridades (`ANON_RE_AUTORIDADE_ANTES`) o lê como o
   nome do juiz. Com a vara depois ("…JUIZ DE DIREITO DA 1ª VARA…") a parte vira token. A correção é no `graphe.js`;
   depois, `node scripts/extrair_motor.mjs` traz para cá.
-- **Nome**: o app se chamava Skiá até a 0.2.0. O repositório (`claudiogonzaga/skia`) e a pasta (`CODIGO/Skia`) ainda
-  têm o nome antigo; as variáveis de teste (`SKIA_E2E`, `SKIA_DADOS`…) e a API do motor (`SkiaMotor`) também, de
-  propósito (são internas).
+- **Nome**: o app se chamava Skiá até a 0.2.0; o repositório virou `claudiogonzaga/incognitus` em 09/11/2026 (o nome
+  antigo redireciona). A pasta (`CODIGO/Skia`), as variáveis de teste (`SKIA_E2E`, `SKIA_DADOS`…) e a API do motor
+  (`SkiaMotor`) ficaram com o nome antigo, de propósito (são internas).
 - **Ícone** (06/11/2026, a pedido do Promotor): uma mão grega faz sombra sobre a inscrição de uma coluna jônica, e a
   sombra esconde o meio das linhas; moldura de meandro do Phylax. Gerado por `scripts/icone/gerar_icone.py` (SVG → PNG
   pelo `rsvg-convert`).
