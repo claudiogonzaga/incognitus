@@ -13,6 +13,7 @@
 }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
+.hospedado .so-avulso { display:none !important; }   /* hospedado no Graphé Desktop: some o que é só do app avulso */
 html { min-height:100%; background:url("fundo.webp") right -40px bottom -10px / auto 96vh no-repeat fixed, linear-gradient(var(--bg-top), var(--bg-end)) fixed; }
 body { margin:0; color:var(--ink); font:var(--font-base)/1.5 -apple-system, system-ui, "Segoe UI", sans-serif;
   display:flex; flex-direction:column; min-height:100vh; -webkit-user-select:none; user-select:none; }

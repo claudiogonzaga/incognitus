@@ -115,7 +115,7 @@
     <label for="inst">Contatos institucionais que ficam em claro (um por linha: endereço, telefone, CEP ou e-mail da Delegacia, do Fórum, da Promotoria…)</label>
     <textarea id="inst" rows="9" spellcheck="false"></textarea>
     <div class="linha"><button type="button" id="bt_inst_padrao" class="ghost pequeno">Restaurar o padrão</button></div>
-    <label class="opcao"><input id="op_checar" type="checkbox"> <span>Procurar atualizações ao abrir o Incognitus (do aplicativo e das regras)</span></label>
+    <label class="opcao"><input id="op_checar" type="checkbox"> <span>Procurar atualizações ao abrir o Incognitus (<span class="so-avulso">do aplicativo e </span>das regras)</span></label>
 
     <h2>Motor de anonimização</h2>
     <div id="motor_info" class="caixa"></div>
@@ -128,9 +128,9 @@
     <h2>Ferramentas</h2>
     <div id="ferramentas_info" class="caixa suave"></div>
 
-    <h2>Aplicativo</h2>
-    <div class="linha"><span id="versao_app" class="suave"></span><button type="button" id="bt_app_checar" class="ghost pequeno">Procurar versão nova</button></div>
-    <div id="app_msg" class="suave"></div>
+    <h2 class="so-avulso">Aplicativo</h2>
+    <div class="linha so-avulso"><span id="versao_app" class="suave"></span><button type="button" id="bt_app_checar" class="ghost pequeno">Procurar versão nova</button></div>
+    <div id="app_msg" class="suave so-avulso"></div>
     <p class="dica">pdftotext e pdftoppm (poppler, GPL) e tesseract (Apache-2.0) vêm dentro do app. As licenças e onde
       está o código-fonte: pasta LICENCAS-terceiros, dentro do aplicativo.</p>
 

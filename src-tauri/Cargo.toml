@@ -15,20 +15,15 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+# o plugin `anonimizacao`: a fila de PDFs, os sidecars, o PDF anonimizado, a reidentificação, o motor e os Ajustes
+tauri-plugin-anonimizacao = { path = "../plugin" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sha2 = "0.10"
-ed25519-dalek = "2"
-base64 = "0.22"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
-pdf-writer = "0.12"
-subsetter = "0.2"
-ttf-parser = "0.25"
-flate2 = "1"
-zip = { version = "2", default-features = false, features = ["deflate"] }
 
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
+[dev-dependencies]
+# os testes montam o app num runtime de mentira (tauri::test), sem abrir janela
+tauri = { version = "2", features = ["test"] }
 
 [profile.release]
 opt-level = 3

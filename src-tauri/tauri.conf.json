@@ -5,7 +5,7 @@
   "mainBinaryName": "incognitus",
   "identifier": "br.eco.consciencia.incognitus",
   "build": {
-    "frontendDist": "../src"
+    "frontendDist": "../modulo"
   },
   "app": {
     "withGlobalTauri": true,
@@ -43,7 +43,7 @@
     "resources": {
       "recursos/tessdata/": "tessdata/",
       "recursos/LICENCAS-terceiros/": "LICENCAS-terceiros/",
-      "recursos/fontes/LICENSE_DEJAVU": "LICENCAS-terceiros/DejaVu-LICENSE.txt"
+      "../plugin/recursos/fontes/LICENSE_DEJAVU": "LICENCAS-terceiros/DejaVu-LICENSE.txt"
     },
     "category": "Productivity",
     "shortDescription": "Anonimização de PDFs em lote, no computador",

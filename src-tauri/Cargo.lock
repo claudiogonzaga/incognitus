@@ -1637,21 +1637,13 @@ dependencies = [
 name = "incognitus"
 version = "0.4.1"
 dependencies = [
- "base64 0.22.1",
- "ed25519-dalek",
- "flate2",
- "libc",
- "pdf-writer",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
- "sha2",
- "subsetter",
  "tauri",
  "tauri-build",
+ "tauri-plugin-anonimizacao",
  "tauri-plugin-dialog",
- "ttf-parser",
- "zip",
 ]
 
 [[package]]
@@ -3694,6 +3686,26 @@ dependencies = [
  "serde_json",
  "tauri-utils",
  "walkdir",
+]
+
+[[package]]
+name = "tauri-plugin-anonimizacao"
+version = "0.4.1"
+dependencies = [
+ "base64 0.22.1",
+ "ed25519-dalek",
+ "flate2",
+ "libc",
+ "pdf-writer",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2",
+ "subsetter",
+ "tauri",
+ "tauri-plugin",
+ "ttf-parser",
+ "zip",
 ]
 
 [[package]]

@@ -3,7 +3,10 @@
 // Um PDF por vez. A pasta temporária de cada PDF é apagada ao fim dele, com ou sem erro.
 'use strict';
 const T = window.__TAURI__;
-const invoke = T.core.invoke;
+// Os comandos do módulo são do plugin `anonimizacao` (plugin/): valem no app avulso e hospedado no Graphé Desktop. Os da
+// atualização do APP (app_checar, app_baixar, app_instalar) são só do app avulso e vão sem o prefixo.
+const PLUGIN = 'plugin:anonimizacao|';
+const invoke = (cmd, args) => T.core.invoke(/^app_/.test(cmd) ? cmd : PLUGIN + cmd, args);
 const $ = (id) => document.getElementById(id);
 const avisar = (texto) => T.dialog.message(texto, { title: 'Incognitus', kind: 'warning' }).catch(() => {});
 
@@ -469,6 +472,7 @@ async function salvarTxt() {
 // ── versão nova do app ────────────────────────────────────────────────────────────────────────────────────────────
 // Como no Comentora: a release mais nova do repositório público; se for mais nova, a faixa no alto oferece atualizar.
 async function checarApp(manual) {
+  if (estado.hospedado) return;   // hospedado, quem atualiza o app é o Graphé Desktop
   try {
     estado.novaVersao = await invoke('app_checar');
     mostrarNovidade();
@@ -574,6 +578,9 @@ async function iniciar() {
   ligar();
   desenhar();
   desenharReid();
+  // Hospedado no Graphé Desktop, some o que é só do app avulso (a atualização do APP; a das regras vale nos dois modos).
+  estado.hospedado = !!(await invoke('info')).hospedado;
+  document.documentElement.classList.toggle('hospedado', estado.hospedado);
   await lerAjustes();
   registrar('ajustes lidos');
   estado.casos = JSON.parse(await texto('motor/casos.json'));
