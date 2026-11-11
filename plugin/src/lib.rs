@@ -4,7 +4,10 @@
 //! (embutido ou baixado e assinado). A anonimização e a reidentificação rodam no front, num Web Worker, com o motor.js.
 //! Nada sai do computador: a única conexão é a checagem das regras (só leitura do repositório público incognitus-motor), que
 //! os Ajustes desligam.
-mod atualizar;
+//!
+//! Este crate é o plugin `anonimizacao` do Tauri (comandos `plugin:anonimizacao|…`), pelo contrato de módulo do Graphé
+//! Desktop (MODULOS.md): serve ao app Incognitus avulso (`init`) e ao Graphé Desktop, que o hospeda como módulo
+//! (`init_como_modulo`). A lista de comandos está aqui, no build.rs e em permissions/default.toml.
 mod ferramentas;
 mod motor;
 mod pdf;
@@ -15,13 +18,20 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use tauri::{Manager, State};
+use tauri::plugin::{Builder, TauriPlugin};
+use tauri::{Manager, Runtime, State};
+
+/// O `id` do módulo no `modulo.json` e a subpasta de dados quando hospedado.
+pub const ID: &str = "incognitus";
+pub const NOME: &str = "Incognitus";
+pub const VERSAO: &str = env!("CARGO_PKG_VERSION");
 
 const PASTA_SAIDA: &str = "Incognitus — anonimizados";
 const MARCA_PRODUTOR: &[u8] = b"/Producer (Incognitus ";
 const MARCA_ANTIGA: &[u8] = b"/Producer (Skia ";   // as saídas de antes do nome novo (até a 0.2.0)
 
 struct Interno {
+    hospedado: bool,
     ferramentas: ferramentas::Ferramentas,
     cache: PathBuf,
     dados: PathBuf,
@@ -46,6 +56,32 @@ async fn em_segundo_plano<T: Send + 'static>(f: impl FnOnce() -> Result<T, Strin
 }
 
 // ── ferramentas e arquivos ─────────────────────────────────────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+struct Modulo {
+    id: &'static str,
+    nome: &'static str,
+    versao: &'static str,
+}
+
+#[derive(Serialize)]
+struct Info {
+    modulo: Modulo,
+    hospedado: bool,
+    sistema: &'static str,
+    dados: String,
+}
+
+/// Obrigatório pelo contrato de módulo: quem é o módulo e se está hospedado (a janela esconde o que é só do app avulso).
+#[tauri::command]
+fn info(estado: State<'_, Estado>) -> Info {
+    Info {
+        modulo: Modulo { id: ID, nome: NOME, versao: VERSAO },
+        hospedado: estado.0.hospedado,
+        sistema: std::env::consts::OS,
+        dados: estado.0.dados.display().to_string(),
+    }
+}
 
 #[derive(Serialize)]
 struct InfoApp {
@@ -299,36 +335,6 @@ async fn gravar_texto(caminho: String, texto: String) -> Result<(), String> {
     em_segundo_plano(move || gravar_atomico(Path::new(&caminho), texto.as_bytes())).await
 }
 
-// ── versão nova do app ─────────────────────────────────────────────────────────────────────────────────────────────
-
-/// A release mais nova (pelo portal, senão pelo GitHub), se for mais nova que esta (SKIA_APP_URL troca o endereço nos testes).
-#[tauri::command]
-async fn app_checar() -> Result<Option<atualizar::NovaVersao>, String> {
-    match std::env::var("SKIA_APP_URL") {
-        Ok(url) => atualizar::checar(&url, env!("CARGO_PKG_VERSION")).await,
-        Err(_) => atualizar::checar_padrao(env!("CARGO_PKG_VERSION")).await,
-    }
-}
-
-/// Baixa o instalador da versão nova para a pasta Downloads.
-#[tauri::command]
-async fn app_baixar(app: tauri::AppHandle, url: String, versao: String) -> Result<String, String> {
-    // SKIA_DOWNLOADS (só para testes): baixa numa pasta à parte, não na Downloads do usuário.
-    let pasta = match std::env::var_os("SKIA_DOWNLOADS") {
-        Some(d) => PathBuf::from(d),
-        None => app.path().download_dir().map_err(|e| format!("sem a pasta Downloads: {e}"))?,
-    };
-    atualizar::baixar(&url, &versao, &pasta).await.map(|p| p.to_string_lossy().to_string())
-}
-
-/// Abre o instalador e fecha o app (no Windows o .msi troca a versão; no Mac, arrasta-se o app novo para Aplicativos).
-#[tauri::command]
-fn app_instalar(app: tauri::AppHandle, caminho: String) -> Result<(), String> {
-    atualizar::abrir(Path::new(&caminho))?;
-    app.exit(0);
-    Ok(())
-}
-
 #[tauri::command]
 fn revelar(caminho: String) -> Result<(), String> {
     let p = PathBuf::from(&caminho);
@@ -406,14 +412,27 @@ fn plano_e2e() -> Option<(PathBuf, serde_json::Value)> {
     Some((p, v))
 }
 
-#[tauri::command]
-fn e2e_plano() -> Option<serde_json::Value> {
-    plano_e2e().map(|(_, v)| v)
+/// O plano do SKIA_E2E abre (JSON em UTF-8)? O app avulso pergunta antes de montar a janela.
+pub fn plano_e2e_abre() -> bool {
+    plano_e2e().is_some()
+}
+
+/// O modo de teste é do app avulso: hospedado, o módulo não segue plano nem fecha o app de quem o hospeda.
+fn plano_do(estado: &Estado) -> Option<(PathBuf, serde_json::Value)> {
+    if estado.0.hospedado {
+        return None;
+    }
+    plano_e2e()
 }
 
 #[tauri::command]
-fn e2e_gravar(nome: String, conteudo: String) -> Result<(), String> {
-    let (_, v) = plano_e2e().ok_or("fora do modo de teste")?;
+fn e2e_plano(estado: State<'_, Estado>) -> Option<serde_json::Value> {
+    plano_do(&estado).map(|(_, v)| v)
+}
+
+#[tauri::command]
+fn e2e_gravar(estado: State<'_, Estado>, nome: String, conteudo: String) -> Result<(), String> {
+    let (_, v) = plano_do(&estado).ok_or("fora do modo de teste")?;
     let dir = PathBuf::from(v["extracao"].as_str().ok_or("plano sem pasta de extração")?);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let nome = Path::new(&nome).file_name().ok_or("nome inválido")?.to_owned();
@@ -421,8 +440,8 @@ fn e2e_gravar(nome: String, conteudo: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn e2e_fim(app: tauri::AppHandle, relatorio: String) -> Result<(), String> {
-    let (_, v) = plano_e2e().ok_or("fora do modo de teste")?;
+fn e2e_fim<R: Runtime>(app: tauri::AppHandle<R>, estado: State<'_, Estado>, relatorio: String) -> Result<(), String> {
+    let (_, v) = plano_do(&estado).ok_or("fora do modo de teste")?;
     let p = PathBuf::from(v["relatorio"].as_str().ok_or("plano sem relatório")?);
     std::fs::write(p, relatorio).map_err(|e| e.to_string())?;
     // "manter": a janela fica aberta no fim (para a foto do README); senão, o app sai.
@@ -434,40 +453,20 @@ fn e2e_fim(app: tauri::AppHandle, relatorio: String) -> Result<(), String> {
 
 // ── início ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    // Modo de teste com um plano que não abre (JSON em UTF-8): para já, com o motivo, em vez de abrir como app normal.
-    if let Some(p) = std::env::var_os("SKIA_E2E") {
-        if plano_e2e().is_none() {
-            eprintln!("[incognitus] SKIA_E2E: o plano {} não abre como JSON em UTF-8", PathBuf::from(p).display());
-            std::process::exit(2);
-        }
+/// As pastas de dados e de cache do módulo (contrato, §1.1): no app avulso, a raiz das pastas do app, como sempre foi
+/// (nada a migrar); hospedado, `modulos/incognitus/` dentro das do hospedeiro.
+fn pastas(dados: PathBuf, cache: PathBuf, hospedado: bool) -> (PathBuf, PathBuf) {
+    if hospedado {
+        (dados.join("modulos").join(ID), cache.join("modulos").join(ID))
+    } else {
+        (dados, cache)
     }
-    tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
-        .setup(|app| {
-            // SKIA_DADOS (só para testes): dados e cache numa pasta à parte, sem tocar nos do usuário.
-            let (cache, dados) = match std::env::var_os("SKIA_DADOS") {
-                Some(d) => (PathBuf::from(&d).join("cache"), PathBuf::from(&d).join("dados")),
-                None => (app.path().app_cache_dir()?, app.path().app_data_dir()?),
-            };
-            let recursos = app.path().resource_dir()?;
-            let bin = std::env::current_exe()?.parent().map(Path::to_path_buf).unwrap_or_default();
-            // Sobras de uma execução interrompida: a pasta temporária começa vazia.
-            let _ = std::fs::remove_dir_all(cache.join("tmp"));
-            std::fs::create_dir_all(cache.join("tmp"))?;
-            std::fs::create_dir_all(&dados)?;
-            let interno = Interno {
-                ferramentas: ferramentas::Ferramentas::new(bin, recursos, &cache),
-                cache,
-                dados,
-                arquivos: Mutex::new(HashMap::new()),
-                contador: AtomicU64::new(1),
-            };
-            app.manage(Estado(Arc::new(interno)));
-            Ok(())
-        })
+}
+
+fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
+    Builder::new("anonimizacao")
         .invoke_handler(tauri::generate_handler![
+            info,
             info_app,
             preparar_arquivo,
             extrair_texto,
@@ -481,9 +480,6 @@ pub fn run() {
             docx_partes,
             gravar_reidentificado,
             gravar_texto,
-            app_checar,
-            app_baixar,
-            app_instalar,
             revelar,
             ajustes_ler,
             ajustes_gravar,
@@ -497,13 +493,96 @@ pub fn run() {
             e2e_gravar,
             e2e_fim
         ])
-        .build(tauri::generate_context!())
-        .expect("erro ao montar o Incognitus")
-        .run(|app, ev| {
+        .setup(move |app, _api| {
+            // SKIA_DADOS (só para testes): dados e cache numa pasta à parte, sem tocar nos do usuário.
+            let (cache, dados) = match std::env::var_os("SKIA_DADOS") {
+                Some(d) => (PathBuf::from(&d).join("cache"), PathBuf::from(&d).join("dados")),
+                None => (app.path().app_cache_dir()?, app.path().app_data_dir()?),
+            };
+            let (dados, cache) = pastas(dados, cache, hospedado);
+            // Os sidecars ficam ao lado do executável do app e os recursos (tessdata/, lib/) na pasta de recursos dele,
+            // nos mesmos caminhos no app avulso e no hospedeiro (o `para` do modulo.json).
+            let recursos = app.path().resource_dir()?;
+            let bin = std::env::current_exe()?.parent().map(Path::to_path_buf).unwrap_or_default();
+            // Sobras de uma execução interrompida: a pasta temporária começa vazia.
+            let _ = std::fs::remove_dir_all(cache.join("tmp"));
+            std::fs::create_dir_all(cache.join("tmp"))?;
+            std::fs::create_dir_all(&dados)?;
+            let interno = Interno {
+                hospedado,
+                ferramentas: ferramentas::Ferramentas::new(bin, recursos, &cache),
+                cache,
+                dados,
+                arquivos: Mutex::new(HashMap::new()),
+                contador: AtomicU64::new(1),
+            };
+            app.manage(Estado(Arc::new(interno)));
+            Ok(())
+        })
+        .on_event(|app, ev| {
             if let tauri::RunEvent::Exit = ev {
                 if let Some(e) = app.try_state::<Estado>() {
                     let _ = std::fs::remove_dir_all(e.0.cache.join("tmp"));
                 }
             }
-        });
+        })
+        .build()
+}
+
+/// App avulso: os dados ficam na raiz da pasta de dados do app, e o app cuida da própria atualização.
+pub fn init<R: Runtime>() -> TauriPlugin<R> {
+    montar(false)
+}
+
+/// Hospedado no Graphé Desktop: os dados ficam em `<dados do hospedeiro>/modulos/incognitus/` e o cache em
+/// `<cache do hospedeiro>/modulos/incognitus/`; a atualização do app é do hospedeiro (a do motor continua aqui).
+pub fn init_como_modulo<R: Runtime>() -> TauriPlugin<R> {
+    montar(true)
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    #[test]
+    fn pastas_do_avulso_e_do_hospedado() {
+        let (d, c) = (PathBuf::from("dados"), PathBuf::from("cache"));
+        assert_eq!(pastas(d.clone(), c.clone(), false), (d.clone(), c.clone()));
+        assert_eq!(pastas(d.clone(), c.clone(), true), (d.join("modulos").join("incognitus"), c.join("modulos").join("incognitus")));
+    }
+
+    /// O modulo.json, o build.rs e o permissions/default.toml dizem o mesmo que este arquivo.
+    #[test]
+    fn modulo_json_confere_com_o_plugin() {
+        let m: serde_json::Value = serde_json::from_str(include_str!("../../modulo/modulo.json")).expect("modulo.json");
+        assert_eq!(m["contrato"], 1);
+        assert_eq!(m["id"], ID);
+        assert_eq!(m["dados"], ID);
+        assert_eq!(m["nome"], NOME);
+        assert_eq!(m["versao"], VERSAO);
+        assert_eq!(m["plugin"]["nome"], "anonimizacao");
+        assert_eq!(m["plugin"]["crate"], env!("CARGO_PKG_NAME"));
+        let lista = |v: &serde_json::Value| -> Vec<String> { v.as_array().expect("lista").iter().map(|x| x.as_str().unwrap().to_string()).collect() };
+        assert!(lista(&m["permissoes"]).contains(&"anonimizacao:default".to_string()));
+        assert_eq!(lista(&m["api"]["permissoes"]), ["anonimizacao:api"]);
+        let sidecars: Vec<String> = m["sidecars"].as_array().unwrap().iter().map(|s| s["nome"].as_str().unwrap().to_string()).collect();
+        assert_eq!(sidecars, ["pdftotext", "pdftoppm", "tesseract"]);
+        // os arquivos da api e a entrada da janela existem em modulo/
+        let pasta = Path::new(env!("CARGO_MANIFEST_DIR")).join("../modulo");
+        for a in lista(&m["api"]["arquivos"]).iter().chain([m["janela"]["entrada"].as_str().unwrap().to_string(), m["icone"].as_str().unwrap().to_string()].iter()) {
+            assert!(pasta.join(a).is_file(), "falta modulo/{a}");
+        }
+        // cada comando do build.rs está no conjunto `default`; o `api` só tem comandos que existem
+        let build = include_str!("../build.rs");
+        let comandos: Vec<String> = build.split('"').skip(1).step_by(2).map(|c| c.to_string()).collect();
+        assert_eq!(comandos.len(), 26);
+        let toml = include_str!("../permissions/default.toml");
+        let (padrao, api) = toml.split_once("[[set]]").expect("o conjunto api");
+        for c in &comandos {
+            assert!(padrao.contains(&format!("\"allow-{}\"", c.replace('_', "-"))), "{c} fora do default");
+        }
+        let da_api: Vec<&str> = api.split('"').filter(|x| x.starts_with("allow-")).collect();
+        assert_eq!(da_api, ["allow-info", "allow-preparar-arquivo", "allow-extrair-texto", "allow-ocr-pagina", "allow-limpar-arquivo", "allow-motor-ativo"]);
+        assert!(da_api.iter().all(|a| comandos.contains(&a["allow-".len()..].replace('-', "_"))));
+    }
 }

@@ -1,0 +1,31 @@
+{
+  "contrato": 1,
+  "id": "incognitus",
+  "nome": "Incognitus",
+  "descricao": "Anonimização de autos em PDF e reidentificação de minutas, no computador",
+  "versao": "0.4.1",
+  "icone": "icone.png",
+  "janela": { "entrada": "index.html", "largura": 1040, "altura": 760, "largura_minima": 760, "altura_minima": 560, "cor": "#c8703f" },
+  "plugin": { "nome": "anonimizacao", "crate": "tauri-plugin-anonimizacao", "caminho": "plugin" },
+  "permissoes": ["core:default", "dialog:default", "anonimizacao:default"],
+  "plugins_comuns": ["dialog"],
+  "api": {
+    "permissoes": ["anonimizacao:api"],
+    "arquivos": ["motor/motor.js", "motor/manifesto.json", "motor/manifesto.json.sig", "motor/casos.json", "casos.js", "worker.js"]
+  },
+  "sidecars": [
+    { "nome": "pdftotext", "sistemas": ["macos", "windows"] },
+    { "nome": "pdftoppm", "sistemas": ["macos", "windows"] },
+    { "nome": "tesseract", "sistemas": ["macos", "windows"] }
+  ],
+  "recursos": [
+    { "de": "src-tauri/recursos/tessdata/", "para": "tessdata/", "sistemas": ["macos", "windows"] },
+    { "de": "src-tauri/recursos/LICENCAS-terceiros/", "para": "LICENCAS-terceiros/", "sistemas": ["macos", "windows"] },
+    { "de": "plugin/recursos/fontes/LICENSE_DEJAVU", "para": "LICENCAS-terceiros/DejaVu-LICENSE.txt", "sistemas": ["macos", "windows"] },
+    { "de": "src-tauri/recursos/mac/lib/", "para": "lib/", "sistemas": ["macos"] },
+    { "de": "src-tauri/recursos/win/lib/", "para": "lib/", "sistemas": ["windows"] }
+  ],
+  "montar": { "comando": "node scripts/montar.mjs", "confere": "src-tauri/binaries" },
+  "plist": {},
+  "dados": "incognitus"
+}

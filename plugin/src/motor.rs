@@ -1,4 +1,4 @@
-//! O motor de anonimização em uso: o embutido no app (src/motor) ou um baixado do repositório público incognitus-motor.
+//! O motor de anonimização em uso: o embutido no app (modulo/motor) ou um baixado do repositório público incognitus-motor.
 //! Um motor baixado só entra se (1) a assinatura Ed25519 do manifesto confere com a chave pública embutida no app,
 //! (2) o sha256 do motor.js é o do manifesto, (3) a API é a que este app fala e (4) os casos de teste embutidos passam
 //! — o teste roda no worker do app, entre o `baixar` e o `instalar`. O anterior fica guardado para voltar.
@@ -10,7 +10,7 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
 const CHAVE_PUBLICA: &str = include_str!("../../motor/chave_publica.txt");
-const MANIFESTO_EMBUTIDO: &str = include_str!("../../src/motor/manifesto.json");
+const MANIFESTO_EMBUTIDO: &str = include_str!("../../modulo/motor/manifesto.json");
 pub const URL_PADRAO: &str = "https://github.com/claudiogonzaga/incognitus-motor/releases/latest/download/";
 pub const API: u32 = 2;
 
@@ -29,7 +29,7 @@ pub struct Manifesto {
 pub struct MotorAtivo {
     pub origem: String,
     pub manifesto: Manifesto,
-    /// O texto do motor baixado (o embutido o front lê de src/motor/motor.js).
+    /// O texto do motor baixado (o embutido o front lê de modulo/motor/motor.js).
     pub js: Option<String>,
     pub anterior: Option<Manifesto>,
 }
@@ -207,8 +207,8 @@ mod testes {
 
     #[test]
     fn embutido_assinado_confere() {
-        let manif = include_bytes!("../../src/motor/manifesto.json");
-        let sig = include_str!("../../src/motor/manifesto.json.sig");
+        let manif = include_bytes!("../../modulo/motor/manifesto.json");
+        let sig = include_str!("../../modulo/motor/manifesto.json.sig");
         verificar_assinatura(manif, sig).expect("assinatura do embutido");
         let mut adulterado = manif.to_vec();
         adulterado[10] ^= 1;
