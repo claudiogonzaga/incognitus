@@ -1,6 +1,6 @@
 # Incognitus — .dmg (macOS universal: Apple Silicon e Intel) e .msi (Windows x64), sem assinatura digital por ora
-# (ver "Como abrir" no README). Roda à mão (Actions → build → Run workflow) ou com uma tag v*; com tag, os
-# instaladores vão também para uma Release em rascunho, junto com o código-fonte do poppler (GPL).
+# (ver "Como abrir" no README). Roda à mão (Actions → build → Run workflow) ou com uma tag v*; com tag, e só se os
+# dois sistemas passarem, os instaladores vão para a release mais nova, junto com o código-fonte do poppler (GPL).
 name: build
 
 on:
@@ -129,25 +129,35 @@ jobs:
           name: codigo-fonte-poppler
           path: poppler-25.02.0.tar.xz
 
-      # O link que não muda: …/releases/latest/download/Incognitus-macOS.dmg e …/Incognitus-Windows.msi apontam sempre
-      # para a versão mais nova (os arquivos com o número da versão vão junto, para o histórico).
-      - name: instaladores com nome fixo (só com tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+  # A release sai SÓ quando os dois sistemas passam (build + teste de ponta a ponta), com os dois instaladores juntos.
+  # Antes, cada sistema publicava o seu ao terminar, e a "latest" ficava uns minutos só com um deles (na 0.4.1, o link
+  # do Mac deu 502 até o portal passar a buscar a release mais nova que tem o arquivo).
+  # O link que não muda: …/releases/latest/download/Incognitus-macOS.dmg e …/Incognitus-Windows.msi apontam sempre
+  # para a versão mais nova (os arquivos com o número da versão vão junto, para o histórico).
+  publicar:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefatos
+          merge-multiple: true
+
+      - name: instaladores com nome fixo
         shell: bash
         run: |
+          ls -la artefatos
           mkdir -p fixos
-          for f in src-tauri/target/${{ matrix.alvo }}/release/bundle/dmg/*.dmg; do [ -f "$f" ] && cp "$f" fixos/Incognitus-macOS.dmg; done
-          for f in src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi; do [ -f "$f" ] && cp "$f" fixos/Incognitus-Windows.msi; done
+          cp artefatos/*.dmg fixos/Incognitus-macOS.dmg
+          cp artefatos/*.msi fixos/Incognitus-Windows.msi
           ls -la fixos
 
-      - name: release publicada, a mais nova (só com tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: release publicada, a mais nova
         uses: softprops/action-gh-release@v2
         with:
           name: Incognitus ${{ github.ref_name }}
           make_latest: true
           files: |
             fixos/*
-            src-tauri/target/${{ matrix.alvo }}/release/bundle/dmg/*.dmg
-            src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi
-            poppler-25.02.0.tar.xz
+            artefatos/*
