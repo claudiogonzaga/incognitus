@@ -19,16 +19,16 @@ echo "── 1. extrair o motor do graphe.js (trava + suíte)"
 node scripts/extrair_motor.mjs
 
 echo "── 2. os casos embutidos no app do último commit"
-if git cat-file -e HEAD:src/motor/casos.json 2>/dev/null; then
+if git cat-file -e HEAD:modulo/motor/casos.json 2>/dev/null; then
   CASOS_APP="$(mktemp -d "$RAIZ/.ferramentas/casos-XXXX")/casos.json"
-  git show HEAD:src/motor/casos.json > "$CASOS_APP"
+  git show HEAD:modulo/motor/casos.json > "$CASOS_APP"
   node scripts/regressao_motor.cjs motor/motor.js --casos "$CASOS_APP" | grep -E '^SKIÁ|^PARIDADE|^RESULTADO'
   rm -rf "$(dirname "$CASOS_APP")"
 fi
 
 echo "── 3. assinar"
 node scripts/assinar_motor.mjs motor
-cp motor/manifesto.json.sig src/motor/manifesto.json.sig
+cp motor/manifesto.json.sig modulo/motor/manifesto.json.sig
 
 VERSAO="$(node -e "console.log(require('./motor/manifesto.json').versao)")"
 SHA="$(node -e "console.log(require('./motor/manifesto.json').sha256)")"

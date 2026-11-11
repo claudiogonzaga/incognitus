@@ -57,7 +57,7 @@ jobs:
       - run: npm ci
 
       - name: o motor passa nos casos embutidos
-        run: node scripts/regressao_motor.cjs motor/motor.js --casos src/motor/casos.json
+        run: node scripts/regressao_motor.cjs motor/motor.js --casos modulo/motor/casos.json
 
       - name: sidecars (poppler, tesseract) e licenças
         shell: bash
@@ -72,7 +72,7 @@ jobs:
 
       - name: testes do Rust
         if: matrix.sidecars == 'mac'
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        run: cargo test --manifest-path src-tauri/Cargo.toml -p incognitus -p tauri-plugin-anonimizacao
 
       - name: build
         run: npx tauri build --target ${{ matrix.alvo }} --bundles ${{ matrix.sidecars == 'mac' && 'app,dmg' || 'msi' }}

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Incognitus — gera o pano de fundo da janela (src/fundo.webp): as três colunas do Fórum Romano, em aquarela, com a
+"""Incognitus — gera o pano de fundo da janela (modulo/fundo.webp): as três colunas do Fórum Romano, em aquarela, com a
 inscrição na arquitrave — NOMEN · ABIT · FORMA · MANET, "o nome sai, a forma fica" — e o NOMEN raspado a cinzel,
 como na damnatio memoriae, com uma sombra caindo sobre esse trecho. Sutil: fica atrás dos painéis.
-Uso: python3 scripts/fundo/gerar_fundo.py   (rsvg-convert para o desenho; Pillow, com a Cinzel de src/fontes, para a
+Uso: python3 scripts/fundo/gerar_fundo.py   (rsvg-convert para o desenho; Pillow, com a Cinzel de modulo/fontes, para a
 inscrição e o .webp)
 """
 import math
@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(os.path.dirname(AQUI))
-FONTE = os.path.join(RAIZ, "src", "fontes")
+FONTE = os.path.join(RAIZ, "modulo", "fontes")
 W, H = 1000, 1000
 SEPIA, OCRE, SOMBRA, POMPEIA = "#7a5a3c", "#b8946a", "#3e2a1c", "#8e2a1e"
 sorte = random.Random(9)
@@ -148,4 +148,4 @@ def gravar(saida_webp, lado=1500, opacidade=0.62):
 
 
 if __name__ == "__main__":
-    print(gravar(os.path.join(RAIZ, "src", "fundo.webp")))
+    print(gravar(os.path.join(RAIZ, "modulo", "fundo.webp")))

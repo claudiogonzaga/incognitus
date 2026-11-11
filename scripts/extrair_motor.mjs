@@ -37,7 +37,7 @@ const REGRESSAO = path.join(GRAPHE, 'testes/anon/regressao.js');
 const AMBIENTE = path.join(SKIA, 'motor/fonte/ambiente.js');
 const API = path.join(SKIA, 'motor/fonte/api.js');
 const SAIDA = path.join(SKIA, 'motor');
-const EMBUTIDO = path.join(SKIA, 'src/motor');
+const EMBUTIDO = path.join(SKIA, 'modulo/motor');
 
 // O que o Incognitus pede pelo nome além do que o pipeline.js e a API chamam (o pedido de 05/11/2026: os pesos do
 // classificador, o limiar e a versão). Se algum não existir no graphe.js, o build para.

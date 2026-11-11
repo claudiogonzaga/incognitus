@@ -122,7 +122,7 @@ versão instalada. As regras continuam com a atualização própria, assinada (v
   com **"0 falhas"** em tudo (94 casos em 09/11/2026).
 
 ```bash
-node scripts/extrair_motor.mjs            # monta motor/ e o motor embutido no app (src/motor/)
+node scripts/extrair_motor.mjs            # monta motor/ e o motor embutido no app (modulo/motor/)
 node scripts/regressao_motor.cjs          # só a suíte
 ```
 
@@ -161,13 +161,13 @@ python scripts/sidecars.py windows     # Windows x64 (pip install pefile)
 
 Licenças: o poppler é **GPL**; o tesseract, Apache-2.0. Os textos das licenças de todos os pacotes embutidos, as
 versões e onde está o código-fonte vão dentro do app (`LICENCAS-terceiros/LEIA-ME.txt`). O workflow anexa o código-fonte
-do poppler aos instaladores. A fonte do PDF é a DejaVu Sans Mono (licença livre, `recursos/fontes/LICENSE_DEJAVU`).
+do poppler aos instaladores. A fonte do PDF é a DejaVu Sans Mono (licença livre, `plugin/recursos/fontes/LICENSE_DEJAVU`).
 
 **O tema** (09/11/2026, romano): travertino, tinta sépia e vermelho pompeiano; os títulos na **Cinzel**, as capitais das
-inscrições romanas (SIL Open Font License, `src/fontes/OFL-Cinzel.txt`; a Trajan, que inspirou o pedido, é paga e não
+inscrições romanas (SIL Open Font License, `modulo/fontes/OFL-Cinzel.txt`; a Trajan, que inspirou o pedido, é paga e não
 pode ir dentro do app); ao fundo, as colunas do Fórum em aquarela com a inscrição NOMEN · ABIT · FORMA · MANET ("o nome
 sai, a forma fica") e o NOMEN raspado a cinzel, como na *damnatio memoriae*, com uma sombra caindo sobre ele
-(`scripts/fundo/gerar_fundo.py` → `src/fundo.webp`).
+(`scripts/fundo/gerar_fundo.py` → `modulo/fundo.webp`).
 
 ## Desenvolvimento
 
@@ -176,7 +176,7 @@ npm ci
 python3 scripts/sidecars.py mac                              # uma vez (fica em .ferramentas/, fora do git)
 npx tauri dev                                                # o app
 npx tauri build --target universal-apple-darwin --bundles dmg
-cargo test --manifest-path src-tauri/Cargo.toml              # PDF, assinatura, versões, .docx da reidentificação
+cargo test --manifest-path src-tauri/Cargo.toml -p incognitus -p tauri-plugin-anonimizacao   # PDF, assinatura, versões, .docx, e a janela falando com o plugin
 python3 testes/e2e.py                                        # ponta a ponta (depois de: npx tauri build --debug --no-bundle)
 python3 scripts/icone/gerar_icone.py && npx tauri icon scripts/icone/icone.png   # o ícone (depois: rm -r src-tauri/icons/{android,ios})
 ```
@@ -192,6 +192,24 @@ byte a byte, à do `main.py` do serviço** rodando localmente com as mesmas ferr
 e Windows x64 (`.msi`), como artefatos; com tag, também numa Release em rascunho.
 
 Nunca use dados reais de processos em testes, exemplos, commits ou logs.
+
+## Módulo do Graphé Desktop
+
+O Incognitus segue o contrato de módulo do Graphé Desktop (`MODULOS.md`, no repositório dele): o mesmo código serve ao
+app avulso e ao Graphé Desktop, que o hospeda como mini-app.
+
+- **`plugin/`**: o crate `tauri-plugin-anonimizacao`. `init()` é o app avulso (dados na raiz da pasta de dados do app,
+  como sempre); `init_como_modulo()` é o hospedado (dados em `<dados do hospedeiro>/modulos/incognitus/`, cache em
+  `<cache>/modulos/incognitus/`). O comando `info` diz qual dos dois. As permissões: `anonimizacao:default` (a janela
+  do Incognitus) e `anonimizacao:api` (o que o hospedeiro chama da janela principal dele para ler os autos:
+  `info`, `preparar_arquivo`, `extrair_texto`, `ocr_pagina`, `limpar_arquivo` e `motor_ativo`).
+- **`modulo/`**: a janela, copiada como está, e o `modulo.json` (id `incognitus`, sidecars, recursos nos mesmos
+  caminhos do app avulso, e os arquivos do motor embutido que o hospedeiro pode carregar). Hospedada, a janela esconde
+  a atualização do app; a atualização assinada das regras vale nos dois modos.
+- **`src-tauri/`**: o app avulso, que é o plugin mais a janela, com a atualização do próprio app.
+
+A versão do `modulo.json`, a do `plugin/Cargo.toml` e a do app (`src-tauri/Cargo.toml`) andam juntas, com a do
+`tauri.conf.json` e a do `package.json`, como antes; um teste do plugin e um do app param se as três primeiras divergirem.
 
 ## Pendências (09/11/2026)
 
@@ -229,11 +247,15 @@ Nunca use dados reais de processos em testes, exemplos, commits ou logs.
 
 ```
 motor/            motor.js (gerado), manifesto + assinatura, casos.json, chave_publica.txt; fonte/: ambiente.js e api.js
-src/              a janela (HTML/JS/CSS simples), worker.js (o motor no Web Worker), casos.js, motor/ (o embutido)
-src-tauri/        Rust: sidecars (ferramentas.rs), PDF de saída (pdf.rs), motor e atualização (motor.rs), minutas da
-                  reidentificação: .txt e .docx (reid.rs), comandos (lib.rs)
+modulo/           a janela (HTML/JS/CSS simples), worker.js (o motor no Web Worker), casos.js, motor/ (o embutido) e o
+                  modulo.json (o contrato de módulo do Graphé Desktop)
+plugin/           o crate tauri-plugin-anonimizacao (comandos `plugin:anonimizacao|…`): sidecars (ferramentas.rs), PDF de
+                  saída (pdf.rs), motor e atualização dele (motor.rs), minutas da reidentificação: .txt e .docx
+                  (reid.rs), comandos (lib.rs), permissões (permissions/default.toml: os conjuntos default e api)
+src-tauri/        o app avulso: o plugin com init(), a janela main em ../modulo, ícones, instalador e a atualização do
+                  app (atualizar.rs)
 scripts/          extrair_motor.mjs, trava.mjs, regressao_motor.cjs, assinar_motor.mjs, publicar_motor.sh, sidecars.py,
-                  icone/gerar_icone.py
+                  montar.mjs (o `montar` do modulo.json), icone/gerar_icone.py
 testes/           gerar_pdfs.py (PDFs fictícios) e e2e.py
 _segredo/         a chave privada do motor (fora do git)
 ```

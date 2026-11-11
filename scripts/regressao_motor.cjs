@@ -4,7 +4,7 @@
 //      trocado por um contexto vm LIMPO (só o JavaScript, nenhum stub do Apps Script — dependência que faltar quebra
 //      aqui) e o pipeline.js é o do próprio Graphé;
 //   2. os mesmos casos (casos.json) pela API do Incognitus — SkiaMotor.anonimizar, o caminho do app —, conferidos pelo
-//      src/casos.js, num motor recém-carregado;
+//      modulo/casos.js, num motor recém-carregado;
 //   3. paridade: caso a caso, o corpo da API do Incognitus é idêntico ao do pipeline.js do Graphé.
 // Sem a pasta do Graphé (no CI, por exemplo), só o passo 2 roda.
 // Uso: node scripts/regressao_motor.cjs motor/motor.js [--casos motor/casos.json] [--graphe ../Graphe] [--verbose]
@@ -16,7 +16,7 @@ const CASOS = path.resolve(arg('--casos', path.join(path.dirname(MOTOR), 'casos.
 const GRAPHE = path.resolve(arg('--graphe', process.env.GRAPHE_DIR || path.join(SKIA, '../Graphe')));
 const VERB = process.argv.includes('--verbose');
 const fonteMotor = fs.readFileSync(MOTOR, 'utf8');
-const SkiaCasos = require(path.join(SKIA, 'src/casos.js'));
+const SkiaCasos = require(path.join(SKIA, 'modulo/casos.js'));
 
 function motorLimpo() {
   const ctx = vm.createContext({});
