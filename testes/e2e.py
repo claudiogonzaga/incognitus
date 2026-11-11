@@ -229,6 +229,15 @@ def conferir_reid(rel2, mm):
             confere(it.get("n") == 4, f".docx: 4 trocas (corpo, cabeçalho e nome do arquivo) — {it.get('n')}")
 
 
+def incognitus_aberto():
+    """No Mac, um Incognitus instalado e ABERTO (mesma identidade do app de teste) atrapalha o teste: o worker do
+    motor baixado não respondeu em 5 min (visto em 10/11/2026; fechado o app, passou em 18 s)."""
+    if sys.platform != "darwin":
+        return False
+    r = subprocess.run(["pgrep", "-f", "Incognitus.app/Contents/MacOS/"], capture_output=True, text=True)
+    return r.returncode == 0 and r.stdout.strip() != ""
+
+
 def main():
     if not os.path.exists(EXE):
         raise SystemExit("falta o executável: npx tauri build --debug --no-bundle")
@@ -349,4 +358,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if incognitus_aberto():
+        sys.exit("e2e: feche o Incognitus instalado antes do teste (ele divide a identidade com o app de teste e o atrapalha)")
     main()

@@ -1,6 +1,6 @@
-// Incognitus — motor de anonimização 1.10.0. Gerado por scripts/extrair_motor.mjs a partir do graphe.js do Graphé
+// Incognitus — motor de anonimização 1.10.1. Gerado por scripts/extrair_motor.mjs a partir do graphe.js do Graphé
 // (as funções do lote automático da anonimização e as dependências delas, pelo nome) e do testes/anon/pipeline.js.
-// Não edite à mão: rode de novo o script. O cabeçalho que este motor escreve diz "GRAPHE v1.10.0": é a versão do motor.
+// Não edite à mão: rode de novo o script. O cabeçalho que este motor escreve diz "GRAPHE v1.10.1": é a versão do motor.
 // ── Ambiente do Incognitus ────────────────────────────────────────────────────────────────────────────────────────────────
 // O que no Graphé vem da planilha e do Apps Script vem daqui, sem rede e sem disco:
 //   · VARIAVEIS_GLOBAIS: vazia — os contatos institucionais são o ANON_INST_PADRAO, que os Ajustes do Incognitus trocam
@@ -41,7 +41,7 @@ var Utilities = {
     });
   }
 };
-// ── Graphé: anonimização (388 declarações) ──
+// ── Graphé: anonimização (389 declarações) ──
 var _TZ_MT_ = 'America/Cuiaba';
 function _pdfPaginasFracas_(texto) {
   var ps = _anonPaginas_(texto), out = [];
@@ -54,7 +54,7 @@ function _pdfOcrFecharMeta_(meta, novo, restantes) {
   for (var i = 0; i < ps.length; i++) if (_anonPaginaSemTexto_(ps[i]) && restantes.indexOf(i + 1) < 0) meta.poucoTexto.push(i + 1);
   return novo;
 }
-var ANON_VERSAO = '1.10.0';
+var ANON_VERSAO = '1.10.1';
 var ANON_PROP_LISTA_BRANCA = 'GRAPHE_ANON_LISTA_BRANCA';
 var ANON_ABRE = '«';
 var ANON_FECHA = '»';
@@ -1287,6 +1287,10 @@ function _anonRegras_() {
     { tipo: 'END',   bloco: true, re: new RegExp('(?<![A-Za-zÀ-ü])((?:Rua|Av\\.|Avenida|Travessa|Alameda|Estrada|Pra[cç]a)[ \\t]+[^\\n,;]{1,50}?[ \\t]*\\n[ \\t]*[^\\n,;]{1,40}?,?[ \\t]*' +
         ANON_END_NUMERO + ANON_END_COMPL + ANON_END_BAIRRO + ')', 'gi'), grupo: 1, ok: _anonEndOk_, okCtx: _anonEndMoradiaAntes_, chave: _anonChave_ },
 
+    { tipo: 'END',   bloco: true, re: new RegExp('(?<![A-Za-zÀ-ü])((?:Rua|Av\\.|Avenida|Travessa|Alameda|Estrada|Rodovia|Pra[cç]a|Beco|Viela)[ \\t]+[^\\n,;]{1,60}?,?[ \\t]*' +
+        'n(?:\\.?[\\u00ba\\u00b0\\u02da]|\\.|o\\.)[ \\t]*\\n[ \\t]*\\d{1,5}[A-Za-z]?(?![\\dA-Za-z])(?!\\/\\S)' + ANON_END_COMPL + ANON_END_BAIRRO + ')', 'gi'),
+      grupo: 1, ok: _anonEndOk_, okCtx: _anonEndQuebraNumCtxOk_, chave: _anonChave_ },
+
     { tipo: 'END',   re: new RegExp('(?<![A-Za-zÀ-ü])(' + ANON_END_RURAL_PREF + '\\s+' + ANON_END_RURAL_NOME + ')', 'g'), grupo: 1, okCtx: _anonEndRuralCtxOk_, chave: _anonChave_ },
 
     { tipo: 'END',   re: /(?<![A-Za-zÀ-ü])((?:(?:Rodovia|RODOVIA|Rod\.|ROD\.)\s*)?(?:BR|MT|MS|GO|RO|PA|SP|PR|MG|TO|BA)[-\s]?\d{3}\s*,?\s*(?:[-–]\s*)?(?:km|Km|KM)\.?\s*\d{1,4}(?:[.,]\d{1,3})?)/g,
@@ -1397,6 +1401,10 @@ function _anonEndOk_(alvo) {
   return !/^(?:rodovia|rod\.?|estrada)\s+[A-Z]{2}[-\s]?\d{3}\s*$/i.test(String(alvo || '').trim());
 }
 function _anonEndMoradiaAntes_(alvo, s, p) { return ANON_RE_MORADIA_ANTES.test(s.slice(Math.max(0, p - 60), p)); }
+function _anonEndQuebraNumCtxOk_(alvo, s, p) {
+  var l = s.slice(s.lastIndexOf('\n', p - 1) + 1, p);
+  return !ANON_RE_INSTITUCIONAL.test(l) || ANON_RE_PESSOA_ANTES.test(l) || ANON_RE_MORADIA.test(l) || l.indexOf(ANON_ABRE) >= 0;
+}
 function _anonEndRuralCtxOk_(alvo, s, p, m) {
   var depois = s.slice(p + m.length, p + m.length + 30);
   return /^\s*,?\s*[-–]?\s*zona\s+rural\b/i.test(depois) || _anonEndMoradiaAntes_(alvo, s, p);
@@ -2128,7 +2136,7 @@ var ANON_OMITIDO = '[omitido]';
 var ANON_RE_CARIMBO_GERADO = /(gerado\s+pelo\s+usu[áa]rio)[ \t]+.+?(?=[ \t]+em[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]*$)/gi;
 var ANON_RE_CARIMBO_ASSINANTE = /(assinad[oa]\s+(?:eletronicamente|digitalmente|de\s+forma\s+digital)\s+por)([ \t]*:?[ \t]*)(?![ \t]*meio\s)(.*?)(?::[ \t]*\d{11})?(?=[ \t]+[-–][ \t]+\d|[ \t]*[,;(]|[ \t]+em[ \t]+\d|[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}|[ \t]+(?:documento\s+)?assinad[oa]\s|[ \t]*$)/gi;
 var ANON_RE_CARIMBO_NOME_HORA = /(^|[:;][ \t]*|[ \t]{2,})([A-ZÀ-Ý][A-ZÀ-Ý'´]+(?:[ \t]+[A-ZÀ-Ý][A-ZÀ-Ý'´]*){1,7})(?=[ \t]+-[ \t]+\d{2}\/\d{2}\/\d{4}[ \t]+\d{2}:\d{2}:\d{2})/g;
-var ANON_RE_CARIMBO_POR_SOLTO = /((?:[Dd]igitalmente|[Ee]letronicamente)[ \t]+por[ \t]*:?[ \t]*)([A-ZÀ-Ý][A-Za-zÀ-ÿ'´]+(?:[ \t]+(?:d[aeo]s?|D[AEO]S?|e|E|[A-ZÀ-Ý][A-Za-zÀ-ÿ'´]+)){0,6})/g;
+var ANON_RE_CARIMBO_POR_SOLTO = /((?:[Dd]igitalmente|[Ee]letronicamente|(?<![A-Za-zÀ-ÿ])[Ee]?l?e?t?r?[ôo]nicamente)[ \t]+por[ \t]*:?[ \t]*)([A-ZÀ-Ý][A-Za-zÀ-ÿ'´]+(?:[ \t]+(?:d[aeo]s?|D[AEO]S?|e|E|[A-ZÀ-Ý][A-Za-zÀ-ÿ'´]+)){0,6})/g;
 var ANON_RE_CARIMBO_RESTO = /^[ \t]*(?:https?:\/\/\S+|\d{15,})[ \t]*$/;
 var ANON_RE_CARIMBO_SO_MAIUSC = /^[ \t]{2,}[A-ZÀ-Ý][A-ZÀ-Ý'´]+(?:[ \t]+[A-ZÀ-Ý][A-ZÀ-Ý'´]*){0,4}[ \t]*$/;
 function _anonCarimboSemNomeAntes_(ls, i) {

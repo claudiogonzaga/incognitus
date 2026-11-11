@@ -951,6 +951,31 @@
    ]
   },
   {
+   "id": "C35a",
+   "c": "END",
+   "req": "GERVASIO TESTEFULANO DE TAL",
+   "t": "Réu: GERVASIO TESTEFULANO DE TAL, brasileiro.\n\fExpeça-se mandado para citação do requerido GERVASIO TESTEFULANO DE TAL, no endereço Rua Teodomiro Ficticio, n.°\n     117, Bairro Jardim Inventado, Cidadefic/MT (ID. 92770536).\n",
+   "oculto": [
+    "Teodomiro Ficticio",
+    "117",
+    "Jardim Inventado"
+   ],
+   "claro": [
+    "Cidadefic/MT"
+   ],
+   "tokenTipo": [
+    "END"
+   ]
+  },
+  {
+   "id": "C35b",
+   "c": "INSTITUCIONAL",
+   "t": "O Fórum da Comarca de Cidadela, situado na Rua Mato Fictício, nº\n140, Centro, atende das 12h às 19h.\n",
+   "claro": [
+    "Rua Mato Fictício, nº 140, Centro"
+   ]
+  },
+  {
    "id": "C26a",
    "c": "GENERO",
    "t": "A genitora MARIA TESTEFULANA PIRES, brasileira, solteira, compareceu. O conduzido JOAO FICTICIO PIRES, brasileiro(a), casado, nascido em 2000.\n",
