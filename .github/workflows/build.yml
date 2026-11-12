@@ -147,11 +147,15 @@ jobs:
       - name: instaladores com nome fixo
         shell: bash
         run: |
-          ls -la artefatos
-          mkdir -p fixos
-          cp artefatos/*.dmg fixos/Incognitus-macOS.dmg
-          cp artefatos/*.msi fixos/Incognitus-Windows.msi
-          ls -la fixos
+          # o upload-artifact guarda a subpasta (dmg/…, msi/…): procurar em qualquer nível
+          find artefatos -type f | sort
+          mkdir -p fixos todos
+          find artefatos -type f -exec cp {} todos/ \;
+          dmg=$(find artefatos -type f -name '*.dmg' | head -1); msi=$(find artefatos -type f -name '*.msi' | head -1)
+          [ -n "$dmg" ] && [ -n "$msi" ] || { echo "falta instalador: dmg='$dmg' msi='$msi'"; exit 1; }
+          cp "$dmg" fixos/Incognitus-macOS.dmg
+          cp "$msi" fixos/Incognitus-Windows.msi
+          ls -la fixos todos
 
       - name: release publicada, a mais nova
         uses: softprops/action-gh-release@v2
@@ -160,4 +164,4 @@ jobs:
           make_latest: true
           files: |
             fixos/*
-            artefatos/*
+            todos/*
