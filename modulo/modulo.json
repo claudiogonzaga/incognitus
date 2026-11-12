@@ -3,7 +3,7 @@
   "id": "incognitus",
   "nome": "Incognitus",
   "descricao": "Anonimização de autos em PDF e reidentificação de minutas, no computador",
-  "versao": "0.4.1",
+  "versao": "0.5.0",
   "icone": "icone.png",
   "janela": { "entrada": "index.html", "largura": 1040, "altura": 760, "largura_minima": 760, "altura_minima": 560, "cor": "#c8703f" },
   "plugin": { "nome": "anonimizacao", "crate": "tauri-plugin-anonimizacao", "caminho": "plugin" },

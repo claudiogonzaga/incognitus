@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-anonimizacao"
-version = "0.4.1"
+version = "0.5.0"
 description = "Incognitus como plugin do Tauri: anonimização de PDFs em lote com o motor do Graphé e reidentificação de minutas (o app Incognitus e o módulo do Graphé Desktop)"
 edition = "2021"
 publish = false

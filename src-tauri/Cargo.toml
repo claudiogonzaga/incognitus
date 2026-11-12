@@ -1,6 +1,6 @@
 [package]
 name = "incognitus"
-version = "0.4.1"
+version = "0.5.0"
 description = "Incognitus — anonimização de PDFs em lote com o motor do Graphé"
 edition = "2021"
 publish = false
