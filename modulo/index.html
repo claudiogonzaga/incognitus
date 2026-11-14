@@ -9,6 +9,7 @@
 <body>
 <header data-tauri-drag-region>
   <div class="titulo" data-tauri-drag-region>
+    <img class="logo" src="logo-128.png" alt="" data-tauri-drag-region>
     <h1 data-tauri-drag-region>Incognitus</h1>
     <span data-tauri-drag-region>anonimização de autos e reidentificação de minutas, no seu computador</span>
   </div>
@@ -28,10 +29,10 @@
   <section id="lado">
     <h2>Arquivos</h2>
     <div class="linha">
-      <button id="bt_pdfs">Escolher PDFs…</button>
+      <button id="bt_pdfs">Escolher arquivos…</button>
       <button id="bt_pasta" class="ghost">Uma pasta…</button>
     </div>
-    <p class="dica">ou arraste PDFs (ou uma pasta) para a janela</p>
+    <p class="dica">PDF, Word (.docx) ou texto (.txt) — ou arraste os arquivos (ou uma pasta) para a janela</p>
 
     <h2>Saída</h2>
     <label class="opcao"><input type="radio" name="saida" value="ao_lado" checked> <span>Ao lado de cada original, na pasta <b>Incognitus — anonimizados</b></span></label>
@@ -40,12 +41,19 @@
       <input id="pasta_saida" type="text" readonly placeholder="nenhuma escolhida">
       <button id="bt_pasta_saida" class="ghost pequeno">Escolher…</button>
     </div>
-    <p class="dica">O PDF anonimizado sai com o MESMO nome do original. O original nunca é alterado.</p>
+    <p class="dica">O PDF anonimizado sai com o nome do original terminado em <b>_anon</b> e sem os nomes de pessoa (trocados pelos mesmos tokens do texto). O original nunca é alterado.</p>
+    <label class="opcao"><input id="op_juntar" type="checkbox" checked> <span>Juntar os documentos do mesmo caso</span></label>
+    <p class="dica">Os documentos da mesma leva que são do mesmo caso — o mesmo número de processo, o mesmo CPF ou a mesma pessoa — são anonimizados juntos, com um mapa só: a mesma pessoa leva o mesmo token em todos. A fila mostra o caso; <b>Separar</b> e <b>Juntar a…</b> corrigem.</p>
     <label class="opcao"><input id="op_txt" type="checkbox"> <span>Gravar também o .txt</span></label>
+    <label class="opcao"><input id="op_rigoroso" type="checkbox"> <span>Anonimização rigorosa <small>(mais lenta)</small></span></label>
+    <p class="dica">Depois das regras, um modelo de inteligência artificial lê o texto e tarja o que ainda parecer nome de
+      pessoa ou endereço. Fica bem mais lento (de 1 a 4 segundos por página) e, na primeira vez, baixa o modelo (110 MB).
+      Tudo continua neste computador. <span id="msg_rigoroso"></span></p>
     <div class="nota">
-      Junto com cada PDF sai sempre o <b>mapa</b> (“… — MAPA (nomes reais).json”): o dicionário de cada token com o
-      nome real, que a aba <b>Reidentificar</b> usa para devolver os nomes à minuta. Ele tem os <b>nomes reais</b>:
-      guarde-o neste computador e nunca o mande à IA — para a IA vai só o PDF anonimizado.
+      Junto com cada PDF saem sempre o <b>mapa</b> (o dicionário de cada token com o nome real, que a aba
+      <b>Reidentificar</b> usa para devolver os nomes à minuta) e a <b>lista CONFIRA</b> (onde olhar antes de usar),
+      numa subpasta “NÃO ENVIAR À IA (nomes reais)”. Eles têm os <b>nomes reais</b>: guarde-os neste computador e nunca
+      os mande à IA — para a IA vai só o PDF anonimizado.
     </div>
 
     <button id="bt_rodar" class="principal" disabled>Anonimizar</button>
@@ -60,7 +68,7 @@
         <button id="bt_limpar" class="ghost pequeno">Limpar prontos</button>
       </div>
     </div>
-    <div id="vazio" class="vazio">Nenhum PDF na fila.</div>
+    <div id="vazio" class="vazio">Nenhum arquivo na fila.</div>
     <ol id="fila"></ol>
   </section>
 </main>

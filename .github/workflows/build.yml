@@ -85,11 +85,28 @@ jobs:
             src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi
           if-no-files-found: error
 
+      # o modelo da anonimização rigorosa (o app baixa na primeira vez; aqui vem do cache ou do Hugging Face, revisão fixa)
+      - name: cache do modelo da anonimização rigorosa
+        uses: actions/cache@v4
+        with:
+          path: .modelo-ner
+          key: ner-inples-e55b0a26
+
+      - name: modelo da anonimização rigorosa
+        shell: bash
+        run: |
+          mkdir -p .modelo-ner
+          for f in model.onnx tokenizer.json; do
+            [ -f ".modelo-ner/$f" ] || curl -sSL --fail --retry 5 -o ".modelo-ner/$f" "https://huggingface.co/inples-tech/anonimato-ner-ptbr/resolve/e55b0a26470a8525387ad9172e1dab24c390e80b/$f"
+          done
+          ls -la .modelo-ner
+
       - name: teste de ponta a ponta no Incognitus.app empacotado (3 PDFs fictícios)
         if: matrix.sidecars == 'mac'
         env:
           PYTHONIOENCODING: utf-8
           SKIA_TESTE_DIR: ${{ runner.temp }}/skia-testes
+          SKIA_NER_DIR: ${{ github.workspace }}/.modelo-ner
         run: |
           python testes/e2e.py "src-tauri/target/${{ matrix.alvo }}/release/bundle/macos/Incognitus.app/Contents/MacOS/incognitus"
 
@@ -99,6 +116,7 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
           SKIA_TESTE_DIR: ${{ runner.temp }}/skia-testes
+          SKIA_NER_DIR: ${{ github.workspace }}/.modelo-ner
         run: |
           $msi = Get-ChildItem "src-tauri/target/${{ matrix.alvo }}/release/bundle/msi/*.msi" | Select-Object -First 1
           Start-Process msiexec.exe -Wait -ArgumentList "/i `"$($msi.FullName)`" /qn /norestart /l*v msi.log"

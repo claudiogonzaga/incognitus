@@ -5,7 +5,7 @@
 ![A janela do Incognitus no macOS](docs/janela.png)
 
 Aplicativo de computador (Mac e Windows) que **anonimiza autos em PDF, em lote**, com o **mesmo motor de anonimização
-do Graphé** — o mesmo fluxo do lote automático (preparar → classificador bayesiano → concluir), as mesmas regras, o
+do Graphé** — o mesmo fluxo do lote automático (preparar → classificador → concluir), as mesmas regras, o
 mesmo cabeçalho de autos anonimizados — e **reidentifica as minutas** que a IA devolve, com o mapa de cada processo,
 como o 🔓 do Graphé. **Tudo roda no computador**: nenhum PDF, texto ou mapa sai dele, e não há telemetria. As únicas
 conexões são, ao abrir, a procura por versão nova do app e das regras (só leitura do GitHub público), que os Ajustes
@@ -16,22 +16,48 @@ desligam.
 
 ### Anonimizar
 
-1. **Escolher PDFs…** (vários de uma vez), **Uma pasta…**, ou arrastar PDFs/pastas para a janela.
+1. **Escolher arquivos…** (vários de uma vez), **Uma pasta…**, ou arrastar arquivos/pastas para a janela: **PDF** e,
+   desde 14/11/2026, **Word (.docx)** e **texto (.txt)** — o relatório, o termo, a peça que vem junto com os autos.
 2. **Saída**: por padrão, ao lado de cada original, na pasta **`Incognitus — anonimizados`**; ou outra pasta à escolha.
-   O PDF anonimizado sai com o **mesmo nome** do original. O original **nunca** é aberto para escrita: as ferramentas
-   trabalham numa cópia temporária, e o Incognitus recusa gravar por cima dele.
+   A saída é sempre um PDF, com o **nome do original terminado em `_anon` e sem os nomes de pessoa** (14/11/2026):
+   "relatorio - JOÃO DA SILVA.docx" sai "relatorio - «Thanasis»_anon.pdf", com o mesmo token do texto (o nome do
+   arquivo também vai para a IA); o .txt, o mapa e a lista CONFIRA levam o mesmo nome.
+   O original **nunca** é aberto para escrita: as ferramentas trabalham numa cópia temporária, e o Incognitus recusa
+   gravar por cima dele.
 3. Opcional: **Gravar também o .txt** (o mesmo texto do Graphé: cabeçalho + `===== PÁGINA n =====`).
-4. **Anonimizar**. Um PDF por vez; a fila mostra cada etapa (extraindo, OCR x/y, anonimizando, gravando, pronto, erro).
+4. **Anonimizar**. Primeiro lê cada arquivo, um por vez (extraindo, OCR x/y); depois junta os do mesmo caso e anonimiza
+   e grava caso a caso; a fila mostra cada etapa (lido, anonimizando, gravando, pronto, erro).
    No máximo 2 OCRs ao mesmo tempo, com prioridade baixa. A pasta temporária de cada PDF é apagada ao fim dele.
 
-**A saída**: os **autos anonimizados** e o **mapa**, lado a lado.
+5. **Juntar os documentos do mesmo caso** (ligado por padrão; 14/11/2026). Os arquivos da mesma leva que são do mesmo
+   caso são anonimizados **juntos, com um mapa só**: a mesma pessoa leva o mesmo token em todos, e a minuta do caso
+   volta com um mapa. O que liga dois documentos: o **número do processo** (no nome do arquivo ou na capa), um
+   **documento de pessoa** em comum (CPF, RG, CNH, CNS, telefone, placa, e-mail) ou a **mesma pessoa** (um nome com
+   três palavras ou mais, ou dois nomes em comum; autoridades ficam em claro e não ligam nada). Um nome de pessoa no
+   nome do arquivo entra como parte do caso, como a linha do pedido no Graphé. A fila mostra o caso e o motivo;
+   **Separar** e **Juntar a…** corrigem à mão, e os casos mexidos são refeitos (sem ler os arquivos de novo). Cada
+   documento sai com as suas páginas (numeradas a partir de 1); o cabeçalho é o do caso, com a lista dos documentos.
+   O mapa e a lista CONFIRA do caso vão com cada um.
+6. Opcional: **Anonimização rigorosa** (14/11/2026). Depois das regras, um modelo de inteligência artificial lê o
+   texto e aponta nomes e endereços que as regras deixaram passar (prenome solto, apelido, nome em minúscula, endereço
+   sem "Rua"). **Fica mais lenta** — de 1 a 4 segundos por página — e, na primeira vez, baixa o modelo (110 MB). O
+   modelo só aponta; quem decide é o motor: autoridade, advogado, servidor e precedente citado continuam em claro, e
+   palavra comum ou que não é nome no léxico do IBGE é recusada. O que ele achou e o que foi recusado (com o motivo)
+   vão para a lista CONFIRA.
+
+**A saída**: os **autos anonimizados** ao lado do original, e o que tem nomes reais numa subpasta à parte,
+**`NÃO ENVIAR À IA (nomes reais)`** (14/11/2026), para não ir junto por engano:
 
 - O PDF tem a primeira folha para o cabeçalho de autos anonimizados (com a versão do motor) e **uma folha para cada
   página dos autos**, em fonte monoespaçada (DejaVu Sans Mono) de **11 pt** — a fonte nunca encolhe: a folha cresce
   quando a página tem linhas longas. O texto é selecionável (dá para copiar e mandar a uma IA).
-- O mapa, `… — MAPA (nomes reais).json`, sai **sempre** (pedido do Promotor, 05/11/2026): o dicionário de cada token
+- O mapa, `… — MAPA (nomes reais).json`, na subpasta, sai **sempre** (pedido do Promotor, 05/11/2026): o dicionário de cada token
   («Thanasis», «REU_01», «CPF_01»…) com o nome ou o dado real, no mesmo formato do mapa do Graphé. É ele que devolve
   os nomes na reidentificação. Tem os **nomes reais**: fica no computador e nunca vai à IA — para a IA vai só o PDF.
+- A **lista CONFIRA**, `… — CONFIRA (nomes reais).txt`, também na subpasta (e no botão **Lista CONFIRA** da fila): o
+  que olhar antes de mandar o PDF à IA — etapas do motor que falharam, páginas sem texto ou com pouco texto, páginas
+  que passaram por OCR, candidatos a nome que ficaram em claro (com a página e o contexto), sobras da varredura e, no
+  modo rigoroso, o que o modelo achou e o que o motor recusou.
 - **Os carimbos do PJe** (pedido do Promotor, 09/11/2026) saem **sem quem assina e sem quem gerou o PDF**:
   "Assinado eletronicamente por: [omitido] - 05/11/2026 14:32:10", "Este documento foi gerado pelo usuário [omitido]
   em …"; o pedaço do carimbo que o pdftotext parte em linhas na diagonal some. Também os carimbos do SEI ("documento
@@ -163,7 +189,18 @@ Licenças: o poppler é **GPL**; o tesseract, Apache-2.0. Os textos das licença
 versões e onde está o código-fonte vão dentro do app (`LICENCAS-terceiros/LEIA-ME.txt`). O workflow anexa o código-fonte
 do poppler aos instaladores. A fonte do PDF é a DejaVu Sans Mono (licença livre, `plugin/recursos/fontes/LICENSE_DEJAVU`).
 
-**O tema** (09/11/2026, romano): travertino, tinta sépia e vermelho pompeiano; os títulos na **Cinzel**, as capitais das
+**A anonimização rigorosa** usa o modelo **inples-tech/anonimato-ner-ptbr** (Apache-2.0; BERT em português, int8,
+rótulos PESSOA, ORG, LOCAL e ENDERECO), numa revisão fixa do Hugging Face e conferido por sha256
+(`plugin/src/ner.rs`). Não vai no instalador: o app baixa na primeira vez que a opção é ligada, para a pasta de dados
+dele. Roda na própria janela, com o **onnxruntime-web** 1.31.1 (MIT, `modulo/vendor/onnxruntime-web/`), em alguns
+Web Workers em paralelo (`modulo/ner_worker.mjs`); o tokenizador WordPiece é nosso (`modulo/ner.js`) e bate com o
+original. Nada sai do computador, além do download do modelo. Nos testes, `SKIA_NER_DIR` aponta uma pasta com o
+`model.onnx` e o `tokenizer.json`; sem ela, a seção do modo rigoroso do `testes/e2e.py` é pulada. O CI baixa o modelo
+(com cache) e roda essa seção no Mac e no Windows.
+
+**A logo** (14/11/2026): uma placa de travertino gravada INCO · GNI · TUS, com uma faixa de sombra sobre o GNI
+(`scripts/icone/logo-pedra-original.jpeg` → `icone.png` → `npx tauri icon`); a janela seguiu a placa: tons de pedra,
+tinta escura, títulos gravados e a régua como a faixa de sombra. **O tema** (09/11/2026, romano): travertino, tinta sépia e vermelho pompeiano; os títulos na **Cinzel**, as capitais das
 inscrições romanas (SIL Open Font License, `modulo/fontes/OFL-Cinzel.txt`; a Trajan, que inspirou o pedido, é paga e não
 pode ir dentro do app); ao fundo, as colunas do Fórum em aquarela com a inscrição NOMEN · ABIT · FORMA · MANET ("o nome
 sai, a forma fica") e o NOMEN raspado a cinzel, como na *damnatio memoriae*, com uma sombra caindo sobre ele
@@ -178,15 +215,23 @@ npx tauri dev                                                # o app
 npx tauri build --target universal-apple-darwin --bundles dmg
 cargo test --manifest-path src-tauri/Cargo.toml -p incognitus -p tauri-plugin-anonimizacao   # PDF, assinatura, versões, .docx, e a janela falando com o plugin
 python3 testes/e2e.py                                        # ponta a ponta (depois de: npx tauri build --debug --no-bundle)
+SKIA_E2E_SO=casos python3 testes/e2e.py                      # só a seção 7 (vários documentos do mesmo caso); =rigoroso, só a 6
 python3 scripts/icone/gerar_icone.py && npx tauri icon scripts/icone/icone.png   # o ícone (depois: rm -r src-tauri/icons/{android,ios})
 ```
 
 O **teste de ponta a ponta** gera 3 PDFs **fictícios** (texto, escaneado, misto), roda o app de verdade (modo de teste,
-`SKIA_E2E`, com dados e cache à parte) e confere: nomes de saída iguais aos de entrada, nenhum dado de pessoa fictícia
+`SKIA_E2E`, com dados e cache à parte) e confere: nomes de saída = os de entrada com `_anon`, nenhum dado de pessoa fictícia
 em claro, originais intactos, uma folha por página + cabeçalho, 11 pt, o mapa ao lado; a **reidentificação** com o mapa
 que o app gravou (texto colado, minuta .txt e .docx com um token partido em dois trechos de formatação, no corpo, no
 cabeçalho e no nome do arquivo); a atualização assinada das regras (e a recusa da adulterada); e a **extração idêntica,
-byte a byte, à do `main.py` do serviço** rodando localmente com as mesmas ferramentas.
+byte a byte, à do `main.py` do serviço** rodando localmente com as mesmas ferramentas. Com `SKIA_NER_DIR`, a
+**anonimização rigorosa** (seção 6); e sempre um **caso com vários documentos** (seção 7: PDF, .docx com o nome da
+pessoa no título e .txt do mesmo caso, mais um PDF de outro caso — um mapa só, nome do arquivo sem nomes, Separar).
+
+O app de teste divide a identidade com o Incognitus instalado: com ele aberto, o teste para. Para não fechar o
+instalado, monte o de teste com outra identidade e avise o teste:
+`npx tauri build --debug --no-bundle --config '{"identifier":"br.eco.consciencia.incognitus.teste"}'` e
+`SKIA_E2E_OUTRA_IDENTIDADE=1 python3 testes/e2e.py`.
 
 **Build e entrega**: `.github/workflows/build.yml` (Actions → build → Run workflow, ou tag `v*`): macOS universal (`.dmg`)
 e Windows x64 (`.msi`), como artefatos; com tag, também numa Release em rascunho.
@@ -197,6 +242,10 @@ Nunca use dados reais de processos em testes, exemplos, commits ou logs.
 
 O Incognitus segue o contrato de módulo do Graphé Desktop (`MODULOS.md`, no repositório dele): o mesmo código serve ao
 app avulso e ao Graphé Desktop, que o hospeda como mini-app.
+
+**Para o hospedeiro** (14/11/2026): a janela que abre o módulo precisa de `"backgroundThrottling": "disabled"` (como a
+do app avulso, em `src-tauri/tauri.conf.json`). Sem isso, no Mac, com a janela escondida atrás de outras, o WebView
+suspende os workers e o lote — sobretudo a anonimização rigorosa — para até a janela voltar à frente.
 
 - **`plugin/`**: o crate `tauri-plugin-anonimizacao`. `init()` é o app avulso (dados na raiz da pasta de dados do app,
   como sempre); `init_como_modulo()` é o hospedado (dados em `<dados do hospedeiro>/modulos/incognitus/`, cache em

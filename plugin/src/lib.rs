@@ -10,6 +10,7 @@
 //! (`init_como_modulo`). A lista de comandos está aqui, no build.rs e em permissions/default.toml.
 mod ferramentas;
 mod motor;
+mod ner;
 mod pdf;
 mod reid;
 
@@ -27,6 +28,8 @@ pub const NOME: &str = "Incognitus";
 pub const VERSAO: &str = env!("CARGO_PKG_VERSION");
 
 const PASTA_SAIDA: &str = "Incognitus — anonimizados";
+/// O mapa e a lista CONFIRA têm os nomes reais: ficam numa subpasta à parte, para não irem junto com os PDFs para a IA.
+const PASTA_PRIVADA: &str = "NÃO ENVIAR À IA (nomes reais)";
 const MARCA_PRODUTOR: &[u8] = b"/Producer (Incognitus ";
 const MARCA_ANTIGA: &[u8] = b"/Producer (Skia ";   // as saídas de antes do nome novo (até a 0.2.0)
 
@@ -160,7 +163,27 @@ struct PedidoSaida {
     paginas: Vec<String>,
     texto: Option<String>,
     mapa: Option<String>,
+    #[serde(default)]
+    confira: Option<String>,
+    /// O nome do arquivo de saída, sem a extensão, já sem os nomes de pessoa (o motor troca pelos tokens). Sem ele, o do original.
+    #[serde(default)]
+    nome_saida: Option<String>,
     versao_motor: String,
+}
+
+/// O nome de saída termina em "_anon" (sem repetir, se já termina).
+fn com_sufixo(base: &str) -> String {
+    if base.to_lowercase().ends_with(SUFIXO) { base.to_string() } else { format!("{base}{SUFIXO}") }
+}
+const SUFIXO: &str = "_anon";
+
+/// Um nome de arquivo que todo sistema aceita (sem / \\ : * ? " < > | e sem controle), no máximo 180 caracteres.
+fn nome_seguro(s: &str) -> String {
+    let t: String = s.chars().map(|c| if "/\\:*?\"<>|".contains(c) || c.is_control() { '-' } else { c }).collect();
+    let t = t.split_whitespace().collect::<Vec<_>>().join(" ");
+    let t = t.trim_matches(|c: char| c == '.' || c == ' ').to_string();
+    let t: String = t.chars().take(180).collect();
+    if t.is_empty() { "documento".into() } else { t }
 }
 
 #[derive(Serialize)]
@@ -168,6 +191,7 @@ struct Gravado {
     pdf: String,
     txt: Option<String>,
     mapa: Option<String>,
+    confira: Option<String>,
     sem_glifo: usize,
     folhas: usize,
 }
@@ -218,11 +242,17 @@ async fn gravar_saida(pedido: PedidoSaida) -> Result<Gravado, String> {
         let dir = pasta_destino(&origem, &pedido.destino);
         std::fs::create_dir_all(&dir).map_err(|e| format!("não consegui criar a pasta de saída: {e}"))?;
         let nome = origem.file_name().ok_or("origem sem nome")?.to_string_lossy().to_string();
-        let (base, ext) = match nome.rfind('.') {
-            Some(k) if k > 0 => (nome[..k].to_string(), nome[k..].to_string()),
-            _ => (nome.clone(), ".pdf".to_string()),
+        let base = match &pedido.nome_saida {
+            Some(n) => nome_seguro(n),
+            None => match nome.rfind('.') {
+                Some(k) if k > 0 => nome[..k].to_string(),
+                _ => nome.clone(),
+            },
         };
-        let destino_pdf = livre(&dir, &base, &ext, pdf_nosso);
+        // a saída é sempre um PDF (também a de um .txt ou .docx), com "_anon" no fim do nome (pedido do Promotor,
+        // 14/11/2026): nunca o mesmo nome do original, nem na mesma pasta
+        let base = com_sufixo(&base);
+        let destino_pdf = livre(&dir, &base, ".pdf", pdf_nosso);
         if mesmo_arquivo(&destino_pdf, &origem) || destino_pdf == origem {
             return Err("a pasta de saída é a dos originais: o anonimizado teria o mesmo nome e tomaria o lugar do original".into());
         }
@@ -239,13 +269,22 @@ async fn gravar_saida(pedido: PedidoSaida) -> Result<Gravado, String> {
             gravar_atomico(&p, t.as_bytes())?;
             txt = Some(p.to_string_lossy().to_string());
         }
-        let mut mapa = None;
+        let privada = dir.join(PASTA_PRIVADA);
+        let (mut mapa, mut confira) = (None, None);
+        if pedido.mapa.is_some() || pedido.confira.is_some() {
+            std::fs::create_dir_all(&privada).map_err(|e| format!("não consegui criar a pasta do mapa: {e}"))?;
+        }
         if let Some(m) = &pedido.mapa {
-            let p = dir.join(format!("{base_final} — MAPA (nomes reais).json"));
+            let p = privada.join(format!("{base_final} — MAPA (nomes reais).json"));
             gravar_atomico(&p, m.as_bytes())?;
             mapa = Some(p.to_string_lossy().to_string());
         }
-        Ok(Gravado { pdf: destino_pdf.to_string_lossy().to_string(), txt, mapa, sem_glifo: r.sem_glifo, folhas: pedido.paginas.len() + 1 })
+        if let Some(c) = &pedido.confira {
+            let p = privada.join(format!("{base_final} — CONFIRA (nomes reais).txt"));
+            gravar_atomico(&p, c.as_bytes())?;
+            confira = Some(p.to_string_lossy().to_string());
+        }
+        Ok(Gravado { pdf: destino_pdf.to_string_lossy().to_string(), txt, mapa, confira, sem_glifo: r.sem_glifo, folhas: pedido.paginas.len() + 1 })
     })
     .await
 }
@@ -256,15 +295,35 @@ fn pasta_padrao(caminho: String) -> String {
     pasta_destino(Path::new(&caminho), &None).to_string_lossy().to_string()
 }
 
-/// Os PDFs de uma pasta (sem descer às subpastas; a de saída do Incognitus fica de fora).
+/// O que a fila aceita: PDF e, desde 14/11/2026, .docx e .txt (o relatório, o termo… do mesmo caso).
+fn aceito(p: &Path) -> bool {
+    let ext = p.extension().map(|x| x.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
+    let nome = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    matches!(ext.as_str(), "pdf" | "docx" | "txt") && !nome.starts_with('.') && !nome.starts_with("~$")
+}
+
+/// O texto de um .txt (ou .md) ou de um .docx da fila.
+#[tauri::command]
+async fn texto_documento(caminho: String) -> Result<String, String> {
+    em_segundo_plano(move || {
+        let p = PathBuf::from(&caminho);
+        match p.extension().map(|x| x.to_string_lossy().to_ascii_lowercase()).as_deref() {
+            Some("docx") => reid::docx_texto(&p),
+            Some("txt") | Some("md") => reid::ler_texto(&p),
+            _ => Err("só .txt e .docx (o PDF passa pelo pdftotext)".into()),
+        }
+    })
+    .await
+}
+
+/// Os PDFs (e .docx e .txt) de uma pasta (sem descer às subpastas; a de saída do Incognitus fica de fora).
 #[tauri::command]
 fn listar_pdfs(pasta: String) -> Result<Vec<String>, String> {
     let mut v: Vec<String> = std::fs::read_dir(&pasta)
         .map_err(|e| format!("não consegui ler a pasta: {e}"))?
         .filter_map(|e| e.ok())
         .map(|e| e.path())
-        .filter(|p| p.is_file() && p.extension().map_or(false, |x| x.eq_ignore_ascii_case("pdf")))
-        .filter(|p| !p.file_name().map_or(false, |n| n.to_string_lossy().starts_with('.')))
+        .filter(|p| p.is_file() && aceito(p))
         .map(|p| p.to_string_lossy().to_string())
         .collect();
     v.sort();
@@ -279,7 +338,7 @@ fn expandir_caminhos(caminhos: Vec<String>) -> Vec<String> {
         let p = PathBuf::from(&c);
         if p.is_dir() {
             v.extend(listar_pdfs(c).unwrap_or_default());
-        } else if p.is_file() && p.extension().map_or(false, |x| x.eq_ignore_ascii_case("pdf")) {
+        } else if p.is_file() && aceito(&p) {
             v.push(c);
         }
     }
@@ -398,6 +457,27 @@ fn motor_voltar(estado: State<'_, Estado>) -> Result<motor::MotorAtivo, String> 
     motor::voltar(&motor::pasta(&estado.0.dados))
 }
 
+// ── o modelo da anonimização rigorosa (opcional; baixado na primeira vez) ─────────────────────────────────────────
+
+#[tauri::command]
+async fn ner_estado(estado: State<'_, Estado>) -> Result<ner::EstadoNer, String> {
+    let dados = estado.0.dados.clone();
+    em_segundo_plano(move || Ok(ner::estado(&dados))).await
+}
+
+#[tauri::command]
+async fn ner_baixar(estado: State<'_, Estado>) -> Result<ner::EstadoNer, String> {
+    ner::baixar(&estado.0.dados).await
+}
+
+/// Os bytes do model.onnx ou do tokenizer.json, crus (sem passar por JSON).
+#[tauri::command]
+async fn ner_ler(estado: State<'_, Estado>, arquivo: String) -> Result<tauri::ipc::Response, String> {
+    let dados = estado.0.dados.clone();
+    let b = em_segundo_plano(move || ner::ler(&dados, &arquivo)).await?;
+    Ok(tauri::ipc::Response::new(b))
+}
+
 /// Erros e marcos do front no stderr (para diagnóstico; nunca leva texto dos autos).
 #[tauri::command]
 fn registrar(msg: String) {
@@ -472,6 +552,7 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             extrair_texto,
             ocr_pagina,
             limpar_arquivo,
+            texto_documento,
             gravar_saida,
             pasta_padrao,
             listar_pdfs,
@@ -488,6 +569,9 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             motor_baixar,
             motor_instalar,
             motor_voltar,
+            ner_estado,
+            ner_baixar,
+            ner_ler,
             registrar,
             e2e_plano,
             e2e_gravar,
@@ -545,6 +629,18 @@ mod testes {
     use super::*;
 
     #[test]
+    fn nome_de_saida_seguro() {
+        assert_eq!(nome_seguro("relatorio - «Thanasis»"), "relatorio - «Thanasis»");
+        assert_eq!(nome_seguro(" a/b:c*?  d. "), "a-b-c-- d");
+        assert_eq!(nome_seguro("../.."), "-");
+        assert_eq!(nome_seguro("   "), "documento");
+        assert_eq!(com_sufixo("relatorio - «Thanasis»"), "relatorio - «Thanasis»_anon");
+        assert_eq!(com_sufixo("autos_ANON"), "autos_ANON");
+        assert!(aceito(Path::new("x/Relatório.DOCX")) && aceito(Path::new("a.txt")) && aceito(Path::new("a.pdf")));
+        assert!(!aceito(Path::new("~$rascunho.docx")) && !aceito(Path::new(".oculto.pdf")) && !aceito(Path::new("a.json")));
+    }
+
+    #[test]
     fn pastas_do_avulso_e_do_hospedado() {
         let (d, c) = (PathBuf::from("dados"), PathBuf::from("cache"));
         assert_eq!(pastas(d.clone(), c.clone(), false), (d.clone(), c.clone()));
@@ -575,7 +671,7 @@ mod testes {
         // cada comando do build.rs está no conjunto `default`; o `api` só tem comandos que existem
         let build = include_str!("../build.rs");
         let comandos: Vec<String> = build.split('"').skip(1).step_by(2).map(|c| c.to_string()).collect();
-        assert_eq!(comandos.len(), 26);
+        assert_eq!(comandos.len(), 30);
         let toml = include_str!("../permissions/default.toml");
         let (padrao, api) = toml.split_once("[[set]]").expect("o conjunto api");
         for c in &comandos {

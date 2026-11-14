@@ -55,6 +55,43 @@ pub fn parte_com_texto(nome: &str) -> bool {
     matches!(f, "document" | "footnotes" | "endnotes" | "comments") || numerado("header") || numerado("footer")
 }
 
+/// O texto corrido de um .docx (o corpo: um parágrafo por linha), para anonimizar junto com os PDFs do caso.
+pub fn docx_texto(p: &Path) -> Result<String, String> {
+    let partes = docx_partes(p)?;
+    let doc = partes.iter().find(|x| x.nome.eq_ignore_ascii_case("word/document.xml")).ok_or("sem word/document.xml")?;
+    Ok(xml_para_texto(&doc.xml))
+}
+
+/// WordprocessingML → texto: o que está em <w:t>, com quebra no fim do parágrafo, <w:br/> e <w:cr/>, e tab em <w:tab/>.
+pub fn xml_para_texto(xml: &str) -> String {
+    let mut out = String::new();
+    let mut resto = xml;
+    let mut em_texto = false;
+    while let Some(k) = resto.find('<') {
+        if em_texto {
+            out.push_str(&desescapar(&resto[..k]));
+        }
+        let Some(f) = resto[k..].find('>') else { break };
+        let tag = &resto[k + 1..k + f];
+        let nome = tag.trim_start_matches('/').split(|c: char| c.is_whitespace() || c == '/').next().unwrap_or("");
+        let fecha = tag.starts_with('/');
+        let vazia = tag.ends_with('/');
+        match nome {
+            "w:t" => em_texto = !fecha && !vazia,
+            "w:p" if fecha => out.push('\n'),
+            "w:br" | "w:cr" => out.push('\n'),
+            "w:tab" if !fecha => out.push('\t'),
+            _ => {}
+        }
+        resto = &resto[k + f + 1..];
+    }
+    out
+}
+
+fn desescapar(s: &str) -> String {
+    s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&")
+}
+
 pub fn docx_partes(p: &Path) -> Result<Vec<Parte>, String> {
     let f = std::fs::File::open(p).map_err(|e| format!("não consegui abrir {}: {e}", p.display()))?;
     let mut z = zip::ZipArchive::new(f).map_err(|_| "não parece um .docx (o arquivo não é um zip)".to_string())?;
@@ -119,6 +156,12 @@ pub fn nome_seguro(s: &str) -> String {
 #[cfg(test)]
 mod testes {
     use super::*;
+
+    #[test]
+    fn texto_do_docx() {
+        let xml = r#"<w:document><w:body><w:p><w:r><w:t>Alvo: JOAO</w:t></w:r><w:r><w:t xml:space="preserve"> TESTEFULANO &amp; cia</w:t></w:r></w:p><w:p><w:r><w:tab/><w:t>linha 2</w:t><w:br/><w:t>linha 3</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>célula</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>"#;
+        assert_eq!(xml_para_texto(xml), "Alvo: JOAO TESTEFULANO & cia\n\tlinha 2\nlinha 3\ncélula\n");
+    }
 
     #[test]
     fn texto_em_utf8_e_em_ansi() {

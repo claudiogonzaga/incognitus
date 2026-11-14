@@ -168,5 +168,73 @@ def main():
     print("3 PDFs fictícios em", PASTA)
 
 
+# A anonimização rigorosa: amigas citadas só pelo prenome (o motor não tem como saber que são pessoas) e um endereço
+# sem o rótulo "Endereço:". O teste confere que, com o modelo ligado, saem tarjados. Tudo fictício.
+RIGOROSO = """TERMO DE DECLARAÇÕES
+Declarante: JOAO TESTEFULANO PIRAMBOIA, brasileiro, solteiro, lavrador.
+QUE a declarante diz que suas amigas Gertrudes e Leocádia chegaram na residência e tentaram acalmar o
+declarante, contudo ele estava muito nervoso e não quis conversar.
+QUE as duas moram na Rua das Palmeiras Fictícias, 120, Bairro Inventado, perto da praça.
+Nada mais disse."""
+
+
+CASO_A = """PODER JUDICIÁRIO DO ESTADO DE MATO GROSSO
+Processo nº 1000999-11.2026.8.11.0099
+AUTOR: MINISTÉRIO PÚBLICO DO ESTADO DE MATO GROSSO
+FLAGRANTEADO: CLODOALDO TESTEFULANO SALAMANDRA
+TERMO DE AUDIÊNCIA DE CUSTÓDIA
+Presente o flagranteado CLODOALDO TESTEFULANO SALAMANDRA,
+brasileiro, inscrito no CPF nº 529.982.247-25.
+A defesa requereu a liberdade provisória. O Ministério Público se manifestou pela conversão."""
+CASO_RELATORIO = ["RELATÓRIO DE INTELIGÊNCIA", "",
+                  "Alvo: CLODOALDO TESTEFULANO SALAMANDRA, CPF 529.982.247-25.",
+                  "O alvo foi visto com ROSIMEIRE TESTEBELTRANA DIAS, sua companheira, na residência do casal."]
+CASO_TERMO = """TERMO DE DECLARAÇÕES
+Declarante: ROSIMEIRE TESTEBELTRANA DIAS, companheira do flagranteado.
+QUE conhece CLODOALDO TESTEFULANO SALAMANDRA há cinco anos.
+"""
+CASO_OUTRO = """PODER JUDICIÁRIO DO ESTADO DE MATO GROSSO
+Processo nº 1000888-22.2026.8.11.0088
+FLAGRANTEADO: GENOVEVO TESTECICRANO PIRES
+TERMO DE AUDIÊNCIA DE CUSTÓDIA
+Presente o flagranteado GENOVEVO TESTECICRANO PIRES, inscrito no CPF nº 111.444.777-35."""
+CASO_NOMES = {"a": "1 - custódia - 1000999-11.2026.8.11.0099.pdf", "relatorio": "relatorio - não juntar - CLODOALDO TESTEFULANO SALAMANDRA.docx",
+              "termo": "termo da companheira.txt", "outro": "2 - custódia - 1000888-22.2026.8.11.0088.pdf"}
+
+
+def docx_minimo(paragrafos):
+    """Um .docx mínimo (sem python-docx): só o document.xml com os parágrafos."""
+    import zipfile
+    from xml.sax.saxutils import escape
+    corpo = "".join(f'<w:p><w:r><w:t xml:space="preserve">{escape(p)}</w:t></w:r></w:p>' for p in paragrafos)
+    b = io.BytesIO()
+    with zipfile.ZipFile(b, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+                   '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+        z.writestr("_rels/.rels", '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
+        z.writestr("word/document.xml", '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                   f'<w:body>{corpo}</w:body></w:document>')
+    return b.getvalue()
+
+
+def gerar_caso(pasta):
+    """Os documentos de um caso (PDF, .docx com o nome da pessoa no título, .txt) e o PDF de outro caso."""
+    os.makedirs(pasta, exist_ok=True)
+    open(os.path.join(pasta, CASO_NOMES["a"]), "wb").write(pdf_texto([CASO_A.splitlines()]))
+    open(os.path.join(pasta, CASO_NOMES["relatorio"]), "wb").write(docx_minimo(CASO_RELATORIO))
+    open(os.path.join(pasta, CASO_NOMES["termo"]), "w", encoding="utf-8").write(CASO_TERMO)
+    open(os.path.join(pasta, CASO_NOMES["outro"]), "wb").write(pdf_texto([CASO_OUTRO.splitlines()]))
+    return [os.path.join(pasta, CASO_NOMES[k]) for k in ("a", "relatorio", "termo", "outro")]
+
+
+def gerar_rigoroso(pasta):
+    os.makedirs(pasta, exist_ok=True)
+    p = os.path.join(pasta, "rigoroso.pdf")
+    open(p, "wb").write(pdf_texto([CAPA, RIGOROSO.splitlines()]))
+    return p
+
+
 if __name__ == "__main__":
     main()

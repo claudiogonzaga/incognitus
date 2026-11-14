@@ -51,6 +51,11 @@ import gerar_pdfs  # noqa: E402
 falhas = []
 
 
+def A(n):
+    """O nome de saída (sem a extensão): o do original com _anon no fim."""
+    return os.path.splitext(n)[0] + "_anon"
+
+
 def confere(cond, msg):
     print(("  ✓ " if cond else "  ✗ ") + msg)
     if not cond:
@@ -232,15 +237,102 @@ def conferir_reid(rel2, mm):
 def incognitus_aberto():
     """No Mac, um Incognitus instalado e ABERTO (mesma identidade do app de teste) atrapalha o teste: o worker do
     motor baixado não respondeu em 5 min (visto em 10/11/2026; fechado o app, passou em 18 s)."""
-    if sys.platform != "darwin":
+    if sys.platform != "darwin" or os.environ.get("SKIA_E2E_OUTRA_IDENTIDADE"):
+        # SKIA_E2E_OUTRA_IDENTIDADE=1: o app de teste foi montado com outro identifier (então não divide nada com o instalado):
+        #   npx tauri build --debug --no-bundle --config '{"identifier":"br.eco.consciencia.incognitus.teste"}'
         return False
     r = subprocess.run(["pgrep", "-f", "Incognitus.app/Contents/MacOS/"], capture_output=True, text=True)
     return r.returncode == 0 and r.stdout.strip() != ""
 
 
+def secao_rigorosa(dados):
+    print("6. a anonimização rigorosa (modelo de NER, com SKIA_NER_DIR apontando para o modelo já baixado)")
+    ner_dir = os.environ.get("SKIA_NER_DIR", "")
+    if not (ner_dir and os.path.exists(os.path.join(ner_dir, "model.onnx"))):
+        print("  (pulei: sem o modelo em SKIA_NER_DIR)")
+    else:
+        pasta_r = os.path.join(BASE, "rigoroso")
+        shutil.rmtree(pasta_r, ignore_errors=True)
+        p = gerar_pdfs.gerar_rigoroso(pasta_r)
+        saida_n, saida_r = os.path.join(pasta_r, "normal"), os.path.join(pasta_r, "rigorosa")
+        relr = {}
+        for modo, saida in (("normal", saida_n), ("rigorosa", saida_r)):
+            relr[modo] = rodar_app({"arquivos": [p], "saida": saida, "txt": True, "rigoroso": modo == "rigorosa",
+                                    "extracao": os.path.join(SAIDA, "extracao-" + modo),
+                                    "relatorio": os.path.join(SAIDA, "relatorio-" + modo + ".json")}, "http://127.0.0.1:9/", dados)
+        it = relr["rigorosa"]["itens"][0]
+        print(f"  rigorosa: {it['etapa']} · {it.get('segundos')} s · {(it.get('stats') or {}).get('rigorosoAceitos')} a mais · avisos {it.get('avisos')}"
+              + (f" · ERRO {it['erro']}" if it.get("erro") else ""))
+        tn = texto_pdf(os.path.join(saida_n, "rigoroso_anon.pdf")) if os.path.exists(os.path.join(saida_n, "rigoroso_anon.pdf")) else ""
+        tr = texto_pdf(os.path.join(saida_r, "rigoroso_anon.pdf")) if os.path.exists(os.path.join(saida_r, "rigoroso_anon.pdf")) else ""
+        confere("Gertrudes" in tn, "sem a opção, as amigas citadas só pelo prenome ficam em claro (o motor não as conhece)")
+        confere(it["etapa"] == "pronto" and tr and not any(x in tr for x in ("Gertrudes", "Leocádia", "Leocadia")),
+                "com a anonimização rigorosa, o modelo as acha e elas saem tarjadas")
+        confere(bool(tr) and "Palmeiras" not in tr, "o endereço sem rótulo também sai")
+        confere(bool(tr) and "TESTEFULANO" not in tr.upper(), "o que o motor já tarjava continua tarjado")
+        conf = os.path.join(saida_r, "NÃO ENVIAR À IA (nomes reais)", "rigoroso_anon — CONFIRA (nomes reais).txt")
+        confere(os.path.exists(conf) and "Anonimização rigorosa" in open(conf, encoding="utf-8").read(), "a lista CONFIRA conta o que o modelo tarjou e o que não")
+        cm = os.path.join(saida_r, "NÃO ENVIAR À IA (nomes reais)", "rigoroso_anon — MAPA (nomes reais).json")
+        mr = json.load(open(cm, encoding="utf-8")) if os.path.exists(cm) else {"tokens": {}}
+        confere(any(v.get("valor") == "Gertrudes" for v in mr["tokens"].values()), "os nomes achados pelo modelo entram no mapa (a reidentificação os devolve)")
+
+
+def secao_casos(dados):
+    print("7. vários documentos do mesmo caso (PDF, .docx e .txt) e um de outro caso: um mapa só, o nome do arquivo sem nomes")
+    pasta_c = os.path.join(BASE, "caso")
+    shutil.rmtree(pasta_c, ignore_errors=True)
+    arqs = gerar_pdfs.gerar_caso(pasta_c)
+    saida = os.path.join(pasta_c, "saida")
+    rel = rodar_app({"arquivos": arqs, "saida": saida, "txt": True, "extracao": os.path.join(SAIDA, "extracao-caso"),
+                     "relatorio": os.path.join(SAIDA, "relatorio-caso.json")}, "http://127.0.0.1:9/", dados)
+    por = {it["nome"]: it for it in rel["itens"]}
+    N = gerar_pdfs.CASO_NOMES
+    for it in rel["itens"]:
+        print(f"  {it['nome']}: {it['etapa']} · caso {(it.get('caso') or {}).get('chave')} ({(it.get('caso') or {}).get('n')}, {(it.get('caso') or {}).get('motivo')})"
+              + (f" · ERRO {it['erro']}" if it.get("erro") else ""))
+    confere(all(it["etapa"] == "pronto" for it in rel["itens"]) and len(rel["itens"]) == 4, "os 4 arquivos (2 PDFs, 1 .docx, 1 .txt) ficaram prontos")
+    ca = [(por.get(N[k]) or {}).get("caso") or {} for k in ("a", "relatorio", "termo", "outro")]
+    confere(ca[0].get("n") == 3 and ca[0].get("chave") == ca[1].get("chave") == ca[2].get("chave"), "os 3 documentos do caso foram juntados")
+    confere(ca[3].get("n") == 1 and ca[3].get("chave") != ca[0].get("chave"), "o PDF do outro caso ficou sozinho")
+    mapas = [json.load(open(os.path.join(saida, "NÃO ENVIAR À IA (nomes reais)", os.path.basename(por[N[k]]["saida"]["pdf"])[:-4] + " — MAPA (nomes reais).json"), encoding="utf-8"))
+             for k in ("a", "relatorio", "termo")]
+    confere(mapas[0]["tokens"] == mapas[1]["tokens"] == mapas[2]["tokens"], "um mapa só para o caso (o mesmo nos 3)")
+    tok = [t for t, v in mapas[0]["tokens"].items() if v.get("valor") == "CLODOALDO TESTEFULANO SALAMANDRA"]
+    tok = tok[0] if tok else "?"
+    nomes_saida = {k: os.path.basename(por[N[k]]["saida"]["pdf"]) for k in N}
+    confere(nomes_saida["relatorio"] == "relatorio - não juntar - " + tok + "_anon.pdf", f"o nome do arquivo sai sem o nome da pessoa: {nomes_saida['relatorio']}")
+    confere(nomes_saida["a"] == N["a"][:-4] + "_anon.pdf" and nomes_saida["termo"] == "termo da companheira_anon.pdf", "os nomes sem pessoa ficam, com _anon no fim (e a saída do .txt é .pdf)")
+    reais = ["CLODOALDO", "SALAMANDRA", "ROSIMEIRE", "TESTEBELTRANA", "GENOVEVO", "TESTECICRANO", "529.982", "111.444"]
+    for k in ("a", "relatorio", "termo", "outro"):
+        t = texto_pdf(por[N[k]]["saida"]["pdf"])
+        achou = [x for x in reais if x in t.upper()]
+        confere(not achou and (k == "outro" or tok in t), f"{nomes_saida[k]}: sem nomes reais" + (" e com o mesmo token da pessoa" if k != "outro" else "") + (f" — ACHEI {achou}" if achou else ""))
+    confere(not any(x in " ".join(os.listdir(saida)).upper() for x in reais), "nenhum nome real nos nomes dos arquivos de saída")
+    t_rel = texto_pdf(por[N["relatorio"]]["saida"]["pdf"])
+    confere("DOCUMENTOS DESTE CASO (3" in t_rel, "o cabeçalho lista os documentos do caso")
+    # Separar (outra rodada, noutra pasta): o termo sai do caso, e os dois casos são refeitos
+    saida2 = os.path.join(pasta_c, "saida-separar")
+    rel2 = rodar_app({"arquivos": arqs, "saida": saida2, "txt": False, "extracao": os.path.join(SAIDA, "extracao-caso2"),
+                      "relatorio": os.path.join(SAIDA, "relatorio-caso2.json"), "separar": N["termo"]}, "http://127.0.0.1:9/", dados)
+    dep = {it["nome"]: it for it in rel2.get("depoisDeSeparar") or []}
+    ct, ca2 = (dep.get(N["termo"]) or {}).get("caso") or {}, (dep.get(N["a"]) or {}).get("caso") or {}
+    confere(ct.get("n") == 1 and ca2.get("n") == 2 and all(i.get("etapa") == "pronto" for i in dep.values()),
+            f"Separar tira o documento do caso e refaz os dois (termo: {ct.get('n')}, custódia: {ca2.get('n')})")
+
+
 def main():
     if not os.path.exists(EXE):
         raise SystemExit("falta o executável: npx tauri build --debug --no-bundle")
+    if os.environ.get("SKIA_E2E_SO") == "casos":   # só a seção 7
+        os.makedirs(SAIDA, exist_ok=True)
+        secao_casos(os.path.join(SAIDA, "dados-casos"))
+        print("\nRESULTADO: " + ("tudo certo" if not falhas else f"{len(falhas)} falha(s)"))
+        sys.exit(1 if falhas else 0)
+    if os.environ.get("SKIA_E2E_SO") == "rigoroso":   # só a seção 6 (para iterar no modo rigoroso)
+        os.makedirs(SAIDA, exist_ok=True)
+        secao_rigorosa(os.path.join(SAIDA, "dados-rigoroso"))
+        print("\nRESULTADO: " + ("tudo certo" if not falhas else f"{len(falhas)} falha(s)"))
+        sys.exit(1 if falhas else 0)
     shutil.rmtree(SAIDA, ignore_errors=True)
     shutil.rmtree(PDFS, ignore_errors=True)
     os.makedirs(SAIDA)
@@ -266,18 +358,19 @@ def main():
 
     print("2. a saída")
     pasta = os.path.join(PDFS, "Incognitus — anonimizados")   # a saída padrão: ao lado dos originais
+    priv = os.path.join(pasta, "NÃO ENVIAR À IA (nomes reais)")   # o mapa e a lista CONFIRA, à parte dos PDFs
     confere(os.path.isdir(pasta), "a pasta padrão de saída é 'Incognitus — anonimizados', ao lado dos originais")
     saidas = sorted(f for f in os.listdir(pasta) if f.lower().endswith(".pdf"))
-    confere(saidas == sorted(nomes), f"nomes de saída iguais aos de entrada: {saidas}")
+    confere(saidas == sorted(A(n) + ".pdf" for n in nomes), f"nomes de saída = os de entrada com _anon no fim: {saidas}")
     proibidos = list(gerar_pdfs.PESSOAS.values()) + list(gerar_pdfs.IDENT.values()) + \
         ["PIRAMBOIA", "TESTEFULANO", "TESTEFULANA", "ROSIMEIRE", "ANTONIETA", "GERALDO", "GUIMARAES", "123456789", "998765432"] + \
         [gerar_pdfs.ASSINANTE, "HELENA FICTICIA", gerar_pdfs.USUARIO_PJE]   # o rodapé do PJe: quem assina e quem gerou o PDF
     for n in nomes:
-        p = os.path.join(pasta, n)
+        p = os.path.join(pasta, A(n) + ".pdf")
         doc = pymupdf.open(p)
         orig = pymupdf.open(os.path.join(PDFS, n))
         t = texto_pdf(p)
-        txt = open(os.path.join(pasta, n[:-4] + ".txt"), encoding="utf-8").read()
+        txt = open(os.path.join(pasta, A(n) + ".txt"), encoding="utf-8").read()
         achados = [x for x in proibidos if norm(x) in norm(t) or norm(x) in norm(txt) or norm(x).replace(".", "").replace("-", "") in norm(t).replace(".", "").replace("-", "")]
         confere(not achados, f"{n}: nenhum dado de pessoa fictícia em claro" + (f" — ACHEI {achados}" if achados else ""))
         if n == "texto.pdf":
@@ -292,8 +385,11 @@ def main():
             if f"PÁGINA {pagina} =====" not in doc[pagina].get_text():
                 confere(False, f"{n}: a folha {pagina + 1} é a página {pagina} dos autos")
                 break
-        mapa = os.path.join(pasta, n[:-4] + " — MAPA (nomes reais).json")
-        confere(os.path.exists(mapa) and "TESTEFULAN" in open(mapa, encoding="utf-8").read().upper(), f"{n}: mapa gravado ao lado (sempre)")
+        mapa = os.path.join(priv, A(n) + " — MAPA (nomes reais).json")
+        confere(os.path.exists(mapa) and "TESTEFULAN" in open(mapa, encoding="utf-8").read().upper(), f"{n}: mapa gravado na pasta NÃO ENVIAR À IA (sempre)")
+        conf = os.path.join(priv, A(n) + " — CONFIRA (nomes reais).txt")
+        confere(os.path.exists(conf) and "CONFIRA ANTES DE USAR" in open(conf, encoding="utf-8").read(), f"{n}: lista CONFIRA gravada junto do mapa")
+        confere(not [f for f in os.listdir(pasta) if "MAPA" in f or "CONFIRA" in f], f"{n}: nada de nomes reais solto ao lado dos PDFs")
         s, m = originais[n]
         confere(sha(os.path.join(PDFS, n)) == s and os.path.getmtime(os.path.join(PDFS, n)) == m, f"{n}: original intacto (sha256 e data)")
     tmp = os.path.join(dados, "cache", "tmp")
@@ -315,9 +411,9 @@ def main():
     json.dump({"tag_name": "v99.0.0", "body": "notas da versao ficticia", "html_url": url + "pagina", "draft": False, "prerelease": False,
                "assets": [{"name": n, "browser_download_url": url + n, "size": 30} for n in ("Incognitus-Windows.msi", "Incognitus-macOS.dmg")]},
               open(os.path.join(pub, "release.json"), "w", encoding="utf-8"))
-    mm = minutas(os.path.join(pasta, "texto — MAPA (nomes reais).json"))
+    mm = minutas(os.path.join(priv, "texto_anon — MAPA (nomes reais).json"))
     plano2 = {"arquivos": [], "relatorio": os.path.join(SAIDA, "relatorio2.json"), "atualizar": True, "extracao": os.path.join(SAIDA, "extracao"),
-              "reidentificar": {"mapa": os.path.join(pasta, "texto — MAPA (nomes reais).json"), "texto": mm["texto"], "arquivos": [mm["txt"], mm["docx"]]},
+              "reidentificar": {"mapa": os.path.join(priv, "texto_anon — MAPA (nomes reais).json"), "texto": mm["texto"], "arquivos": [mm["txt"], mm["docx"]]},
               "atualizacaoApp": True}
     shutil.rmtree(os.path.join(dados, "dados", "motor"), ignore_errors=True)   # volta ao embutido
     rel2 = rodar_app(plano2, url, dados)
@@ -351,6 +447,9 @@ def main():
                     open(os.path.join(SAIDA, it["nome"] + ".servico.txt"), "w", encoding="utf-8").write(js["text"])
         finally:
             proc.kill()
+
+    secao_rigorosa(dados)
+    secao_casos(dados)
 
     print()
     print("RESULTADO: " + ("tudo certo" if not falhas else f"{len(falhas)} falha(s)"))

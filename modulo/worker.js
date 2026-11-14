@@ -6,7 +6,7 @@ self.onmessage = function (ev) {
   try {
     switch (m.tipo) {
       case 'versao':
-        r = { versao: SkiaMotor.versao, api: SkiaMotor.api };
+        r = { versao: SkiaMotor.versao, api: SkiaMotor.api, caso: typeof SkiaMotor.anonimizarCaso === 'function' };
         break;
       case 'configurar':
         r = SkiaMotor.configurar(m.cfg);
@@ -18,11 +18,18 @@ self.onmessage = function (ev) {
         r = SkiaMotor.aplicarOcr(m.texto, m.fracas, m.lidos);
         break;
       case 'anonimizar':
-        r = SkiaMotor.anonimizar(m.texto, { meta: m.meta, incluirMapa: true });
+        r = SkiaMotor.anonimizar(m.texto, { meta: m.meta, incluirMapa: true, extras: m.extras, rigoroso: !!m.rigoroso });
         r.mapaJson = JSON.stringify(r.mapa, null, 1);
         delete r.mapa;
         delete r.corpo;
         if (!m.comTexto) delete r.texto;
+        break;
+      case 'caso':
+        // vários documentos do mesmo caso (ou um só): a saída repartida, um mapa, a assinatura para juntar
+        r = SkiaMotor.anonimizarCaso(m.docs, { incluirMapa: true, extras: m.extras, rigoroso: !!m.rigoroso });
+        r.mapaJson = JSON.stringify(r.mapa, null, 1);
+        delete r.mapa;
+        if (!m.comTexto) r.documentos.forEach(function (d) { delete d.texto; });
         break;
       case 'reidentificar':
         r = SkiaMotor.reidentificar(m.texto, m.mapa, m.titulo);

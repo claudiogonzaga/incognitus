@@ -135,6 +135,60 @@ if (temGraphe) {
   const ruins = casos.filter((c) => !c[1]);
   ruins.forEach((c) => console.log('✗ carimbo: ' + c[0]));
   console.log('CARIMBOS: ' + (casos.length - ruins.length) + ' ok, ' + ruins.length + ' falhas, de ' + casos.length);
-  if (ruins.length) falhou = true;
+  // 5 ─ a anonimização rigorosa: o filtro do que o modelo aponta (sem o modelo; dados fictícios)
+  const tr = 'PROCESSO Nº 1000001-11.2026.8.11.0001\nRÉU: GERVASIO TESTEFULANO DE TAL\f'
+    + 'TERMO DE DECLARAÇÕES\nQUE a declarante diz que suas amigas Gertrudes e Leocádia chegaram e tentaram acalmar GERVASIO TESTEFULANO DE TAL.\n'
+    + 'QUE a rosa estava murcha e a Rosa não falou nada.\nConforme julgado no HC 123.456/MT, Rel. Min. Fulano Ficticio, Plenário, julgado em 01/01/2020 (Teodoro Precedente versus Estado).\n\f';
+  const ex = [{ nome: 'Gertrudes', tipo: 'PESSOA' }, { nome: 'Leocádia', tipo: 'PESSOA' }, { nome: 'Rosa', tipo: 'PESSOA' }, { nome: 'Teodoro Precedente', tipo: 'PESSOA' }];
+  const sem = M.anonimizar(tr, {}), com = M.anonimizar(tr, { extras: ex, rigoroso: true, incluirMapa: true });
+  const rig = [
+    ['sem extras, nada muda', sem.texto.indexOf('Gertrudes') >= 0],
+    ['prenome solto apontado vira token (com acento)', !/Gertrudes|Leocádia/.test(com.texto)],
+    ['palavra que também aparece em minúscula fica', /a Rosa não falou/.test(com.texto)],
+    ['precedente citado fica inteiro', /Teodoro Precedente versus Estado/.test(com.texto)],
+    ['a lista CONFIRA conta o que entrou e o que não entrou', /Tarjados a mais: 2/.test(com.confira) && /Apontados pelo modelo e NÃO tarjados \(confira\): 2/.test(com.confira)],
+    ['o mapa leva os nomes novos (a reidentificação devolve)', M.reidentificar(com.texto, com.mapa).texto.indexOf('Leocádia') >= 0],
+  ].filter((c) => !c[1]);
+  rig.forEach((c) => console.log('✗ rigoroso: ' + c[0]));
+  console.log('RIGOROSO: ' + (6 - rig.length) + ' ok, ' + rig.length + ' falhas, de 6');
+  // 6 ─ vários documentos do mesmo caso: um mapa só, as páginas repartidas, o nome do arquivo sem nomes (dados fictícios)
+  const dA = { nome: '1 - 13h - custódia - 1000999-11.2026.8.11.0099.pdf',
+    texto: 'PODER JUDICIÁRIO DO ESTADO DE MATO GROSSO\nProcesso nº 1000999-11.2026.8.11.0099\nAUTOR: MINISTÉRIO PÚBLICO DO ESTADO DE MATO GROSSO\n'
+      + 'FLAGRANTEADO: CLODOALDO TESTEFULANO SALAMANDRA\nTERMO DE AUDIÊNCIA DE CUSTÓDIA\nPresente o flagranteado CLODOALDO TESTEFULANO SALAMANDRA, '
+      + 'brasileiro, inscrito no CPF nº 529.982.247-25, filho de ZULEIDE TESTEFULANA SALAMANDRA.\f'
+      + 'DECISÃO\nConverto a prisão de CLODOALDO TESTEFULANO SALAMANDRA em preventiva.\f' };
+  const dB = { nome: 'relatorio janus - não juntar - CLODOALDO TESTEFULANO SALAMANDRA.pdf',
+    texto: 'RELATÓRIO DE INTELIGÊNCIA\nAlvo: CLODOALDO TESTEFULANO SALAMANDRA, CPF 529.982.247-25.\nO alvo foi visto com ROSIMEIRE TESTEBELTRANA DIAS, '
+      + 'sua companheira, na residência do casal.\f' };
+  const dC = { nome: '2 - 13h15 - custódia - 1000888-22.2026.8.11.0088.pdf',
+    texto: 'PODER JUDICIÁRIO DO ESTADO DE MATO GROSSO\nProcesso nº 1000888-22.2026.8.11.0088\nFLAGRANTEADO: GENOVEVO TESTECICRANO PIRES\n'
+      + 'TERMO DE AUDIÊNCIA DE CUSTÓDIA\nPresente o flagranteado GENOVEVO TESTECICRANO PIRES, inscrito no CPF nº 111.444.777-35.\f' };
+  const reais = /CLODOALDO|SALAMANDRA|ROSIMEIRE|ZULEIDE|529\.982/;
+  const cAB = M.anonimizarCaso([dA, dB], { incluirMapa: true });
+  const sA = M.anonimizarCaso([dA], {}).assinatura, sB = M.anonimizarCaso([dB], {}).assinatura, sC = M.anonimizarCaso([dC], {}).assinatura;
+  const comum = (x, y) => x.filter((k) => y.indexOf(k) >= 0);
+  const tokReu = (Object.keys(cAB.mapa.tokens).filter((t) => cAB.mapa.tokens[t].valor === 'CLODOALDO TESTEFULANO SALAMANDRA')[0]) || '?';
+  const um = M.anonimizarCaso([dA], {}), solo = M.anonimizar(dA.texto, {});
+  const caso = [
+    ['dois documentos, cada um com as suas páginas', cAB.documentos.length === 2 && cAB.documentos[0].paginas.length === 2 && cAB.documentos[1].paginas.length === 1],
+    ['as páginas de cada documento começam em 1', /^===== PÁGINA 1 =====/.test(cAB.documentos[1].paginas[0])],
+    ['a mesma pessoa leva o mesmo token nos dois', cAB.documentos.every((d) => d.paginas.join('\n').indexOf(tokReu) >= 0)],
+    ['nenhum nome real nas páginas nem no cabeçalho', !cAB.documentos.some((d) => reais.test(d.paginas.join('\n')) || reais.test(d.texto)) && !reais.test(cAB.cabecalho)],
+    ['o nome do arquivo sai sem o nome da pessoa', cAB.documentos[1].nomeSaida === 'relatorio janus - não juntar - ' + tokReu],
+    ['o nome do arquivo sem pessoa fica igual', cAB.documentos[0].nomeSaida === '1 - 13h - custódia - 1000999-11.2026.8.11.0099'],
+    ['o cabeçalho lista os documentos do caso', /DOCUMENTOS DESTE CASO \(2/.test(cAB.cabecalho) && cAB.cabecalho.indexOf(tokReu) >= 0],
+    ['a assinatura liga A e B (CPF e nome)', comum(sA.ids, sB.ids).length > 0 && comum(sA.pessoas, sB.pessoas).length > 0],
+    ['a assinatura não liga A e C', !comum(sA.ids, sC.ids).length && !comum(sA.pessoas, sC.pessoas).length && !comum(sA.cnj, sC.cnj).length],
+    ['o número do processo do nome do arquivo entra na assinatura', sA.cnj.indexOf('1000999-11.2026.8.11.0099') >= 0],
+    ['um documento só: as mesmas páginas da anonimização de sempre', JSON.stringify(um.documentos[0].paginas) === JSON.stringify(solo.paginas) && um.cabecalho === solo.cabecalho],
+    ['o nome do arquivo sem pessoa não vira parte', M.partesDoNomeDeArquivo('2 - 13h15 - custódia - 1000888-22.2026.8.11.0088.pdf').length === 0
+      && M.partesDoNomeDeArquivo('Relatório Final - Delegacia de Polícia.pdf').length === 0],
+    ['um papel tomado por nome não troca a palavra no nome do arquivo', M.anonimizarCaso([{ nome: 'termo da companheira.txt',
+      texto: 'TERMO DE DECLARAÇÕES\nDeclarante: ROSIMEIRE TESTEBELTRANA DIAS, companheira do flagranteado.\nQUE conhece o flagranteado há cinco anos.\n\f' }], {}).documentos[0].nomeSaida === 'termo da companheira'],
+    ['a reidentificação devolve os nomes dos dois documentos', M.reidentificar(cAB.documentos[1].texto, cAB.mapa).texto.indexOf('ROSIMEIRE TESTEBELTRANA DIAS') >= 0],
+  ].filter((c) => !c[1]);
+  caso.forEach((c) => console.log('✗ caso: ' + c[0]));
+  console.log('CASO: ' + (14 - caso.length) + ' ok, ' + caso.length + ' falhas, de 14');
+  if (ruins.length || rig.length || caso.length) falhou = true;
 }
 process.exitCode = falhou ? 1 : 0;

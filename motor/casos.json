@@ -987,6 +987,363 @@
     "MARIA": "F",
     "JOAO FICTICIO": "M"
    }
+  },
+  {
+   "id": "BN01",
+   "c": "AUTORIDADE",
+   "t": "Testemunha: GERVASIO BORGES, brasileiro, casado, lavrador, residente nesta cidade.\nQue viu os fatos.\n\fDELEGACIA DE POLÍCIA DE CIDADELA\n\nDeclarante: GERVASIO BORGES\nEscrivão(ã) de Polícia: TESTESERVIDOR CARLOS DIAS\n\nQue o declarante compareceu.\n",
+   "oculto": [
+    "GERVASIO BORGES"
+   ]
+  },
+  {
+   "id": "BN02",
+   "c": "HOMONIMO",
+   "t": "Testemunha: GERVASIO BORGES, brasileiro, casado, lavrador, residente nesta cidade.\nQue viu os fatos.\n\fDeclarante: GERVASIO ROCHA, brasileiro, casado, lavrador, residente nesta cidade.\nQue viu os fatos.\n\fPOLO PASSIVO: GERVASIO BORGES\n\n\n                 GERVASIO BORGES, inscrito no Cadastro Nacional de\nPessoas Físicas, vem requerer a juntada.\n",
+   "oculto": [
+    "GERVASIO BORGES"
+   ]
+  },
+  {
+   "id": "BN04",
+   "c": "PRENOME",
+   "t": "Vítima: KETLYN TESTEFULANA DIAS, brasileira, menor.\n\fA periculosidade do investigado não atinge apenas a vítima Ketlin, mas todas as demais crianças.\n",
+   "oculto": [
+    "Ketlin"
+   ]
+  },
+  {
+   "id": "BN08",
+   "c": "PRENOME",
+   "t": "QUE me desloquei à fazenda e buscando informações junto ao gerente identificado como VALDEMIR o mesmo relatou desconhecer os fatos.\n",
+   "oculto": [
+    "VALDEMIR"
+   ]
+  },
+  {
+   "id": "BI01",
+   "c": "RG",
+   "t": "RG (NÚMERO): 2345678\nÓRGÃO EXPEDIDOR: SSP/MT\n",
+   "oculto": [
+    "2345678"
+   ]
+  },
+  {
+   "id": "BI02",
+   "c": "NASC",
+   "t": "Naturalidade: CIDADELA / MT   Data Nascimento • 01/02/1990   Idade 36\n",
+   "oculto": [
+    "01/02/1990"
+   ]
+  },
+  {
+   "id": "BI03",
+   "c": "CPF",
+   "t": "Documento abc123 CI** 123.456.789-00 RG\n",
+   "oculto": [
+    "123.456.789-00"
+   ]
+  },
+  {
+   "id": "BI04",
+   "c": "CPF",
+   "t": "associação sem fins lucrativos, registrada no C.N.P.J. sob o nº 12.345.678/0001-00, estabelecida no distrito.\n",
+   "oculto": [
+    "12.345.678/0001-00"
+   ]
+  },
+  {
+   "id": "BI05",
+   "c": "END",
+   "t": "GERVASIO TESTEFULANO, brasileiro, residente e domiciliado na Avenida Imaginária, Bairro Recanto Inventado, na cidade de Cidadela/MT.\n",
+   "oculto": [
+    "Avenida Imaginária"
+   ]
+  },
+  {
+   "id": "BI07",
+   "c": "END",
+   "t": "O imóvel fica na Gleba Rio Inventado, sentido Linha 9, 30km entra à esquerda e mais 12 km para dentro.\n",
+   "oculto": [
+    "Gleba Rio Inventado"
+   ]
+  },
+  {
+   "id": "BA01",
+   "c": "CAR",
+   "t": "sob domínio segundo o CAR MT-5199999- A1B2C3D4E5F60718293A4B5C6D7E8F90 e licença ambiental.\n",
+   "oculto": [
+    "A1B2C3D4E5F60718293A4B5C6D7E8F90"
+   ]
+  },
+  {
+   "id": "BA02",
+   "c": "CAR",
+   "t": "Cadastro Ambiental Rural – CAR FEDERAL MT- MT-5199998- A1B2C3D4E5F60718293A4B5C6D7E8F90 Propriedade\n",
+   "oculto": [
+    "A1B2C3D4E5F60718293A4B5C6D7E8F90"
+   ]
+  },
+  {
+   "id": "BE01",
+   "c": "EXCESSO",
+   "t": "Trata-se de uma das fórmulas de cálculo do chamado Custo de Reposição da vegetação.\n",
+   "claro": [
+    "chamado Custo de Reposição"
+   ]
+  },
+  {
+   "id": "BE02",
+   "c": "EXCESSO",
+   "t": "Projeção: Lambert Conformal Conic   Datum: SIRGAS 2000   Satélite: Sentinel\nProjeção: Lambert Conformal Conic   Datum: SIRGAS 2000\n",
+   "claro": [
+    "Lambert Conformal Conic"
+   ]
+  },
+  {
+   "id": "BE03",
+   "c": "EXCESSO",
+   "t": "3  Hymenolobium Elatum Ducke Angelim  0,3685  353,06\n4  Hymenolobium Elatum Ducke Angelim  0,1200  120,00\n",
+   "claro": [
+    "Hymenolobium Elatum Ducke Angelim"
+   ]
+  },
+  {
+   "id": "BE05",
+   "c": "EXCESSO",
+   "t": "Endereço....................: PREJUDICADO\nTelefone....................: PREJUDICADO\n",
+   "claro": [
+    "Endereço....................: PREJUDICADO"
+   ]
+  },
+  {
+   "id": "BE07",
+   "c": "EXCESSO",
+   "t": "Apelação Cível nº 1000001-11.2026.8.11.0001\nRelatora: Desa. Marinalva Testejuíza Dias\nPrimeira Câmara de Direito Público\n",
+   "claro": [
+    "Marinalva Testejuíza Dias"
+   ]
+  },
+  {
+   "id": "BE09",
+   "c": "EXCESSO",
+   "t": "ASSESSORIA AMBIENTAL\n11 - CAR VALIDADO - APROVADO PELA SEMA/MT\n12 - CAR VALIDADO - APROVADO PELA SEMA/MT\n",
+   "claro": [
+    "CAR VALIDADO"
+   ]
+  },
+  {
+   "id": "BE10",
+   "c": "EXCESSO",
+   "t": "Tipologia Vegetal - Savana Estacional sem floresta de galeria\nTipologia Vegetal - Savana Estacional\n",
+   "claro": [
+    "Savana Estacional"
+   ]
+  },
+  {
+   "id": "BE12",
+   "c": "EXCESSO",
+   "t": "Coordenadoria de Fiscalização de Flora\nCarlos Testeservidor Dias - Analista de Meio Ambiente/SEMA-MT\nMario Testeservidor Nunes - Assistente Técnico/SEMA-MT\n",
+   "claro": [
+    "Carlos Testeservidor Dias",
+    "Mario Testeservidor Nunes"
+   ]
+  },
+  {
+   "id": "BR3a",
+   "c": "PRECEDENTE",
+   "t": "O acusado JOAO TESTEFULANO PIRAMBOIA, CPF 123.456.789-09, foi julgado em 12/03/2020 pelo Plenário do Tribunal do Júri, e a testemunha Gervasio Pereira Testefulano o reconheceu.\n",
+   "oculto": [
+    "TESTEFULANO",
+    "123.456.789-09"
+   ]
+  },
+  {
+   "id": "BR3b",
+   "c": "PRECEDENTE",
+   "t": "A vítima, aluna da Turma B, contou ao Conselheiro Relator que Marilda Testebeltrana Souza ligou do telefone (65) 99999-1235.\n",
+   "oculto": [
+    "Testebeltrana",
+    "99999-1235"
+   ]
+  },
+  {
+   "id": "BR4",
+   "c": "PRECEDENTE",
+   "t": "Nesse sentido decidiu o STJ no HC 123456, Rel. Min. Fulano de Tal, julgado em 10/03/2020\nA testemunha Gervasio Pereira Testefulano declarou que viu JOAO TESTEFULANO PIRAMBOIA agredir a vítima\ne que o telefone dele é (65) 99999-1235.\n",
+   "oculto": [
+    "Gervasio Pereira",
+    "99999-1235"
+   ],
+   "claro": [
+    "HC 123456, Rel. Min. Fulano de Tal"
+   ]
+  },
+  {
+   "id": "BR5a",
+   "c": "PRECEDENTE",
+   "t": "Conforme decidiu o STJ no habeas corpus impetrado por JOAO TESTEFULANO PIRAMBOIA e por sua companheira Marilda Testebeltrana Souza contra ato do juízo.\n",
+   "oculto": [
+    "Testebeltrana",
+    "TESTEFULANO"
+   ]
+  },
+  {
+   "id": "BR5b",
+   "c": "PRECEDENTE",
+   "t": "A vítima Marilda Testebeltrana Souza (2012) relatou os fatos. A testemunha Gervasio Pereira Testefulano (2019) confirmou.\n",
+   "oculto": [
+    "Testebeltrana",
+    "Testefulano"
+   ]
+  },
+  {
+   "id": "BR5c",
+   "c": "PRECEDENTE",
+   "t": "(STJ, AgRg no REsp 1.234.567/SP, Rel. Min. Herman Benjamin, Segunda Turma, julgado em 10/03/2020, DJe 12/03/2020).\nSegundo Guilherme Nucci (2019), a pena deve ser individualizada.\n",
+   "claro": [
+    "Herman Benjamin",
+    "Guilherme Nucci"
+   ]
+  },
+  {
+   "id": "BR5d",
+   "c": "PRECEDENTE",
+   "t": "(HC 123.456/MT, Rel. Min. Fulano de Tal, DJe 10/03/2020) — o paciente, CPF 123.456.789-09.\n",
+   "oculto": [
+    "123.456.789-09"
+   ],
+   "claro": [
+    "Fulano de Tal"
+   ]
+  },
+  {
+   "id": "BR6a",
+   "c": "PARTE",
+   "t": "A testemunha Paulo Henrique Pereira Souza, brasileiro, casado.\nSegundo apurado, Paulo Pereira Souza agrediu a vítima.\n",
+   "oculto": [
+    "Henrique",
+    "Pereira Souza"
+   ]
+  },
+  {
+   "id": "BR6b",
+   "c": "PARTE",
+   "t": "A testemunha Gervasio Pereira do Nascimento, brasileiro, casado. A declarante Fernanda Câmara Zimbrauxo, brasileira, casada, nada sabe.\n",
+   "oculto": [
+    "Nascimento",
+    "Zimbrauxo",
+    "Fernanda"
+   ]
+  },
+  {
+   "id": "BR6c",
+   "c": "PARTE",
+   "req": "GERVASIO MAJOR PEREIRA",
+   "t": "RÉU: GERVASIO MAJOR PEREIRA\nO réu GERVASIO MAJOR PEREIRA confessou.\n",
+   "oculto": [
+    "MAJOR PEREIRA"
+   ]
+  },
+  {
+   "id": "BR7",
+   "c": "PARTE",
+   "req": "GERVASIO SÁ PEREIRA",
+   "t": "RÉU: GERVASIO SÁ PEREIRA\nO réu GERVASIO SÁ PEREIRA confessou.\n",
+   "oculto": [
+    "SÁ PEREIRA"
+   ]
+  },
+  {
+   "id": "BR8",
+   "c": "AUTORIDADE",
+   "t": "A testemunha Antonio Ferreira, brasileiro, casado, pedreiro, declarou. A criança Luis Felipe, de 8 anos, contou.\nConforme o voto do Ministro Herman Benjamin, a regra vale.\n",
+   "oculto": [
+    "Antonio Ferreira",
+    "Luis Felipe"
+   ],
+   "claro": [
+    "Ministro Herman Benjamin"
+   ]
+  },
+  {
+   "id": "BQ1",
+   "c": "ACENTO",
+   "t": "O réu JOÃO TESTEFULANO PIRAMBÓIA confessou (acento decomposto, NFD).\n",
+   "oculto": [
+    "TESTEFULANO"
+   ]
+  },
+  {
+   "id": "BQ2",
+   "c": "CPF",
+   "t": "CPF 123.456.789‑09 e CPF 987.654.321​-00 e telefone (65)​99999-1235; CPF 111.444.777–35\n",
+   "oculto": [
+    "123.456.789",
+    "987.654.321",
+    "99999-1235",
+    "111.444.777"
+   ]
+  },
+  {
+   "id": "BQ3",
+   "c": "PARTE",
+   "t": "A testemunha Gervasio Pereira Testefulano, brasileiro, casado. JOAO TESTE­FULANO PIRAMBOIA saiu.\n",
+   "oculto": [
+    "Testefulano",
+    "FULANO PIRAMBOIA"
+   ]
+  },
+  {
+   "id": "BQ4",
+   "c": "PARTE",
+   "t": "POLO PASSIVO: GERVASIO BORGES\n\nOBJETO: juntada de documento\n\nGERVASIO BORGES, inscrito no CPF, vem requerer.\n",
+   "oculto": [
+    "GERVASIO BORGES"
+   ],
+   "claro": [
+    "OBJETO: juntada de documento"
+   ]
+  },
+  {
+   "id": "BQ5",
+   "c": "PROSA",
+   "t": "A testemunha disse que viu Ana Lúcia\nTestefulana, que estava ali.\n",
+   "oculto": [
+    "Testefulana"
+   ]
+  },
+  {
+   "id": "BE1",
+   "c": "EXCESSO",
+   "t": "Os fatos ocorreram em São Paulo, no Jardim Paulista, e na Câmara Municipal. A Lei Maria da Penha se aplica. Atendimento pela Cruz Vermelha.\n",
+   "claro": [
+    "São Paulo",
+    "Câmara Municipal",
+    "Lei Maria da Penha",
+    "Cruz Vermelha"
+   ]
+  },
+  {
+   "id": "BE2",
+   "c": "EXCESSO",
+   "t": "O delegado Carlos Testeservidor Neto\nInterrogado, disse nada. Assinou Maria Testeoficial\nPromotora, em 10/03.\n",
+   "claro": [
+    "Interrogado",
+    "Promotora"
+   ]
+  },
+  {
+   "id": "BE3",
+   "c": "EXCESSO",
+   "t": "TERMO DE DECLARAÇÕES\nDeclarante: ROSIMEIRE TESTEBELTRANA DIAS, companheira do flagranteado.\nQUE conhece CLODOALDO TESTEFULANO SALAMANDRA há cinco anos.\n",
+   "oculto": [
+    "TESTEBELTRANA",
+    "SALAMANDRA"
+   ],
+   "claro": [
+    "companheira do flagranteado"
+   ]
   }
  ]
 }

@@ -210,7 +210,7 @@ try {
       '--casos', path.join(tmp, 'casos.json'), '--graphe', GRAPHE], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) { parar('a suíte falhou:\n' + ((e.stdout || '') + (e.stderr || '')).trim()); }
   process.stdout.write(out);
-  if (!/RESULTADO: \d+ ok, 0 falhas/.test(out) || !/INCOGNITUS: \d+ ok, 0 falhas/.test(out) || !/CARIMBOS: \d+ ok, 0 falhas/.test(out)) parar('a suíte não terminou em "0 falhas"');
+  if (!/RESULTADO: \d+ ok, 0 falhas/.test(out) || !/INCOGNITUS: \d+ ok, 0 falhas/.test(out) || !/CARIMBOS: \d+ ok, 0 falhas/.test(out) || !/RIGOROSO: \d+ ok, 0 falhas/.test(out) || !/CASO: \d+ ok, 0 falhas/.test(out)) parar('a suíte não terminou em "0 falhas"');
 
   // ── 6. Gravar (só agora) ────────────────────────────────────────────────────────────────────────────────────────
   const hash = sha256(motor);
