@@ -223,7 +223,9 @@ async function emParalelo(itens, n, fn) {
 // Uma linha patológica de formulário já travou uma expressão regular do motor por mais de um minuto: cada pedido ao
 // worker tem prazo proporcional às páginas; estourado, o worker é recriado e o PDF sai com erro, sem travar a fila.
 const MSG_PRAZO = 'o motor passou do prazo';
-function prazoMotor(paginas) { return 120000 + 3000 * (paginas || 1); }
+// (14/11/2026: no Mac o WebView roda o motor no JavaScriptCore, várias vezes mais lento que o V8 em autos grandes —
+// 112 páginas reais levaram 289 s —, daí 6 s por página)
+function prazoMotor(paginas) { return 120000 + 6000 * (paginas || 1); }
 async function pedirMotor(tipo, dados, paginas) {
   try { return await comPrazo(estado.worker.pedir(tipo, dados), prazoMotor(paginas), MSG_PRAZO + ' (' + tipo + ', ' + Math.round(prazoMotor(paginas) / 1000) + ' s)'); }
   catch (e) {
@@ -288,7 +290,10 @@ async function lerRigoroso(i, paginas) {
     while (k < paginas.length) {
       const idx = k++, pag = paginas[idx];
       if (estado.e2e) registrar('rigoroso: página ' + (idx + 1) + ' (' + pag.length + ' caracteres)');
-      const achados = await comPrazo(L.pedir('reconhecer', { texto: pag }), 180000, 'a leitura rigorosa travou na página ' + (idx + 1));
+      // o prazo cresce com a página: cada janela de 510 peças leva uns 6 s num leitor (a página de diagramação larga, com
+      // milhares de linhas, tem várias janelas); umas 3 letras por peça
+      const janelas = Math.max(1, Math.ceil((pag.replace(/\s+/g, '').length / 3 - 510) / 384) + 1);
+      const achados = await comPrazo(L.pedir('reconhecer', { texto: pag }), 120000 + 60000 * janelas, 'a leitura rigorosa travou na página ' + (idx + 1));
       // o que já é do motor (o nome grego de um token, [omitido]) sai; o resto encostado num token é pedaço de nome que
       // o OCR estragou ("«Thalia» SgRGIO") e vai marcado como colado
       const zonas = [...pag.matchAll(/«[^«»\n]{0,80}»|\[omitido\]/g)].map((m) => [m.index, m.index + m[0].length]);
@@ -391,8 +396,9 @@ function ligacao(a, b) {
   const comum = (x, y) => (x || []).filter((k) => (y || []).indexOf(k) >= 0);
   if (comum(a.cnj, b.cnj).length) return 'mesmo número de processo';
   if (comum(a.ids, b.ids).length) return 'mesmo documento de pessoa (' + comum(a.ids, b.ids)[0].split(':')[0] + ')';
-  const p = comum(a.pessoas, b.pessoas);
-  if (p.some((k) => k.split(' ').length >= 3) || p.length >= 2) return 'mesma pessoa';
+  // (a assinatura só traz nome de três palavras ou mais, ou nome de PARTE: dois nomes curtos em comum juntavam custódias
+  // diferentes da mesma região — bateria de 14/11/2026)
+  if (comum(a.pessoas, b.pessoas).length) return 'mesma pessoa';
   return null;
 }
 
@@ -469,6 +475,10 @@ async function gravarCaso(g, nomesUsados) {
 // pendente enquanto a fila roda segura a página acordada.
 function manterAcordado(promessa) {
   try { if (navigator.locks) navigator.locks.request('incognitus-fila', () => promessa.catch(() => {})); } catch (e) { /* sem Web Locks */ }
+  // no Mac, com a janela fora da tela, o sistema suspende a página inteira (o backgroundThrottling não basta): a fila
+  // declara uma atividade iniciada pelo usuário enquanto roda (plugin: acordado)
+  invoke('acordado', { ligar: true }).catch(() => {});
+  promessa.finally(() => invoke('acordado', { ligar: false }).catch(() => {}));
   return promessa;
 }
 
@@ -857,6 +867,8 @@ async function iniciar() {
     if (f.Err) avisar('As ferramentas embutidas (pdftotext, pdftoppm, tesseract) não rodaram: ' + f.Err);
   });
   estado.e2e = await invoke('e2e_plano');
+  // no teste, um sinal de vida a cada 30 s: mostra se os timers da janela continuam rodando (página suspensa ou não)
+  if (estado.e2e) { const t0 = Date.now(); setInterval(() => registrar('vivo ' + Math.round((Date.now() - t0) / 1000) + ' s · ' + document.visibilityState), 30000); }
   if (estado.e2e) return testeDePontaAPonta(estado.e2e);
   if (estado.ajustes.checarAoAbrir !== false) { atualizarRegras(false); checarApp(false); }
 }

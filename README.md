@@ -243,9 +243,15 @@ Nunca use dados reais de processos em testes, exemplos, commits ou logs.
 O Incognitus segue o contrato de módulo do Graphé Desktop (`MODULOS.md`, no repositório dele): o mesmo código serve ao
 app avulso e ao Graphé Desktop, que o hospeda como mini-app.
 
-**Para o hospedeiro** (14/11/2026): a janela que abre o módulo precisa de `"backgroundThrottling": "disabled"` (como a
-do app avulso, em `src-tauri/tauri.conf.json`). Sem isso, no Mac, com a janela escondida atrás de outras, o WebView
-suspende os workers e o lote — sobretudo a anonimização rigorosa — para até a janela voltar à frente.
+**A página não pode dormir** (14/11/2026). No Mac, com a janela fora da tela (outra mesa, app em tela cheia,
+minimizada), o WebKit freia os timers e, depois de uns 5 minutos, suspende a página inteira: o motor e a leitura
+rigorosa congelavam no meio, sem CPU, até a janela voltar. O plugin resolve isso para toda janela do app, também a do
+hospedeiro (`on_webview_ready` → `plugin/src/acordado.rs`): desliga no WKWebView a supressão de processo pela
+visibilidade e o freio dos timers de página escondida, põe a política de página inativa em "nenhuma" e desliga a
+detecção de oclusão (as três primeiras são preferências do WebKit; só são chamadas se existirem). Enquanto a fila roda, o
+app também declara ao macOS uma atividade iniciada pelo usuário (`plugin:anonimizacao|acordado`), que impede o repouso
+automático do Mac no meio de um lote; no Windows, uma Web Lock segura a página. A janela do app avulso tem ainda
+`"backgroundThrottling": "disabled"`.
 
 - **`plugin/`**: o crate `tauri-plugin-anonimizacao`. `init()` é o app avulso (dados na raiz da pasta de dados do app,
   como sempre); `init_como_modulo()` é o hospedado (dados em `<dados do hospedeiro>/modulos/incognitus/`, cache em

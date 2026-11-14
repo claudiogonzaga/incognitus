@@ -185,10 +185,15 @@ if (temGraphe) {
       && M.partesDoNomeDeArquivo('Relatório Final - Delegacia de Polícia.pdf').length === 0],
     ['um papel tomado por nome não troca a palavra no nome do arquivo', M.anonimizarCaso([{ nome: 'termo da companheira.txt',
       texto: 'TERMO DE DECLARAÇÕES\nDeclarante: ROSIMEIRE TESTEBELTRANA DIAS, companheira do flagranteado.\nQUE conhece o flagranteado há cinco anos.\n\f' }], {}).documentos[0].nomeSaida === 'termo da companheira'],
+    ['dois nomes curtos em comum (não partes) não ligam documentos', (function () {
+      const x = M.anonimizarCaso([{ nome: 'a.pdf', texto: 'TERMO\nRÉU: CLODOALDO TESTEFULANO SALAMANDRA\nTestemunhas: GERVASIO PIRES e ODETE MORAIS, que viram tudo.\f' }], {}).assinatura;
+      const y = M.anonimizarCaso([{ nome: 'b.pdf', texto: 'TERMO\nRÉU: GENOVEVO TESTECICRANO DIAS\nTestemunhas: GERVASIO PIRES e ODETE MORAIS, que viram tudo.\f' }], {}).assinatura;
+      return !x.pessoas.some((k) => y.pessoas.indexOf(k) >= 0);
+    })()],
     ['a reidentificação devolve os nomes dos dois documentos', M.reidentificar(cAB.documentos[1].texto, cAB.mapa).texto.indexOf('ROSIMEIRE TESTEBELTRANA DIAS') >= 0],
   ].filter((c) => !c[1]);
   caso.forEach((c) => console.log('✗ caso: ' + c[0]));
-  console.log('CASO: ' + (14 - caso.length) + ' ok, ' + caso.length + ' falhas, de 14');
+  console.log('CASO: ' + (15 - caso.length) + ' ok, ' + caso.length + ' falhas, de 15');
   if (ruins.length || rig.length || caso.length) falhou = true;
 }
 process.exitCode = falhou ? 1 : 0;

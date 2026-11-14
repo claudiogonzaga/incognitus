@@ -10,6 +10,7 @@
 //! (`init_como_modulo`). A lista de comandos está aqui, no build.rs e em permissions/default.toml.
 mod ferramentas;
 mod motor;
+mod acordado;
 mod ner;
 mod pdf;
 mod reid;
@@ -302,6 +303,13 @@ fn aceito(p: &Path) -> bool {
     matches!(ext.as_str(), "pdf" | "docx" | "txt") && !nome.starts_with('.') && !nome.starts_with("~$")
 }
 
+/// A fila avisa quando começa e termina: no macOS, uma atividade iniciada pelo usuário mantém a página rodando com a
+/// janela fora da tela (ver acordado.rs).
+#[tauri::command]
+fn acordado(ligar: bool) -> bool {
+    acordado::acordado(ligar)
+}
+
 /// O texto de um .txt (ou .md) ou de um .docx da fila.
 #[tauri::command]
 async fn texto_documento(caminho: String) -> Result<String, String> {
@@ -553,6 +561,7 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             ocr_pagina,
             limpar_arquivo,
             texto_documento,
+            acordado,
             gravar_saida,
             pasta_padrao,
             listar_pdfs,
@@ -602,6 +611,15 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             };
             app.manage(Estado(Arc::new(interno)));
             Ok(())
+        })
+        // no Mac, a página não dorme com a janela fora da tela (o lote congelava; ver acordado.rs)
+        .on_webview_ready(|webview| {
+            #[cfg(target_os = "macos")]
+            {
+                let _ = webview.with_webview(|pw| acordado::webview_sem_sono(pw.inner()));
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = webview;
         })
         .on_event(|app, ev| {
             if let tauri::RunEvent::Exit = ev {
@@ -671,7 +689,7 @@ mod testes {
         // cada comando do build.rs está no conjunto `default`; o `api` só tem comandos que existem
         let build = include_str!("../build.rs");
         let comandos: Vec<String> = build.split('"').skip(1).step_by(2).map(|c| c.to_string()).collect();
-        assert_eq!(comandos.len(), 30);
+        assert_eq!(comandos.len(), 31);
         let toml = include_str!("../permissions/default.toml");
         let (padrao, api) = toml.split_once("[[set]]").expect("o conjunto api");
         for c in &comandos {

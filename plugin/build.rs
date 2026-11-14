@@ -3,7 +3,7 @@
 // `api` (o que o hospedeiro chama da janela principal dele) estão em permissions/default.toml.
 const COMANDOS: &[&str] = &[
     // geral
-    "info", "info_app", "registrar", "revelar", "ajustes_ler", "ajustes_gravar",
+    "info", "info_app", "registrar", "revelar", "ajustes_ler", "ajustes_gravar", "acordado",
     // a fila: a cópia temporária do PDF, o pdftotext e o OCR de página; o texto de um .txt ou .docx
     "preparar_arquivo", "extrair_texto", "ocr_pagina", "limpar_arquivo", "texto_documento",
     // a saída: o PDF anonimizado, o .txt e o mapa

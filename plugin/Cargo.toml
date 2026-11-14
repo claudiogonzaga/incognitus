@@ -25,3 +25,9 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# a fila declara ao macOS uma atividade iniciada pelo usuário (sem isso, com a janela fora da tela, o sistema suspende a
+# página e o lote para)
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSProcessInfo", "NSString", "NSObject"] }

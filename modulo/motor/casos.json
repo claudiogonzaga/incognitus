@@ -1344,6 +1344,134 @@
    "claro": [
     "companheira do flagranteado"
    ]
+  },
+  {
+   "id": "BE4",
+   "c": "EXCESSO",
+   "t": "TERMO\nRÉU: CLODOALDO TESTEFULANO SALAMANDRA\nTestemunhas: GERVASIO PIRES e ODETE MORAIS, que viram tudo.\n",
+   "oculto": [
+    "SALAMANDRA",
+    "GERVASIO PIRES",
+    "ODETE MORAIS"
+   ],
+   "claro": [
+    "que viram tudo"
+   ]
+  },
+  {
+   "id": "BR9",
+   "c": "NASC",
+   "t": "             Nome........: ZULEICA TESTEBELTRANA DIAS\n             Sexo........: FEMININO Nascimento..: 03/05/1980 Idade.......: 45 anos\n",
+   "oculto": [
+    "03/05/1980",
+    "TESTEBELTRANA"
+   ],
+   "claro": [
+    "FEMININO"
+   ]
+  },
+  {
+   "id": "BR10",
+   "c": "NASC",
+   "t": "SECRETARIA DE SEGURANÇA PÚBLICA INSTITUTO DE IDENTIFICAÇÃO\nIDENTIDADE DATA NAsciv ENTO 07/08/1991 naruratiDaDE CIDADELA-MT\nREGISTRO GERAL a masciv ENTO 21/09/1972 naturaLimade PRATA\n",
+   "oculto": [
+    "07/08/1991",
+    "21/09/1972"
+   ],
+   "claro": []
+  },
+  {
+   "id": "BR11",
+   "c": "RG",
+   "t": "ZULEICA TESTEBELTRANA DIAS, brasileira, portadora da Cédula de Identidade/CI com RG.SSP/MT n.º 1234567-8,e do CPF/MF n.º 123.456.789-09; residente nesta cidade.\n",
+   "oculto": [
+    "1234567-8",
+    "123.456.789-09"
+   ],
+   "claro": []
+  },
+  {
+   "id": "BR12",
+   "c": "PLACA",
+   "t": "26/08/2099, 16:32 DetranNet - Extrato do Veiculo de PLACA TST3977\n\n Dados do Veículo Em 26/08/2099\n\n  Placa         Renavam        Placa Anterior    Tipo           Categoria      Espécie        Lugares\n  TST3977       00123456789    00123456/MT       4-MOTOCICLETA  1-Particular   1-Passageiro   2\n",
+   "oculto": [
+    "TST3977"
+   ],
+   "claro": [
+    "MOTOCICLETA"
+   ]
+  },
+  {
+   "id": "BR13",
+   "c": "END",
+   "t": "Intime-se JOAO TESTEFULANO PIRAMBOIA no endereço da Rua Testeira, esquina com a Travessa Ficticia, quadra 13, lote 09, bairro Jardim Teste, nesta cidade.\n",
+   "oculto": [
+    "Rua Testeira",
+    "Travessa Ficticia",
+    "Jardim Teste"
+   ],
+   "claro": [
+    "nesta cidade"
+   ]
+  },
+  {
+   "id": "BR14",
+   "c": "END",
+   "t": "O réu reside na Rua Testeira, nº 45, esquina com a Travessa Ficticia, quadra n.-13, lote n.-09, bairro Jardim Teste, do inteiro teor.\n",
+   "oculto": [
+    "Rua Testeira",
+    "Travessa Ficticia",
+    "lote n.-09",
+    "Jardim Teste"
+   ],
+   "claro": [
+    "do inteiro teor"
+   ]
+  },
+  {
+   "id": "BR15",
+   "c": "END",
+   "t": "compareceu GERVASIO TESTECICRANO DIAS, residente à Residencial - Rua Rua das Testeiras Bairro Distrito de Vila Teste - Cidadela/MT - 78000000, que declarou.\n",
+   "oculto": [
+    "Rua das Testeiras",
+    "Vila Teste",
+    "TESTECICRANO"
+   ],
+   "claro": [
+    "Cidadela/MT",
+    "que declarou"
+   ]
+  },
+  {
+   "id": "BR16",
+   "c": "END",
+   "t": "inscrita no CPF 123.456.789-09, portadora do RG 1234567 SSP MT, residente à Residencial - Rua\nRua das Testeiras Bairro Distrito de Vila Teste - Cidadela/MT - 78000000, telefone(s)\n(65) 99999-0000, tendo manifestado o desejo de representar.\n",
+   "oculto": [
+    "Rua das Testeiras",
+    "Vila Teste"
+   ],
+   "claro": [
+    "Cidadela/MT",
+    "desejo de representar"
+   ]
+  },
+  {
+   "id": "BE5",
+   "c": "EXCESSO",
+   "t": "O fato ocorreu na Rua Testeira, esquina com a Avenida Ficticia, em frente ao bar, por volta das 22h.\n",
+   "oculto": [],
+   "claro": [
+    "Rua Testeira, esquina com a Avenida Ficticia"
+   ]
+  },
+  {
+   "id": "BE6",
+   "c": "EXCESSO",
+   "t": "A testemunha Gervasio Nascimento, em 12/03/2099, compareceu ao cartório.\n",
+   "oculto": [],
+   "claro": [
+    "12/03/2099"
+   ]
   }
  ]
 }

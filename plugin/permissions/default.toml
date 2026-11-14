@@ -3,7 +3,7 @@
 [default]
 description = "O que a janela do Incognitus usa: a fila de PDFs (pdftotext e OCR), o PDF anonimizado, a reidentificação, o motor e a atualização assinada dele, os Ajustes e o teste de ponta a ponta."
 permissions = [
-  "allow-info", "allow-info-app", "allow-registrar", "allow-revelar", "allow-ajustes-ler", "allow-ajustes-gravar",
+  "allow-info", "allow-info-app", "allow-registrar", "allow-revelar", "allow-ajustes-ler", "allow-ajustes-gravar", "allow-acordado",
   "allow-preparar-arquivo", "allow-extrair-texto", "allow-ocr-pagina", "allow-limpar-arquivo", "allow-texto-documento",
   "allow-gravar-saida", "allow-pasta-padrao", "allow-listar-pdfs", "allow-expandir-caminhos",
   "allow-ler-texto", "allow-docx-partes", "allow-gravar-reidentificado", "allow-gravar-texto",

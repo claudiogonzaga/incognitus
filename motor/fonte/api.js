@@ -316,7 +316,8 @@ var SkiaMotor = (function () {
   var TIPOS_LIGAM = { CPF: 1, RG: 1, CNH: 1, DOC: 1, CNS: 1, CERT: 1, RJI: 1, TEL: 1, PLACA: 1, EMAIL: 1 };
   var TIPOS_NAO_PESSOA = { ALIAS: 1, PRENOME: 1, ALCUNHA: 1, INICIAIS: 1, EMP: 1 };
   function assinatura(mapa, nomes, idCaso) {
-    var cnj = {}, ids = {}, pessoas = {};
+    var cnj = {}, ids = {}, pessoas = {}, pren = _anonPrenomesSet_(), sob = _anonSobrenomesSet_();
+    var temNome = function (v) { return _anonPalavrasSignificativas_(v).some(function (w) { var u = _anonSemAcento_(w).toUpperCase(); return pren[u] || sob[u]; }); };
     (nomes || []).concat([idCaso || '']).forEach(function (x) { (String(x).match(new RegExp(RE_CNJ.source, 'g')) || []).forEach(function (c) { cnj[c] = 1; }); });
     Object.keys(mapa.tokens || {}).forEach(function (t) {
       var e = mapa.tokens[t];
@@ -324,9 +325,12 @@ var SkiaMotor = (function () {
       if (TIPOS_LIGAM[e.tipo]) {
         var v = (e.tipo === 'EMAIL' || e.tipo === 'PLACA') ? String(e.valor).toLowerCase().replace(/[^a-z0-9@.]/g, '') : _anonDigitos_(e.valor);
         if (v.length >= 6) ids[e.tipo + ':' + v] = 1;
-      } else if (e.variantes && !TIPOS_NAO_PESSOA[e.tipo] && !_anonEhSoIniciais_(e.valor)) {
-        var k = _anonChaveSig_(e.valor);
-        if (k.split(' ').length >= 2) pessoas[k] = 1;
+      } else if (e.variantes && !TIPOS_NAO_PESSOA[e.tipo] && !_anonEhSoIniciais_(e.valor) && temNome(e.valor)) {
+        // nome de três palavras ou mais; de duas, só de PARTE (réu, vítima, autor…), marcado como tal: dois nomes curtos de
+        // pessoas quaisquer em comum juntavam custódias diferentes da mesma região (bateria de 14/11/2026)
+        var k = _anonChaveSig_(e.valor), np = k.split(' ').length;
+        if (np >= 3) pessoas[k] = 1;
+        else if (np === 2 && typeof ANON_PAPEIS_PARTE !== 'undefined' && ANON_PAPEIS_PARTE[e.tipo]) pessoas['parte:' + k] = 1;
       }
     });
     return { cnj: Object.keys(cnj), ids: Object.keys(ids), pessoas: Object.keys(pessoas) };
