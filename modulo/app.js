@@ -20,6 +20,7 @@ const estado = {
   motorCaso: false,
   instPadrao: '', motor: null, worker: null, casos: null, e2e: null,
   aba: 'anon', reid: { mapa: null, texto: null, itens: [] },
+  minutas: {},   // mapa do caso → { itens } : as minutas da IA reidentificadas no próprio card
 };
 const ETAPAS = { fila: 'na fila', extraindo: 'extraindo', ocr: 'OCR', anonimizando: 'anonimizando', rigoroso: 'leitura rigorosa', gravando: 'gravando o PDF', pronto: 'pronto', erro: 'erro', lido: 'lido · esperando os outros', refazer: 'a refazer (caso mudou)' };
 
@@ -190,7 +191,8 @@ function desenhar() {
         (outros.length ? ' <select class="mini" data-juntar="' + i.id + '"><option value="">Juntar a…</option>' +
           outros.map((o) => '<option value="' + esc(o.chave) + '">' + esc(o.rotulo) + ' (' + o.itens.length + ')</option>').join('') + '</select>' : '') : '') +
       '</div>';
-    return '<li class="item' + (trab ? ' ativo' : '') + (i.etapa === 'erro' ? ' erro' : '') + (varios ? ' do-caso' : '') + '"' + (varios ? ' style="--cor-caso:' + corCaso(c.chave) + '"' : '') + '>' +
+    return '<li class="item' + (trab ? ' ativo' : '') + (i.etapa === 'erro' ? ' erro' : '') + (varios ? ' do-caso' : '') + '"' + (varios ? ' style="--cor-caso:' + corCaso(c.chave) + '"' : '') +
+      (i.saida && i.saida.mapa ? ' data-mapa-caso="' + esc(i.saida.mapa) + '"' : '') + '>' +
       '<div class="cab"><span class="nome">' + esc(i.nome) + '</span><span class="chip ' + (i.etapa === 'pronto' ? 'pronto' : i.etapa === 'erro' ? 'erro' : trab ? 'trabalhando' : '') + '">' + esc(chip) + '</span></div>' +
       '<div class="barra"><i style="width:' + progresso(i) + '%"></i></div>' +
       (det.length ? '<div class="det">' + det.join(' · ') + '</div>' : '') + linhaCaso +
@@ -198,8 +200,8 @@ function desenhar() {
       (i.avisos.length ? '<div class="det">⚠ ' + esc(i.avisos.join(' · ')) + '</div>' : '') +
       (i.erro ? '<div class="msg-erro">' + esc(i.erro) + '</div>' : '') +
       (i.saida ? '<div class="acoes"><button class="ghost" data-revelar="' + esc(i.saida.pdf) + '">Mostrar na pasta</button>' +
-        (i.saida.mapa ? '<button class="ghost" data-mapa="' + esc(i.saida.mapa) + '">Reidentificar com este mapa</button>' : '') +
         (i.saida.confira ? '<button class="ghost" data-revelar="' + esc(i.saida.confira) + '">Lista CONFIRA</button>' : '') + '</div>' : '') +
+      blocoMinuta(i) +
       '</li>';
   }).join('');
   $('vazio').hidden = estado.fila.length > 0;
@@ -549,6 +551,97 @@ async function salvarAjustes() {
   await estado.worker.pedir('configurar', { cfg: cfgMotor() });
 }
 
+// ── a minuta da IA, no card do caso ───────────────────────────────────────────────────────────────────────────────
+// A minuta que a IA escreveu sobre os autos anonimizados também vem com os tokens: volta aos nomes reais com o mapa do
+// caso, ali mesmo (botão, texto colado ou arrastando o arquivo para o card). Num caso com vários documentos, o bloco
+// fica só no primeiro card dele (o mapa é um só). A aba Reidentificar fica para o mapa de uma leva antiga.
+function blocoMinuta(i) {
+  const mapa = i.saida && i.saida.mapa;
+  if (!mapa || estado.fila.find((x) => x.saida && x.saida.mapa === mapa) !== i) return '';
+  const b = estado.minutas[mapa] || { itens: [] };
+  const lista = b.itens.map((m) => '<li class="' + (m.etapa === 'erro' ? 'erro' : '') + '">' +
+    (m.etapa === 'trabalhando' ? '⏳ ' + esc(m.nome) + ' — reidentificando…'
+      : m.etapa === 'erro' ? '✗ ' + esc(m.nome) + ': ' + esc(m.erro)
+      : '✓ <b>' + esc(nomeDe(m.saida)) + '</b> · ' + m.n + ' token(s) devolvido(s) ' +
+        '<button class="ghost mini" data-revelar="' + esc(m.saida) + '">Mostrar na pasta</button>' +
+        (m.sobras && m.sobras.length ? '<div class="aviso">' + esc(avisoSobras(m.sobras)) + '</div>' : '')) + '</li>').join('');
+  const n = i.caso && i.caso.itens.length > 1 ? ' deste caso' : ' deste processo';
+  return '<div class="minuta">' +
+    '<div class="minuta-cab"><b>Minuta da IA</b><span>volta aos nomes reais com o mapa' + n + '</span></div>' +
+    '<div class="acoes"><button data-minuta="' + esc(mapa) + '">Reidentificar minuta…</button>' +
+    '<button class="ghost" data-colar="' + esc(mapa) + '">Colar texto</button></div>' +
+    (lista ? '<ul class="minutas">' + lista + '</ul>' : '') +
+    '<div class="det">ou arraste para este card a minuta (.docx, .txt ou .md). A cópia reidentificada sai ao lado dela, com “(reidentificado)” no nome.</div>' +
+    '</div>';
+}
+
+const mapasLidos = {};
+async function mapaDoCaso(caminho) {
+  if (!mapasLidos[caminho]) mapasLidos[caminho] = await invoke('ler_texto', { caminho });
+  return mapasLidos[caminho];
+}
+
+/** Uma minuta (.docx, .txt ou .md) de volta aos nomes, com o mapa (o JSON). */
+async function reidUma(caminho, mapa) {
+  const ext = extDe(caminho);
+  if (ext === 'docx') return reidDocx(caminho, mapa);
+  if (ext === 'txt' || ext === 'md') return reidTxt(caminho, mapa);
+  throw new Error('a reidentificação lê .docx, .txt e .md');
+}
+
+async function reidNoCard(mapaCaminho, caminhos) {
+  const b = estado.minutas[mapaCaminho] || (estado.minutas[mapaCaminho] = { itens: [] });
+  for (const c of caminhos) {
+    const m = { caminho: c, nome: nomeDe(c), etapa: 'trabalhando' };
+    b.itens.unshift(m);
+    desenhar();
+    try { Object.assign(m, await reidUma(c, await mapaDoCaso(mapaCaminho))); m.etapa = 'pronto'; }
+    catch (e) { m.etapa = 'erro'; m.erro = String((e && e.message) || e); }
+    desenhar();
+  }
+  return b.itens.slice(0, caminhos.length);
+}
+
+async function escolherMinutas(mapaCaminho) {
+  const r = await T.dialog.open({ multiple: true, directory: false, filters: [{ name: 'Minuta', extensions: ['docx', 'txt', 'md'] }] });
+  if (r) await reidNoCard(mapaCaminho, Array.isArray(r) ? r : [r]);
+}
+
+/** Colar o texto da minuta: uma janelinha por cima da fila, com o resultado para copiar. */
+function abrirColar(mapaCaminho) {
+  const d = $('dlg_colar');
+  d.dataset.mapa = mapaCaminho;
+  $('colar_entrada').value = '';
+  $('colar_resultado').hidden = true;
+  d.showModal();
+  $('colar_entrada').focus();
+}
+async function reidColado() {
+  const d = $('dlg_colar'), texto = $('colar_entrada').value;
+  if (!texto.trim()) return;
+  try {
+    const r = await estado.worker.pedir('reidentificar', { texto, mapa: await mapaDoCaso(d.dataset.mapa) });
+    $('colar_info').innerHTML = r.sobras.length
+      ? '<div class="aviso">' + r.n + ' token(s) devolvido(s). ' + esc(avisoSobras(r.sobras)) + '</div>'
+      : '<div class="ok">' + r.n + ' token(s) devolvido(s). Nenhum token sobrou.</div>';
+    $('colar_saida').value = r.texto;
+    $('colar_resultado').hidden = false;
+  } catch (e) { avisar('Não consegui reidentificar: ' + ((e && e.message) || e)); }
+}
+async function copiarDe(area, botao) {
+  try { await navigator.clipboard.writeText(area.value); }
+  catch (e) { area.focus(); area.select(); try { document.execCommand('copy'); } catch (e2) { /* fica selecionado */ } }
+  const t = botao.textContent; botao.textContent = '✓ Copiado';
+  setTimeout(() => { botao.textContent = t; }, 2500);
+}
+
+/** O card com mapa debaixo do ponteiro, durante o arrastar (posição física da janela → CSS). */
+function cardSob(pos) {
+  if (!pos) return null;
+  const el = document.elementFromPoint(pos.x / devicePixelRatio, pos.y / devicePixelRatio);
+  return el ? el.closest('[data-mapa-caso]') : null;
+}
+
 // ── reidentificação ───────────────────────────────────────────────────────────────────────────────────────────────
 // Como o 🔓 do Graphé: as funções do motor (no worker) trocam cada token do mapa pelo nome; aqui, a janela, a leitura e a
 // gravação dos arquivos (no Rust) e, no .docx, a troca dentro de cada parágrafo, sem mexer na formatação.
@@ -690,10 +783,7 @@ async function reidArquivos(caminhos) {
     estado.reid.itens.unshift(i);
     desenharReid();
     try {
-      const ext = extDe(c);
-      if (ext === 'docx') Object.assign(i, await reidDocx(c, m.json));
-      else if (ext === 'txt' || ext === 'md') Object.assign(i, await reidTxt(c, m.json));
-      else throw new Error('a reidentificação lê .docx, .txt e .md');
+      Object.assign(i, await reidUma(c, m.json));
       i.etapa = 'pronto';
     } catch (e) {
       i.etapa = 'erro'; i.erro = String((e && e.message) || e);
@@ -816,8 +906,10 @@ function ligar() {
   $('fila').onclick = (ev) => {
     const b = ev.target.closest('[data-revelar]');
     if (b) invoke('revelar', { caminho: b.dataset.revelar });
-    const m = ev.target.closest('[data-mapa]');
-    if (m) { mostrarAba('reid'); escolherMapa(m.dataset.mapa); }
+    const mi = ev.target.closest('[data-minuta]');
+    if (mi) escolherMinutas(mi.dataset.minuta);
+    const co = ev.target.closest('[data-colar]');
+    if (co) abrirColar(co.dataset.colar);
     const sp = ev.target.closest('[data-separar]');
     if (sp) mexerNoCaso(estado.fila.find((x) => x.id === +sp.dataset.separar), 'só');
   };
@@ -825,6 +917,9 @@ function ligar() {
     const j = ev.target.closest('[data-juntar]');
     if (j && j.value) mexerNoCaso(estado.fila.find((x) => x.id === +j.dataset.juntar), j.value);
   };
+  $('bt_colar_reid').onclick = reidColado;
+  $('bt_colar_copiar').onclick = () => copiarDe($('colar_saida'), $('bt_colar_copiar'));
+  $('bt_colar_fechar').onclick = () => $('dlg_colar').close();
   $('bt_ajustes').onclick = abrirAjustes;
   $('bt_motor').onclick = abrirAjustes;
   $('bt_inst_padrao').onclick = () => { $('inst').value = estado.instPadrao.split(/\s*;\s*|\n+/).filter(Boolean).join('\n'); };
@@ -838,8 +933,18 @@ function ligar() {
   };
   T.webview.getCurrentWebview().onDragDropEvent((ev) => {
     const t = ev.payload.type;
-    document.body.classList.toggle('arrastando', t === 'enter' || t === 'over');
-    if (t === 'drop') (estado.aba === 'reid' ? soltarReid : adicionar)(ev.payload.paths || []);
+    // por cima de um card pronto, a minuta vai para o mapa dele; fora dos cards, entra na fila
+    const card = estado.aba === 'anon' && (t === 'over' || t === 'enter' || t === 'drop') ? cardSob(ev.payload.position) : null;
+    document.querySelectorAll('.item.alvo').forEach((el) => { if (el !== card) el.classList.remove('alvo'); });
+    if (card && t !== 'drop') card.classList.add('alvo');
+    document.body.classList.toggle('arrastando', !card && (t === 'enter' || t === 'over'));
+    if (t !== 'drop') return;
+    const paths = ev.payload.paths || [];
+    if (estado.aba === 'reid') { soltarReid(paths); return; }
+    const minutas = card ? paths.filter((c) => ['docx', 'txt', 'md'].includes(extDe(c))) : [];
+    if (minutas.length) reidNoCard(card.dataset.mapaCaso, minutas);
+    const resto = paths.filter((c) => !minutas.includes(c));
+    if (resto.length) adicionar(resto);
   });
 }
 
@@ -894,6 +999,17 @@ async function testeDePontaAPonta(p) {
       const alvo = estado.fila.find((i) => i.nome === p.separar);
       if (alvo) { mexerNoCaso(alvo, 'só'); await rodar(); }
       rel.depoisDeSeparar = estado.fila.map((i) => ({ nome: i.nome, etapa: i.etapa, saida: i.saida, caso: i.caso ? { chave: i.caso.chave, n: i.caso.itens.length } : null }));
+    }
+    if (p.minutaNoCard) {
+      // a minuta da IA no card: escreve uma minuta com tokens do mapa do primeiro caso e a reidentifica ali
+      const i = estado.fila.find((x) => x.saida && x.saida.mapa);
+      const dic = await estado.worker.pedir('dicionario', { mapa: await mapaDoCaso(i.saida.mapa) });
+      const toks = dic.lista.slice(0, 3).map((x) => x.token);
+      const caminho = p.minutaNoCard + '/minuta da IA.txt';
+      await invoke('gravar_texto', { caminho, texto: 'MINUTA\n\nTrata-se de ' + toks.join(', ') + '. É o relatório.\n' });
+      const [m] = await reidNoCard(i.saida.mapa, [caminho]);
+      rel.minutaNoCard = { doc: i.nome, tokens: toks.length, etapa: m.etapa, erro: m.erro, saida: m.saida, n: m.n, sobras: m.sobras,
+        texto: m.saida ? await invoke('ler_texto', { caminho: m.saida }) : null, bloco: !!document.querySelector('.minuta [data-minuta]') };
     }
     if (p.reidentificar) {
       const q = p.reidentificar;

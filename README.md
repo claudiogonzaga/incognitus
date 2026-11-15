@@ -67,11 +67,18 @@ desligam.
 
 ### Reidentificar
 
+**No card do caso** (14/11/2026, pedido do Promotor): a minuta que a IA escreveu sobre os autos anonimizados volta aos
+nomes ali mesmo, sem trocar de aba. Cada caso pronto tem o bloco **Minuta da IA**:
+**Reidentificar minuta…** (.docx, .txt ou .md), **Colar texto** (uma janelinha com o resultado para copiar) ou arrastar
+a minuta para o card. Vale o mapa daquele caso. Num caso com vários documentos, o bloco fica no primeiro card (o mapa é
+um só). Arrastada para fora dos cards, a minuta .docx/.txt entra na fila para ser anonimizada, como antes.
+
 ![A aba Reidentificar, com dados fictícios](docs/reidentificar.png)
 
-A aba **Reidentificar** faz o que o 🔓 do Graphé faz na minuta, com as mesmas funções do motor:
+A aba **Reidentificar** serve para o mapa de outro dia (a fila não guarda as levas antigas) e faz o que o 🔓 do Graphé
+faz na minuta, com as mesmas funções do motor:
 
-1. **Escolher o mapa…** (ou, na fila, **Reidentificar com este mapa**). O mapa do Graphé também serve. O dicionário
+1. **Escolher o mapa…**. O mapa do Graphé também serve. O dicionário
    (token → nome) fica à vista em **Ver o dicionário**.
 2. A minuta que a IA devolveu: **arquivos .docx, .txt ou .md** (ou arrastados para a janela, junto com o mapa), ou o
    texto **colado** na caixa.

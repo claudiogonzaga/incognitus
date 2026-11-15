@@ -50,8 +50,9 @@
       pessoa ou endereço. Fica bem mais lento (de 1 a 4 segundos por página) e, na primeira vez, baixa o modelo (110 MB).
       Tudo continua neste computador. <span id="msg_rigoroso"></span></p>
     <div class="nota">
-      Junto com cada PDF saem sempre o <b>mapa</b> (o dicionário de cada token com o nome real, que a aba
-      <b>Reidentificar</b> usa para devolver os nomes à minuta) e a <b>lista CONFIRA</b> (onde olhar antes de usar),
+      Junto com cada PDF saem sempre o <b>mapa</b> (o dicionário de cada token com o nome real: a minuta que a IA
+      escrever volta aos nomes pelo botão <b>Reidentificar minuta…</b> do card do caso, ou pela aba <b>Reidentificar</b>, num
+      mapa de outro dia) e a <b>lista CONFIRA</b> (onde olhar antes de usar),
       numa subpasta “NÃO ENVIAR À IA (nomes reais)”. Eles têm os <b>nomes reais</b>: guarde-os neste computador e nunca
       os mande à IA — para a IA vai só o PDF anonimizado.
     </div>
@@ -116,6 +117,18 @@
   <span>🔒 Tudo fica neste computador: nenhum PDF, texto ou mapa é enviado. Sem telemetria.</span>
   <span id="rodape_motor" class="suave"></span>
 </footer>
+
+<dialog id="dlg_colar">
+  <h2>Colar a minuta da IA</h2>
+  <p class="dica">Cole o que a IA devolveu, com os tokens («Thanasis», «REU_01»…). Os nomes voltam com o mapa deste caso; nada sai do computador.</p>
+  <textarea id="colar_entrada" rows="8" spellcheck="false" placeholder="Cole aqui a minuta"></textarea>
+  <button id="bt_colar_reid" class="principal">Reidentificar o texto</button>
+  <div id="colar_resultado" hidden>
+    <div id="colar_info" style="margin-top:12px"></div>
+    <textarea id="colar_saida" rows="8" readonly spellcheck="false"></textarea>
+  </div>
+  <div class="linha fim"><button id="bt_colar_copiar" class="ghost">Copiar</button><button id="bt_colar_fechar">Fechar</button></div>
+</dialog>
 
 <dialog id="dlg_ajustes">
   <form method="dialog">

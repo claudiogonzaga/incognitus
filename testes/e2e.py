@@ -9,7 +9,7 @@
 3. Confere: nomes de saída iguais aos de entrada; nenhum dado de pessoa fictícia em claro na saída (PDF e .txt);
    originais intactos; o cabeçalho com a versão do motor; uma folha por página dos autos + a do cabeçalho; fonte
    monoespaçada de 11 pt; o mapa ao lado de cada PDF.
-4. A reidentificação (na segunda execução), com o mapa que o app gravou: um texto colado, uma minuta .txt e uma .docx
+4. A reidentificação: a minuta da IA no card do caso (na primeira execução) e, na segunda, a aba Reidentificar, com o mapa que o app gravou: um texto colado, uma minuta .txt e uma .docx
    com um token partido em dois trechos de formatação, no corpo, no cabeçalho e no nome do arquivo. Os nomes voltam,
    nenhum token fica, o que está fora do mapa é apontado, as minutas não mudam e o resto do .docx sai igual.
 5. Compara a extração do Incognitus com a do serviço do Graphé (cloudrun-pdftotext/main.py rodando aqui, com as MESMAS
@@ -347,7 +347,9 @@ def main():
 
     print("1. o app com os 3 PDFs (e a atualização assinada das regras no fim)")
     plano = {"arquivos": [os.path.join(PDFS, n) for n in nomes], "saida": None, "txt": True,
-             "extracao": os.path.join(SAIDA, "extracao"), "relatorio": os.path.join(SAIDA, "relatorio1.json"), "atualizar": True}
+             "extracao": os.path.join(SAIDA, "extracao"), "relatorio": os.path.join(SAIDA, "relatorio1.json"), "atualizar": True,
+             "minutaNoCard": os.path.join(SAIDA, "minuta-card")}
+    os.makedirs(plano["minutaNoCard"], exist_ok=True)
     rel = rodar_app(plano, url, dados)
     for it in rel["itens"]:
         print(f"  {it['nome']}: {it['etapa']} · {it.get('paginas')} pág. · OCR {it.get('e2e', {}).get('ocr', {}).get('paginas')} · "
@@ -355,6 +357,12 @@ def main():
         for a in it.get("avisos") or []:
             print("    aviso: " + a)
     confere(all(it["etapa"] == "pronto" for it in rel["itens"]) and len(rel["itens"]) == 3, "os 3 arquivos ficaram prontos")
+    mc = rel.get("minutaNoCard") or {}
+    confere(mc.get("bloco"), "o card pronto tem o bloco 'Minuta da IA' (Reidentificar minuta…)")
+    confere(mc.get("etapa") == "pronto" and mc.get("n") == mc.get("tokens") and mc.get("tokens", 0) >= 1 and not mc.get("sobras"),
+            f"a minuta da IA reidentificada no card, com o mapa do caso: {mc.get('n')} de {mc.get('tokens')} token(s), sobras {mc.get('sobras')} {mc.get('erro') or ''}")
+    confere(bool(mc.get("texto")) and "«" not in mc["texto"] and os.path.basename(mc.get("saida") or "") == "minuta da IA (reidentificado).txt",
+            "a cópia reidentificada sai ao lado da minuta, sem tokens")
 
     print("2. a saída")
     pasta = os.path.join(PDFS, "Incognitus — anonimizados")   # a saída padrão: ao lado dos originais
