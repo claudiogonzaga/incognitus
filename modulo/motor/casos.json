@@ -1472,6 +1472,86 @@
    "claro": [
     "12/03/2099"
    ]
+  },
+  {
+   "id": "BR17",
+   "c": "GPS",
+   "t": "BOLETIM DE OCORRÊNCIA - N°: 2099.000111\n                                                               12\n\n\n\n             Longitude.: -54.1234567890123\n                13\n\n\n\n                                                                 14\n             Latitude.: -16.98765432101234\n              15\n",
+   "oculto": [
+    "-54.1234567890123",
+    "-16.98765432101234"
+   ],
+   "claro": [
+    "2099.000111"
+   ]
+  },
+  {
+   "id": "BR18",
+   "c": "DOC",
+   "t": "26/08/2099, 16:32 DetranNet - Extrato do Veiculo de PLACA TST3977\n\n Dados do Veículo Em 26/08/2099\n\n  Placa         Renavam        Placa Anterior    Tipo           Categoria      Espécie        Lugares\n  TST3977       00123456789    00123456/MT       4-MOTOCICLETA  1-Particular   1-Passageiro   2\n",
+   "oculto": [
+    "00123456789"
+   ],
+   "claro": [
+    "MOTOCICLETA"
+   ]
+  },
+  {
+   "id": "BR19",
+   "c": "DOC",
+   "t": "O veículo Moto Ficticia 150, Placa TST3977, Cor Azul, Renavam\n00987654321, foi apreendido.\n\f Placa         Renavam        Tipo\n  TST3977       00987654321    4-MOTOCICLETA\n",
+   "oculto": [
+    "00987654321"
+   ]
+  },
+  {
+   "id": "BR20",
+   "c": "PM",
+   "t": "Outros participantes\n\nGERVASIO TESTEPOLICIAL PEQUIZEIRO (TERCEIRO INTERESSADO)\nANACLETO BURITI TESTEMORERA (TERCEIRO INTERESSADO)\nZULEICA TESTEVITIMA BURITIZAL (VÍTIMA)\n\f             BOLETIM DE OCORRÊNCIA - N°: 2099.000222\n             ELABORADO POR - GERVASIO TESTEPOLICIAL PEQUIZEIRO\n\nRelato: a guarnição composta pelo SD PM ANACLETO BURITI TESTEMOREIRA e pelo CB PM GERVASIO TESTEPOLICIAL PEQUIZEIRO foi acionada.\n\f para constar lavrei o presente termo:\n\nNome:........................: GERVASIO TESTEPOLICIAL PEQUIZEIRO\nEstado Civil.................: Casado\n\nAutoridade Policial: BELISARIO TESTEDELEGADO PRADO\n\nDepoente: GERVASIO TESTEPOLICIAL PEQUIZEIRO\n\nDocumento assinado biometricamente por GERVASIO TESTEPOLICIAL PEQUIZEIRO, em 10h20min\n",
+   "oculto": [
+    "TESTEPOLICIAL",
+    "TESTEMOREIRA",
+    "TESTEMORERA"
+   ],
+   "claro": [
+    "BELISARIO TESTEDELEGADO PRADO"
+   ]
+  },
+  {
+   "id": "BE7",
+   "c": "EXCESSO",
+   "t": "presentes a probabilidade do direito e o perigo de dano.\n          Ao discorrer sobre o tema Teodoro Anselmo Testeira, Valdomiro Ficticio e\nElpidio Testejurista asseveram que o requisito “é a plausibilidade do pedido, apurada\nem exame inicial” (Manual Fictício, v. 3, p. 45).\n",
+   "claro": [
+    "Teodoro Anselmo Testeira",
+    "Valdomiro Ficticio",
+    "Elpidio Testejurista"
+   ]
+  },
+  {
+   "id": "BE8",
+   "c": "EXCESSO",
+   "t": "                       •      FUMUS BONI IURIS (Fumaça do bom direito):\nHá prova suficiente nos autos.\n                       •      PERICULUM IN MORA (Perigo da demora):\nO veículo segue retido.\n",
+   "claro": [
+    "FUMUS BONI IURIS",
+    "PERICULUM IN MORA"
+   ]
+  },
+  {
+   "id": "BE9",
+   "c": "EXCESSO",
+   "t": "Polo passivo\n\nCHEFE DA CIRETRAN DE CIDADELA - MT (IMPETRADO)\n\f Trata-se de mandado de segurança impetrado em face do Chefe da CIRETRAN de Cidadela/MT, objetivando a liberação do veículo.\n",
+   "claro": [
+    "CHEFE DA CIRETRAN DE CIDADELA",
+    "Chefe da CIRETRAN de Cidadela"
+   ]
+  },
+  {
+   "id": "BE10",
+   "c": "EXCESSO",
+   "t": "Condutor: SD PM ROBERVAL TESTECONDUTOR LIMA, que lavrou o boletim.\nO SD PM ROBERVAL TESTECONDUTOR LIMA apresentou o conduzido.\n",
+   "claro": [
+    "ROBERVAL TESTECONDUTOR LIMA"
+   ]
   }
  ]
 }

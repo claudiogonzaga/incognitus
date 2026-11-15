@@ -1,16 +1,16 @@
 {
   "nome": "incognitus-motor",
-  "versao": "1.11.1",
+  "versao": "1.11.2",
   "api": 2,
-  "data": "2026-11-14T19:22:02Z",
-  "sha256": "891e88b7584d8468ae281be9600a7b87ab33fdf9b7234fb827739f847b9bb773",
-  "bytes": 436646,
+  "data": "2026-11-15T12:50:40Z",
+  "sha256": "ee257500e5be0b9a948638df35a76a0e6a8a3348d04f170dcf78546d2e7efea6",
+  "bytes": 438848,
   "casos": {
-    "total": 157,
-    "sha256": "3b0ddddcb9b7ad27a405ab38da49b178e893c0a75c3ee8de0ecb8768f8cda3b6"
+    "total": 165,
+    "sha256": "5791945d2dc6358012ac622a201a078b0105ff30f2dece8910d9a9504e7aef09"
   },
   "origem": {
-    "graphe_sha256": "9d444919579a9b94f9579c5ef5345e83b6b4fa14184f5eea249284c52fdff029",
-    "pipeline_sha256": "aa823adb6bb3bc84947f8820c2c146540777d6b5c52b6ec15f5dd584cd2928bf"
+    "graphe_sha256": "396fc5026a8ec8a9174a6f1daf4e4108e393c1f274aca08dc21a723b58eb1d71",
+    "pipeline_sha256": "b9346f44031722ffd57268608755b2f3c7058f16c4d2d6444375d7c72aca2023"
   }
 }
