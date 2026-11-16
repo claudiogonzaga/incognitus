@@ -56,9 +56,6 @@
       numa subpasta “NÃO ENVIAR À IA (nomes reais)”. Eles têm os <b>nomes reais</b>: guarde-os neste computador e nunca
       os mande à IA — para a IA vai só o PDF anonimizado.
     </div>
-
-    <button id="bt_rodar" class="principal" disabled>Anonimizar</button>
-    <button id="bt_parar" class="ghost" hidden>Parar depois deste arquivo</button>
   </section>
 
   <section id="fila_secao">
@@ -68,6 +65,10 @@
         <span id="resumo" class="suave"></span>
         <button id="bt_limpar" class="ghost pequeno">Limpar prontos</button>
       </div>
+    </div>
+    <div class="acao-fila">
+      <button id="bt_rodar" class="principal anonimizar" disabled>Anonimizar</button>
+      <button id="bt_parar" class="ghost" hidden>Parar depois deste arquivo</button>
     </div>
     <div id="vazio" class="vazio">Nenhum arquivo na fila.</div>
     <ol id="fila"></ol>

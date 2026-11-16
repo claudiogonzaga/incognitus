@@ -11,6 +11,7 @@
   --romana:"Cinzel", "Trajan Pro", Georgia, "Times New Roman", serif;
   --font-min:11px; --font-base:12px; --font-control:14px; --font-title:16px;
   --verniz:#1A120D;
+  --anonimizar:#8a2b22; --anonimizar-forte:#74231c;   /* o vermelho do botão Anonimizar: pompeiano escuro, sóbrio */
 }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
@@ -62,7 +63,17 @@ button:disabled { opacity:.4; cursor:default; }
 .aviso { margin:6px 0 0; padding:10px; border:2px solid var(--danger); border-radius:8px; background:rgba(158,51,39,.12); color:var(--ink); font-size:12px; }
 .vazio { padding:28px 10px; text-align:center; color:var(--ink-faint); border:2px dashed var(--border); border-radius:10px; }
 body.arrastando .vazio, body.arrastando #fila { outline:3px dashed var(--ink); outline-offset:4px; }
-#fila { list-style:none; margin:0; padding:0; display:grid; gap:8px; max-height:calc(100vh - 230px); overflow-y:auto; }
+/* o botão Anonimizar fica no alto da fila, junto dos cards (16/11/2026): quem anonimiza um processo só não rola a tela
+   para achá-lo; o painel da fila acompanha a rolagem das opções */
+#fila_secao { position:sticky; top:10px; }
+@media (max-width:820px) { #fila_secao { position:static; order:-1; } }   /* numa coluna só, a fila e o botão vêm primeiro */
+.acao-fila { display:flex; gap:8px; margin:0 0 10px; }
+.acao-fila > button { margin:0; }
+.acao-fila > #bt_parar { flex:none; width:auto; }
+button.anonimizar { background:var(--anonimizar); border-color:var(--anonimizar-forte); color:var(--cream);
+  box-shadow:0 1px 2px rgba(37,29,22,.25); letter-spacing:.02em; }
+button.anonimizar:hover:not(:disabled) { background:var(--anonimizar-forte); }
+#fila { list-style:none; margin:0; padding:0; display:grid; gap:8px; max-height:calc(100vh - 290px); overflow-y:auto; }
 .item { padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
 .item.ativo { border-color:var(--ink); background:var(--surface-up); }
 .item.erro { border-color:var(--danger); }
