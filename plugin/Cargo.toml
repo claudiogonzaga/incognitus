@@ -23,7 +23,9 @@ ttf-parser = "0.25"
 flate2 = "1"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 getrandom = "0.2"
-tokio = { version = "1", features = ["time"] }
+# macros e rt-multi-thread só servem aos testes; ficam aqui porque o CI testa o plugin pelo Cargo.toml do app, e
+# dependência só de teste não vale em pacote fora do workspace
+tokio = { version = "1", features = ["time", "macros", "rt-multi-thread"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
@@ -39,9 +41,6 @@ features = ["windows-native"]
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies.keyring]
 version = "3"
-
-[dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 
 # a fila declara ao macOS uma atividade iniciada pelo usuário (sem isso, com a janela fora da tela, o sistema suspende a
 # página e o lote para)
