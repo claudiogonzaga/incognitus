@@ -114,7 +114,7 @@
 </main>
 
 <footer>
-  <span>🔒 Tudo fica neste computador: nenhum PDF, texto ou mapa é enviado. Sem telemetria.</span>
+  <span>🔒 Tudo fica neste computador: nenhum PDF ou mapa é enviado, e texto só vai à IA quando você clica no 🧠 (o anonimizado). Sem telemetria.</span>
   <span id="rodape_motor" class="suave"></span>
 </footer>
 
@@ -130,6 +130,23 @@
   <div class="linha fim"><button id="bt_colar_copiar" class="ghost">Copiar</button><button id="bt_colar_fechar">Fechar</button></div>
 </dialog>
 
+<dialog id="dlg_mpa">
+  <h2>🧠 Melhor Próximo Ato</h2>
+  <div id="mpa_info" class="dica"></div>
+  <div class="linha abas-mpa">
+    <button type="button" id="mpa_bt_analise" class="aba ativa">Análise</button>
+    <button type="button" id="mpa_bt_minuta" class="aba">Minuta</button>
+  </div>
+  <textarea id="mpa_texto" rows="16" readonly spellcheck="false"></textarea>
+  <p class="dica">Com os nomes reais (o mapa do caso). O arquivo anonimizado (_anon.md) fica ao lado do PDF; o com os
+    nomes reais, na subpasta “NÃO ENVIAR À IA (nomes reais)”.</p>
+  <div class="linha fim">
+    <button id="bt_mpa_copiar" class="ghost">Copiar</button>
+    <button id="bt_mpa_pasta" class="ghost">Mostrar na pasta</button>
+    <button id="bt_mpa_fechar">Fechar</button>
+  </div>
+</dialog>
+
 <dialog id="dlg_ajustes">
   <form method="dialog">
     <h2>Ajustes</h2>
@@ -137,6 +154,36 @@
     <textarea id="inst" rows="9" spellcheck="false"></textarea>
     <div class="linha"><button type="button" id="bt_inst_padrao" class="ghost pequeno">Restaurar o padrão</button></div>
     <label class="opcao"><input id="op_checar" type="checkbox"> <span>Procurar atualizações ao abrir o Incognitus (<span class="so-avulso">do aplicativo e </span>das regras)</span></label>
+
+    <h2 id="ia_titulo">🧠 Melhor Próximo Ato</h2>
+    <p class="dica">O botão 🧠 do card manda à Anthropic, com a <b>sua</b> chave, o texto <b>anonimizado</b> do caso e o
+      <b>seu</b> prompt, e traz a análise e a minuta, que voltam aos nomes reais com o mapa do caso. O mapa e os nomes reais
+      não saem do computador, e um porteiro confere cada envio contra o mapa antes de ele sair.</p>
+    <label for="ia_chave">Chave da Anthropic <span id="ia_chave_sit" class="suave"></span></label>
+    <div class="linha">
+      <input id="ia_chave" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
+      <button type="button" id="bt_ia_chave" class="ghost pequeno">Guardar</button>
+      <button type="button" id="bt_ia_chave_apagar" class="ghost pequeno" hidden>Apagar</button>
+    </div>
+    <p class="dica">Fica no chaveiro do sistema (Keychain no Mac, Gerenciador de Credenciais no Windows), nunca num arquivo.</p>
+    <label for="ia_prompt">Prompt: um arquivo .txt ou .md, ou o link de um Google Docs (ou do OneDrive/SharePoint)</label>
+    <div class="linha">
+      <input id="ia_prompt" type="text" spellcheck="false" placeholder="https://docs.google.com/document/d/…">
+      <button type="button" id="bt_ia_prompt_arquivo" class="ghost pequeno">Arquivo…</button>
+      <button type="button" id="bt_ia_prompt_conferir" class="ghost pequeno">Conferir</button>
+    </div>
+    <div id="ia_prompt_msg" class="suave"></div>
+    <div class="linha"><span id="ia_google_sit" class="suave"></span>
+      <button type="button" id="bt_ia_google" class="ghost pequeno">Entrar com o Google</button>
+      <button type="button" id="bt_ia_google_sair" class="ghost pequeno" hidden>Sair</button>
+    </div>
+    <p class="dica">O Google Docs é lido com o seu login do Google, só para leitura: abre o Doc que a sua conta já pode
+      abrir. O link do OneDrive/SharePoint precisa estar compartilhado com “qualquer pessoa com o link”.</p>
+    <label for="ia_modelo">Modelo</label>
+    <select id="ia_modelo">
+      <option value="claude-opus-5-5">Claude Opus 5.5 (como no Graphé)</option>
+      <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (mais barato)</option>
+    </select>
 
     <h2>Motor de anonimização</h2>
     <div id="motor_info" class="caixa"></div>
@@ -162,6 +209,7 @@
   </form>
 </dialog>
 
+<script src="porteiro.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

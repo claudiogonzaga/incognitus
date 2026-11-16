@@ -106,11 +106,57 @@ def publicar_motor_teste(pasta, adulterar=False):
     return m
 
 
-def rodar_app(plano, url_motor, dados):
+def anthropic_de_mentira():
+    """Uma Anthropic de mentira para o 🧠: guarda cada pedido e responde em streaming (SSE), como a de verdade. A análise
+    e a minuta citam os tokens que vieram nos autos (para a reidentificação ter o que devolver)."""
+    import re as _re
+    pedidos = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            n = int(self.headers.get("content-length") or 0)
+            corpo = self.rfile.read(n).decode("utf-8")
+            pedidos.append({"cabecalhos": {k.lower(): v for k, v in self.headers.items()}, "corpo": json.loads(corpo)})
+            p = pedidos[-1]["corpo"]
+            autos = p["messages"][0]["content"][0]["text"]
+            toks = [t for t in dict.fromkeys(_re.findall(r"«[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9_]{2,39}»", autos)) if t != "«PAPEL_nn»"][:3]
+            if len(p["messages"]) == 1:
+                texto = ("ANÁLISE (de mentira). Os autos tratam de " + ", ".join(toks) + ".\n\nPRÓXIMO ATO: Denúncia\nMINUTA: SEGUIR")
+            else:
+                texto = "EXCELENTÍSSIMO SENHOR JUIZ (minuta de mentira)\n\nO Ministério Público denuncia " + " e ".join(toks) + ".\n"
+            evs = [
+                {"type": "message_start", "message": {"id": "msg_x", "type": "message", "role": "assistant", "model": p["model"], "content": [],
+                                                      "stop_reason": None, "usage": {"input_tokens": 1000, "output_tokens": 1}}},
+                {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}},
+                {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": texto}},
+                {"type": "content_block_stop", "index": 0},
+                {"type": "message_delta", "delta": {"stop_reason": "end_turn", "stop_sequence": None}, "usage": {"output_tokens": 200}},
+                {"type": "message_stop"},
+            ]
+            sse = "".join(f"event: {ev['type']}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n" for ev in evs).encode("utf-8")
+            self.send_response(200)
+            self.send_header("content-type", "text/event-stream")
+            self.send_header("content-length", str(len(sse)))
+            self.end_headers()
+            self.wfile.write(sse)
+
+    porta = porta_livre()
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", porta), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, f"http://127.0.0.1:{porta}/v1/messages", pedidos
+
+
+CHAVE_DE_PROVA = "-".join(["sk", "ant", "prova", "e2e", "0000000000000000"])
+
+
+def rodar_app(plano, url_motor, dados, extra_env=None):
     caminho = os.path.join(SAIDA, "plano-" + uuid.uuid4().hex[:6] + ".json")
     json.dump(plano, open(caminho, "w", encoding="utf-8"), ensure_ascii=False)
     env = dict(os.environ, SKIA_E2E=caminho, SKIA_DADOS=dados, SKIA_MOTOR_URL=url_motor,
-               SKIA_APP_URL=url_motor + "release.json", SKIA_DOWNLOADS=os.path.join(SAIDA, "downloads"))
+               SKIA_APP_URL=url_motor + "release.json", SKIA_DOWNLOADS=os.path.join(SAIDA, "downloads"), **(extra_env or {}))
     os.makedirs(env["SKIA_DOWNLOADS"], exist_ok=True)
     t0 = time.time()
     r = subprocess.run([EXE], env=env, capture_output=True, timeout=900)
@@ -283,8 +329,15 @@ def secao_casos(dados):
     shutil.rmtree(pasta_c, ignore_errors=True)
     arqs = gerar_pdfs.gerar_caso(pasta_c)
     saida = os.path.join(pasta_c, "saida")
+    # o 🧠 roda neste caso, com uma Anthropic de mentira e um prompt em arquivo (fictício)
+    srv_ia, url_ia, pedidos = anthropic_de_mentira()
+    prompt = os.path.join(pasta_c, "prompt de prova.md")
+    open(prompt, "w", encoding="utf-8").write("# Prompt de prova\nVocê é o assessor jurídico fictício do teste de ponta a ponta.\n")
     rel = rodar_app({"arquivos": arqs, "saida": saida, "txt": True, "extracao": os.path.join(SAIDA, "extracao-caso"),
-                     "relatorio": os.path.join(SAIDA, "relatorio-caso.json")}, "http://127.0.0.1:9/", dados)
+                     "relatorio": os.path.join(SAIDA, "relatorio-caso.json"),
+                     "mpa": {"prompt": prompt, "vazar": os.path.join(pasta_c, "prompt que vaza.md"), "visor": True}},
+                    "http://127.0.0.1:9/", dados, {"SKIA_CLAUDE_URL": url_ia, "SKIA_CHAVE_DE_PROVA": CHAVE_DE_PROVA})
+    srv_ia.shutdown()
     por = {it["nome"]: it for it in rel["itens"]}
     N = gerar_pdfs.CASO_NOMES
     for it in rel["itens"]:
@@ -308,6 +361,31 @@ def secao_casos(dados):
         achou = [x for x in reais if x in t.upper()]
         confere(not achou and (k == "outro" or tok in t), f"{nomes_saida[k]}: sem nomes reais" + (" e com o mesmo token da pessoa" if k != "outro" else "") + (f" — ACHEI {achou}" if achou else ""))
     confere(not any(x in " ".join(os.listdir(saida)).upper() for x in reais), "nenhum nome real nos nomes dos arquivos de saída")
+    # o 🧠 Melhor Próximo Ato e o 👁
+    mp = rel.get("mpa") or {}
+    print(f"  🧠: {mp.get('etapa')} · {mp.get('proximo')} · {len(pedidos)} pedido(s) à Anthropic de mentira" + (f" · ERRO {mp.get('erro')}" if mp.get("erro") else ""))
+    confere(mp.get("botao") and (mp.get("olho") or 0) >= 4, f"o card tem o 🧠 e os 👁 (anonimizado e original): {mp.get('olho')} botão(ões) 👁")
+    confere(mp.get("visor") == "ok", f"o 👁 abre o PDF anonimizado numa janela do app ({mp.get('visor')})")
+    confere(mp.get("etapa") == "pronto" and mp.get("proximo") == "Denúncia" and not mp.get("suspensa"), "o 🧠 fez a análise e a minuta (MINUTA: SEGUIR)")
+    ped = [p for p in pedidos]
+    confere(len(ped) == 2 and len(ped[1]["corpo"]["messages"]) == 3 and ped[1]["corpo"]["messages"][1]["role"] == "assistant",
+            f"duas chamadas, como no Graphé: a análise e, na mesma conversa, a minuta ({len(ped)} pedido(s))")
+    tudo = json.dumps([p["corpo"] for p in ped], ensure_ascii=False).upper()
+    confere(bool(ped) and all(p["corpo"].get("system", "").startswith("# Prompt de prova") for p in ped), "o prompt do arquivo vai como as instruções (system)")
+    vaz = [x for x in reais if x in tudo]
+    confere(bool(ped) and tok.upper() in tudo and not vaz, "à Anthropic vão só os autos anonimizados: o token, nenhum nome real" + (f" — ACHEI {vaz}" if vaz else ""))
+    confere(bool(ped) and all(p["cabecalhos"].get("x-api-key") == CHAVE_DE_PROVA and p["cabecalhos"].get("anthropic-version") for p in ped),
+            "a chave vai no cabeçalho (posta pelo Rust), com a versão da API")
+    ta, tr = mp.get("textoAnon") or "", mp.get("textoReal") or ""
+    confere((mp.get("anonimo") or "").endswith("_anon.md") and os.path.dirname(mp.get("anonimo") or "") == saida and tok in ta
+            and not [x for x in reais if x in ta.upper()], "a resposta anonimizada (_anon.md) fica ao lado do PDF, só com tokens")
+    sobrou = [t for t in mapas[0]["tokens"] if t in tr]
+    voltou = [v["valor"] for v in mapas[0]["tokens"].values() if v.get("valor") and v["valor"] in tr]
+    confere("NÃO ENVIAR À IA" in (mp.get("real") or "") and not sobrou and voltou and "INÍCIO DA MINUTA" in tr,
+            f"a análise e a minuta com os nomes reais ficam na subpasta privada, sem tokens ({len(voltou)} dado(s) de volta)" + (f" — sobrou {sobrou}" if sobrou else ""))
+    vz = mp.get("vazar") or {}
+    confere(vz.get("achou") and vz.get("etapa") == "erro" and "porteiro" in (vz.get("erro") or "") and len(pedidos) == 2,
+            f"o porteiro barra o pedido com um nome do mapa em claro, e nada sai ({vz.get('erro')})")
     t_rel = texto_pdf(por[N["relatorio"]]["saida"]["pdf"])
     confere("DOCUMENTOS DESTE CASO (3" in t_rel, "o cabeçalho lista os documentos do caso")
     # Separar (outra rodada, noutra pasta): o termo sai do caso, e os dois casos são refeitos

@@ -1,7 +1,7 @@
 "$schema" = "schemas/schema.json"
 
 [default]
-description = "O que a janela do Incognitus usa: a fila de PDFs (pdftotext e OCR), o PDF anonimizado, a reidentificação, o motor e a atualização assinada dele, os Ajustes e o teste de ponta a ponta."
+description = "O que a janela do Incognitus usa: a fila de PDFs (pdftotext e OCR), o PDF anonimizado, a reidentificação, o motor e a atualização assinada dele, os Ajustes, o teste de ponta a ponta, o 🧠 Melhor Próximo Ato (chave, login do Google, prompt e envio à Anthropic) e o 👁 (o PDF numa janela do app)."
 permissions = [
   "allow-info", "allow-info-app", "allow-registrar", "allow-revelar", "allow-ajustes-ler", "allow-ajustes-gravar", "allow-acordado",
   "allow-preparar-arquivo", "allow-extrair-texto", "allow-ocr-pagina", "allow-limpar-arquivo", "allow-texto-documento",
@@ -10,6 +10,9 @@ permissions = [
   "allow-motor-ativo", "allow-motor-checar", "allow-motor-baixar", "allow-motor-instalar", "allow-motor-voltar",
   "allow-ner-estado", "allow-ner-baixar", "allow-ner-ler",
   "allow-e2e-plano", "allow-e2e-gravar", "allow-e2e-fim",
+  "allow-ia-situacao", "allow-ia-chave-guardar", "allow-ia-chave-apagar", "allow-ia-google-entrar", "allow-ia-google-cancelar", "allow-ia-google-sair",
+  "allow-ia-prompt-ler", "allow-ia-enviar",
+  "allow-visor-abrir",
 ]
 
 # O que o hospedeiro (Graphé Desktop) chama da janela principal dele para ler os autos no MPA: a cópia temporária do PDF,

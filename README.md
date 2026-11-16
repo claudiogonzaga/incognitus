@@ -7,9 +7,10 @@
 Aplicativo de computador (Mac e Windows) que **anonimiza autos em PDF, em lote**, com o **mesmo motor de anonimização
 do Graphé** — o mesmo fluxo do lote automático (preparar → classificador → concluir), as mesmas regras, o
 mesmo cabeçalho de autos anonimizados — e **reidentifica as minutas** que a IA devolve, com o mapa de cada processo,
-como o 🔓 do Graphé. **Tudo roda no computador**: nenhum PDF, texto ou mapa sai dele, e não há telemetria. As únicas
-conexões são, ao abrir, a procura por versão nova do app e das regras (só leitura do GitHub público), que os Ajustes
-desligam.
+como o 🔓 do Graphé. **Tudo roda no computador**: nenhum PDF ou mapa sai dele, e não há telemetria. As conexões de
+sempre são, ao abrir, a procura por versão nova do app e das regras (só leitura do GitHub público), que os Ajustes
+desligam. Texto só sai quando a pessoa clica no **🧠 Melhor Próximo Ato**, com a chave da Anthropic dela: vai o texto
+**anonimizado** do caso e o prompt que ela escolheu, conferidos antes por um porteiro contra o mapa.
 
 
 ## Como usar
@@ -65,6 +66,39 @@ desligam.
   data, a hora, o número do documento e o "Num. … - Pág.", que a IA usa para citar o ID. No corpo dos autos vale a
   regra do Graphé: servidores, autoridades e advogados ficam em claro.
 
+### Ver o PDF (👁)
+
+Cada card pronto tem **👁 Anonimizado** e **👁 Original** (este, para PDF e .txt): o arquivo abre numa janela do
+próprio Incognitus, com o leitor de PDF do sistema (o do WebKit no Mac, o do Edge no Windows), sem passar pelo Finder.
+A janela só lê o arquivo; o original nunca é copiado nem alterado.
+
+### 🧠 Melhor Próximo Ato
+
+(15/11/2026, pedido do Promotor: o Incognitus vai crescendo até virar o próprio Graphé.) No card de cada caso pronto,
+o botão **🧠 Melhor Próximo Ato** faz o que o 🧠 do Graphé faz: a **análise** (Fase 1) e, logo depois, sozinha, a
+**minuta** (Fase 2) na mesma conversa, salvo quando a análise termina com `MINUTA: SUSPENSA — o que falta`. O modelo
+padrão é o do Graphé (Claude Opus 5.5, esforço alto, até 32 mil tokens de resposta); o Sonnet 5.5 é a opção mais barata.
+
+- **O prompt é de quem usa**: o app não traz nenhum. Nos Ajustes, escolhe-se um arquivo **.txt ou .md**, ou cola-se o
+  link de um **Google Docs** (o caminho principal) ou de um arquivo do **OneDrive/SharePoint**. O prompt é lido de novo
+  a cada 🧠, para valer a versão atual. O Google Docs é lido pela API do Docs com o **login do Google** de quem usa
+  (OAuth para computador, com PKCE; só `openid email` e `documents.readonly`): abre o Doc que a conta já pode abrir. O
+  link da Microsoft precisa estar compartilhado com "qualquer pessoa com o link" (o login da Microsoft ainda não está
+  no app).
+- **A chave da Anthropic** fica no chaveiro do sistema (Keychain no Mac, Gerenciador de Credenciais no Windows), e só
+  o Rust a lê, na hora de chamar a API.
+- **O que sai**: o prompt e o texto anonimizado do caso inteiro (o cabeçalho e cada documento com as páginas
+  numeradas). Antes de cada envio, o **porteiro** (o mesmo do Graphé Desktop, `modulo/porteiro.js`) confere o pedido
+  contra o mapa do caso e **barra** o que tiver em claro um nome, CPF, telefone, e-mail ou outro dado que a
+  anonimização trocou por token. O mapa nunca sai.
+- **O que volta**: a análise e a minuta, que voltam aos nomes reais com o mapa do caso. Ficam dois arquivos: o
+  anonimizado (`… — MPA 22h41_anon.md`), ao lado do PDF, e o com os nomes reais (`… — MPA 22h41 (nomes reais).md`), na
+  subpasta "NÃO ENVIAR À IA (nomes reais)". O card mostra o próximo ato, o custo estimado e **Ver** (a análise e a
+  minuta numa janela, com **Copiar**).
+- **O login do Google precisa do cliente OAuth do app** ("App para computador", no Google Cloud): o arquivo
+  `google_cliente.json` na pasta de dados do app, ou `INCOGNITUS_GOOGLE_CLIENT_ID`/`_SECRET` no ambiente do build.
+  Sem ele, o Google Docs não abre (o arquivo .txt/.md continua valendo).
+
 ### Reidentificar
 
 **No card do caso** (14/11/2026, pedido do Promotor): a minuta que a IA escreveu sobre os autos anonimizados volta aos
@@ -93,7 +127,7 @@ vezes grava), no corpo, nos cabeçalhos, nos rodapés, nas notas e nos comentár
 colado volta na tela, com **Copiar** e **Salvar como .txt…**.
 
 **Ajustes**: os **contatos institucionais** que ficam em claro (um por linha; o padrão é o `ANON_INST_PADRAO` do
-Graphé), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar regras** e **Voltar à versão anterior**.
+Graphé), o **🧠 Melhor Próximo Ato** (a chave da Anthropic, o prompt, o login do Google e o modelo), a checagem das regras ao abrir, a versão do motor em uso, **Atualizar regras** e **Voltar à versão anterior**.
 
 ## Baixar
 

@@ -2,14 +2,21 @@
 //! minutas com o mapa. O Rust cuida do que é do sistema: os sidecars (pdftotext, pdftoppm, tesseract), a cópia temporária
 //! de cada PDF, a gravação da saída (PDF, .txt e mapa), a leitura e a gravação das minutas (reid.rs) e o motor em uso
 //! (embutido ou baixado e assinado). A anonimização e a reidentificação rodam no front, num Web Worker, com o motor.js.
-//! Nada sai do computador: a única conexão é a checagem das regras (só leitura do repositório público incognitus-motor), que
-//! os Ajustes desligam.
+//! Nada sai do computador sem a pessoa pedir: a conexão de sempre é a checagem das regras (só leitura do repositório
+//! público incognitus-motor), que os Ajustes desligam. O 🧠 Melhor Próximo Ato (ia.rs), só com a chave da Anthropic de
+//! quem usa e só ao clique, manda o texto anonimizado do caso e o prompt escolhido à Anthropic; o mapa nunca sai.
 //!
 //! Este crate é o plugin `anonimizacao` do Tauri (comandos `plugin:anonimizacao|…`), pelo contrato de módulo do Graphé
 //! Desktop (MODULOS.md): serve ao app Incognitus avulso (`init`) e ao Graphé Desktop, que o hospeda como módulo
 //! (`init_como_modulo`). A lista de comandos está aqui, no build.rs e em permissions/default.toml.
+mod chaveiro;
+mod claude;
 mod ferramentas;
+mod google;
+mod ia;
 mod motor;
+mod prompt;
+mod visor;
 mod acordado;
 mod ner;
 mod pdf;
@@ -584,8 +591,18 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             registrar,
             e2e_plano,
             e2e_gravar,
-            e2e_fim
+            e2e_fim,
+            ia::ia_situacao,
+            ia::ia_chave_guardar,
+            ia::ia_chave_apagar,
+            ia::ia_google_entrar,
+            ia::ia_google_cancelar,
+            ia::ia_google_sair,
+            ia::ia_prompt_ler,
+            ia::ia_enviar,
+            visor::visor_abrir
         ])
+        .register_asynchronous_uri_scheme_protocol(visor::ESQUEMA, visor::servir)
         .setup(move |app, _api| {
             // SKIA_DADOS (só para testes): dados e cache numa pasta à parte, sem tocar nos do usuário.
             let (cache, dados) = match std::env::var_os("SKIA_DADOS") {
@@ -609,6 +626,8 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
                 arquivos: Mutex::new(HashMap::new()),
                 contador: AtomicU64::new(1),
             };
+            app.manage(ia::novo(&app.config().identifier, hospedado, interno.dados.clone()));
+            app.manage(visor::Visor::default());
             app.manage(Estado(Arc::new(interno)));
             Ok(())
         })
@@ -689,7 +708,7 @@ mod testes {
         // cada comando do build.rs está no conjunto `default`; o `api` só tem comandos que existem
         let build = include_str!("../build.rs");
         let comandos: Vec<String> = build.split('"').skip(1).step_by(2).map(|c| c.to_string()).collect();
-        assert_eq!(comandos.len(), 31);
+        assert_eq!(comandos.len(), 40);
         let toml = include_str!("../permissions/default.toml");
         let (padrao, api) = toml.split_once("[[set]]").expect("o conjunto api");
         for c in &comandos {

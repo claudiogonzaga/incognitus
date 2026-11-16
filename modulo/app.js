@@ -21,6 +21,8 @@ const estado = {
   instPadrao: '', motor: null, worker: null, casos: null, e2e: null,
   aba: 'anon', reid: { mapa: null, texto: null, itens: [] },
   minutas: {},   // mapa do caso → { itens } : as minutas da IA reidentificadas no próprio card
+  autosAnon: {}, // mapa do caso → o texto anonimizado do caso inteiro (o que o 🧠 manda à IA)
+  mpa: {},       // mapa do caso → o 🧠 Melhor Próximo Ato daquele caso { etapa, t0, msg, resultado… }
 };
 const ETAPAS = { fila: 'na fila', extraindo: 'extraindo', ocr: 'OCR', anonimizando: 'anonimizando', rigoroso: 'leitura rigorosa', gravando: 'gravando o PDF', pronto: 'pronto', erro: 'erro', lido: 'lido · esperando os outros', refazer: 'a refazer (caso mudou)' };
 
@@ -199,7 +201,9 @@ function desenhar() {
       (i.saida ? '<div class="det">saiu como <b>' + esc(nomeDe(i.saida.pdf)) + '</b></div>' : '') +
       (i.avisos.length ? '<div class="det">⚠ ' + esc(i.avisos.join(' · ')) + '</div>' : '') +
       (i.erro ? '<div class="msg-erro">' + esc(i.erro) + '</div>' : '') +
-      (i.saida ? '<div class="acoes"><button class="ghost" data-revelar="' + esc(i.saida.pdf) + '">Mostrar na pasta</button>' +
+      (i.saida ? '<div class="acoes"><button class="ghost" data-ver="' + esc(i.saida.pdf) + '" data-rotulo="anonimizado" title="Abrir o PDF anonimizado aqui no Incognitus">👁 Anonimizado</button>' +
+        (['pdf', 'txt'].includes(extDe(i.caminho)) ? '<button class="ghost" data-ver="' + esc(i.caminho) + '" data-rotulo="original" title="Abrir o original aqui no Incognitus (só leitura)">👁 Original</button>' : '') +
+        '<button class="ghost" data-revelar="' + esc(i.saida.pdf) + '">Mostrar na pasta</button>' +
         (i.saida.confira ? '<button class="ghost" data-revelar="' + esc(i.saida.confira) + '">Lista CONFIRA</button>' : '') + '</div>' : '') +
       blocoMinuta(i) +
       '</li>';
@@ -445,6 +449,7 @@ async function gravarCaso(g, nomesUsados) {
     }
     marcar('gravando');
     const destino = estado.ajustes.saida === 'outra' ? estado.ajustes.pastaSaida : null;
+    const textoDoCaso = autosParaIa(r);
     for (const [k, i] of its.entries()) {
       const d = r.documentos[k];
       let nome = d.nomeSaida, n = 2;
@@ -458,6 +463,7 @@ async function gravarCaso(g, nomesUsados) {
         cabecalho: r.cabecalho.normalize('NFC'), paginas: d.paginas.map((p) => p.normalize('NFC')),
         texto: comTexto ? d.texto : null, mapa: r.mapaJson, confira: r.confira,
       } });
+      if (k === 0) estado.autosAnon[i.saida.mapa] = textoDoCaso;
       if (i.saida.sem_glifo) i.avisos.push(i.saida.sem_glifo + ' caractere(s) sem desenho na fonte viraram "?" no PDF' + (comTexto ? ' (o .txt tem o original)' : ''));
       i.etapa = 'pronto';
     }
@@ -535,12 +541,18 @@ async function gravarAjustes() {
   const a = Object.assign({}, estado.ajustes);
   await invoke('ajustes_gravar', { ajustes: a });
 }
-function abrirAjustes() {
+function abrirAjustes(secao) {
   const c = estado.ajustes.contatos == null ? estado.instPadrao : estado.ajustes.contatos;
+  $('ia_prompt').value = estado.ajustes.iaPrompt || '';
+  $('ia_modelo').value = estado.ajustes.iaModelo || 'claude-opus-5-5';
+  $('ia_chave').value = '';
+  $('ia_prompt_msg').textContent = '';
+  mostrarIa();
   $('inst').value = c.split(/\s*;\s*|\n+/).filter(Boolean).join('\n');
   $('op_checar').checked = estado.ajustes.checarAoAbrir !== false;
   $('motor_msg').textContent = '';
-  $('dlg_ajustes').showModal();
+  if (!$('dlg_ajustes').open) $('dlg_ajustes').showModal();
+  if (secao === 'ia') $('ia_titulo').scrollIntoView({ block: 'start' });
 }
 async function salvarAjustes() {
   const linhas = $('inst').value.split('\n').map((x) => x.trim()).filter(Boolean).join('\n');
@@ -566,13 +578,179 @@ function blocoMinuta(i) {
         '<button class="ghost mini" data-revelar="' + esc(m.saida) + '">Mostrar na pasta</button>' +
         (m.sobras && m.sobras.length ? '<div class="aviso">' + esc(avisoSobras(m.sobras)) + '</div>' : '')) + '</li>').join('');
   const n = i.caso && i.caso.itens.length > 1 ? ' deste caso' : ' deste processo';
-  return '<div class="minuta">' +
+  return blocoMpa(mapa, n) + '<div class="minuta">' +
     '<div class="minuta-cab"><b>Minuta da IA</b><span>volta aos nomes reais com o mapa' + n + '</span></div>' +
     '<div class="acoes"><button data-minuta="' + esc(mapa) + '">Reidentificar minuta…</button>' +
     '<button class="ghost" data-colar="' + esc(mapa) + '">Colar texto</button></div>' +
     (lista ? '<ul class="minutas">' + lista + '</ul>' : '') +
     '<div class="det">ou arraste para este card a minuta (.docx, .txt ou .md). A cópia reidentificada sai ao lado dela, com “(reidentificado)” no nome.</div>' +
     '</div>';
+}
+
+// ── o 🧠 Melhor Próximo Ato, no card do caso ─────────────────────────────────────────────────────────────────────
+// Como no Graphé: a análise (Fase 1) e, logo depois, sozinha, a minuta (Fase 2), salvo "MINUTA: SUSPENSA" (a IA diz o
+// que falta e para). O prompt é o de quem usa (Ajustes: arquivo, Google Docs ou OneDrive), lido de novo a cada vez; vão
+// à Anthropic só ele e o texto anonimizado do caso, conferidos pelo porteiro contra o mapa antes de sair. O que a IA
+// devolve volta aos nomes reais com o mapa do caso, e os dois arquivos ficam gravados (o _anon ao lado do PDF; o com os
+// nomes reais, na subpasta privada).
+const MPA_MAX_TOKENS = 32000;
+const MPA_SEPARADOR = '**✂️ -------------------------- INÍCIO DA MINUTA -------------------------- ✂️**';
+const MPA_MINUTA_RE = /^\W*MINUTA\s*:\s*(SEGUIR|SUSPENSA)\b[\s—–:\-]*(.*)$/im;
+const MPA_PRECOS = { 'claude-opus-5-5': [4, 20, 0.05], 'claude-sonnet-5-5': [2, 10, 0.1] };
+const MPA_TAREFA_ANALISE = 'Os autos acima foram anonimizados no computador de quem pede: nomes de pessoas, documentos, ' +
+  'endereços e contatos foram trocados por tokens entre « » (por exemplo, «REU_01»). Use os tokens exatamente como estão, ' +
+  'sem tentar adivinhar os dados.\n\nFaça a análise do Melhor Próximo Ato conforme as suas instruções. Termine com duas linhas:\n' +
+  'PRÓXIMO ATO: <o ato recomendado>\n' +
+  'MINUTA: SEGUIR — se já dá para redigir a peça; ou MINUTA: SUSPENSA — <o que falta> — se falta algo essencial.';
+const MPA_TAREFA_MINUTA = 'Agora redija a minuta completa da peça recomendada na análise, pronta para revisão, conforme as suas ' +
+  'instruções. Use os tokens « » no lugar dos nomes e dados, como nos autos. Responda só com a minuta.';
+
+/** O texto anonimizado do caso inteiro, como vai à IA: o cabeçalho e cada documento com as páginas numeradas. */
+function autosParaIa(r) {
+  const docs = r.documentos || [];
+  return [r.cabecalho].concat(docs.map((d, k) => '===== DOCUMENTO ' + (k + 1) + ' de ' + docs.length + ': ' + d.nomeSaida + ' =====\n\n' +
+    d.paginas.map((p, n) => '— página ' + (n + 1) + ' —\n' + p).join('\n\n'))).join('\n\n').normalize('NFC');
+}
+
+function usdDe(modelo, u) {
+  const p = MPA_PRECOS[modelo] || MPA_PRECOS['claude-opus-5-5'];
+  u = u || {};
+  const ent = +u.input_tokens || 0, cw = +u.cache_creation_input_tokens || 0, cr = +u.cache_read_input_tokens || 0, sai = +u.output_tokens || 0;
+  return (ent * p[0] + cw * p[0] * 1.25 + cr * p[0] * p[2] + sai * p[1]) / 1e6;
+}
+const usdTexto = (v) => 'US$ ' + (Math.round(v * 100) / 100).toFixed(2).replace('.', ',');
+
+function blocoMpa(mapa, n) {
+  const m = estado.mpa[mapa];
+  const trab = m && !['pronto', 'erro'].includes(m.etapa);
+  let corpo = '';
+  if (m && trab) corpo = '<div class="det">⏳ ' + esc(m.msg) + ' · <span data-mpa-tempo="' + esc(mapa) + '">' + Math.round((Date.now() - m.t0) / 1000) + ' s</span></div>';
+  else if (m && m.etapa === 'erro') corpo = '<div class="msg-erro">' + esc(m.erro) + '</div>';
+  else if (m && m.etapa === 'pronto') corpo = '<div class="det">✓ <b>' + esc(m.proximo || 'análise pronta') + '</b>' +
+    (m.suspensa ? ' · minuta suspensa: ' + esc(m.suspensa) : ' · análise e minuta prontas') + ' · ' + usdTexto(m.usd) + ' · ' + m.segundos + ' s' +
+    (m.sobras && m.sobras.length ? '<div class="aviso">' + esc(avisoSobras(m.sobras)) + '</div>' : '') + '</div>' +
+    '<div class="acoes"><button class="ghost mini" data-mpa-ver="' + esc(mapa) + '">Ver</button>' +
+    '<button class="ghost mini" data-revelar="' + esc(m.real) + '">Mostrar na pasta</button></div>';
+  return '<div class="minuta mpa">' +
+    '<div class="minuta-cab"><b>🧠 Melhor Próximo Ato</b><span>a IA lê os autos anonimizados' + n + ' com o seu prompt</span></div>' +
+    '<div class="acoes"><button class="cerebro" data-mpa="' + esc(mapa) + '"' + (trab ? ' disabled' : '') + '>' +
+    (trab ? 'Pensando…' : m && m.etapa === 'pronto' ? '🧠 De novo' : '🧠 Melhor Próximo Ato') + '</button></div>' + corpo + '</div>';
+}
+
+function textoDaResposta(json) {
+  return (json.content || []).filter((b) => b.type === 'text').map((b) => b.text || '').join('').trim();
+}
+
+/** Um pedido à Anthropic: o porteiro confere contra o mapa e só então vai (a chave é posta pelo Rust). */
+async function enviarIa(corpo, mapaObj) {
+  const texto = JSON.stringify(corpo);
+  Porteiro.barrarSeVazar(texto, mapaObj);
+  const r = await invoke('ia_enviar', { corpo: texto, cabecalhos: { 'anthropic-version': '2023-06-01' } });
+  if (r.json.stop_reason === 'refusal') throw new Error('A IA recusou o pedido (triagem de segurança da Anthropic).');
+  if (r.json.stop_reason === 'max_tokens') throw new Error('A resposta da IA foi cortada no limite de tamanho.');
+  return r;
+}
+
+async function rodarMpa(mapa) {
+  const m = estado.mpa[mapa] = { etapa: 'prompt', msg: 'lendo o seu prompt', t0: Date.now() };
+  const tique = setInterval(() => {
+    document.querySelectorAll('[data-mpa-tempo]').forEach((el) => { const x = estado.mpa[el.dataset.mpaTempo]; if (x) el.textContent = Math.round((Date.now() - x.t0) / 1000) + ' s'; });
+  }, 1000);
+  desenhar();
+  try {
+    const sit = await invoke('ia_situacao');
+    if (!sit.chave.guardada) { abrirAjustes('ia'); throw new Error('Falta a chave da Anthropic: guarde-a nos Ajustes.'); }
+    if (!estado.ajustes.iaPrompt) { abrirAjustes('ia'); throw new Error('Falta o prompt: escolha um arquivo ou cole o link do Google Docs nos Ajustes.'); }
+    const autos = estado.autosAnon[mapa];
+    if (!autos) throw new Error('O texto anonimizado deste caso não está mais na memória: anonimize-o de novo.');
+    const prompt = await invoke('ia_prompt_ler', { fonte: estado.ajustes.iaPrompt });
+    const mapaJson = await mapaDoCaso(mapa), mapaObj = JSON.parse(mapaJson);
+    const modelo = estado.ajustes.iaModelo || 'claude-opus-5-5';
+    const user1 = { role: 'user', content: [
+      { type: 'text', text: 'AUTOS ANONIMIZADOS (Incognitus)\n\n' + autos, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: MPA_TAREFA_ANALISE }] };
+    const base = { model: modelo, max_tokens: MPA_MAX_TOKENS, system: prompt.texto, output_config: { effort: 'high' } };
+    Object.assign(m, { etapa: 'analise', msg: 'a IA está fazendo a análise (' + prompt.titulo + ')' }); desenhar();
+    const r1 = await enviarIa(Object.assign({ messages: [user1] }, base), mapaObj);
+    let usd = usdDe(modelo, r1.json.usage);
+    const analise = textoDaResposta(r1.json);
+    if (analise.length < 40) throw new Error('A IA devolveu uma análise vazia ou curta demais.');
+    const mMin = analise.match(MPA_MINUTA_RE), mPa = analise.match(/PR[ÓO]XIMO\s+ATO\s*:\s*([^\n]+)/i);
+    const suspensa = mMin && /SUSPENSA/i.test(mMin[1]) ? (String(mMin[2] || '').replace(/\*\*|==/g, '').trim() || 'a IA não disse o que falta') : '';
+    let minuta = '';
+    if (!suspensa) {
+      Object.assign(m, { etapa: 'minuta', msg: 'a IA está redigindo a minuta' }); desenhar();
+      const r2 = await enviarIa(Object.assign({ messages: [user1, { role: 'assistant', content: r1.json.content },
+        { role: 'user', content: [{ type: 'text', text: MPA_TAREFA_MINUTA }] }] }, base), mapaObj);
+      usd += usdDe(modelo, r2.json.usage);
+      minuta = textoDaResposta(r2.json);
+      if (minuta.length < 40) throw new Error('A IA devolveu uma minuta vazia ou curta demais.');
+    }
+    const anon = analise + (minuta ? '\n\n' + MPA_SEPARADOR + '\n\n' + minuta : '') + '\n';
+    const rA = await estado.worker.pedir('reidentificar', { texto: analise, mapa: mapaJson });
+    const rM = minuta ? await estado.worker.pedir('reidentificar', { texto: minuta, mapa: mapaJson }) : null;
+    // os arquivos: o _anon ao lado do PDF anonimizado; o com os nomes reais, junto do mapa (a subpasta privada)
+    const i = estado.fila.find((x) => x.saida && x.saida.mapa === mapa);
+    const hora = new Date(), hh = String(hora.getHours()).padStart(2, '0') + 'h' + String(hora.getMinutes()).padStart(2, '0');
+    const baseNome = nomeDe(i.saida.pdf).replace(/_anon\.pdf$/i, '').replace(/\.pdf$/i, '');
+    const pastaDe = (c) => c.slice(0, c.length - nomeDe(c).length);
+    const caminhoAnon = pastaDe(i.saida.pdf) + baseNome + ' — MPA ' + hh + '_anon.md';
+    const caminhoReal = pastaDe(mapa) + baseNome + ' — MPA ' + hh + ' (nomes reais).md';
+    await invoke('gravar_texto', { caminho: caminhoAnon, texto: anon });
+    await invoke('gravar_texto', { caminho: caminhoReal, texto: rA.texto + (rM ? '\n\n' + MPA_SEPARADOR + '\n\n' + rM.texto : '') + '\n' });
+    Object.assign(m, { etapa: 'pronto', analise: rA.texto, minuta: rM ? rM.texto : '', suspensa, proximo: mPa ? mPa[1].replace(/\*\*/g, '').trim() : '',
+      usd, segundos: Math.round((Date.now() - m.t0) / 1000), anonimo: caminhoAnon, real: caminhoReal,
+      sobras: [...new Set([...(rA.sobras || []), ...((rM && rM.sobras) || [])])], modelo, prompt: prompt.titulo });
+  } catch (e) {
+    Object.assign(m, { etapa: 'erro', erro: String((e && e.message) || e) });
+    if (estado.e2e) registrar('🧠: ' + m.erro);
+  } finally {
+    clearInterval(tique);
+    desenhar();
+  }
+  return m;
+}
+
+function verMpa(mapa, qual) {
+  const m = estado.mpa[mapa];
+  if (!m || m.etapa !== 'pronto') return;
+  const d = $('dlg_mpa');
+  d.dataset.mapa = mapa;
+  qual = qual || (m.minuta ? 'minuta' : 'analise');
+  $('mpa_info').textContent = (m.proximo ? 'Próximo ato: ' + m.proximo + ' · ' : '') + (m.suspensa ? 'minuta suspensa (' + m.suspensa + ') · ' : '') +
+    m.modelo + ' · ' + usdTexto(m.usd) + ' · prompt: ' + m.prompt;
+  $('mpa_bt_minuta').disabled = !m.minuta;
+  $('mpa_bt_analise').classList.toggle('ativa', qual === 'analise');
+  $('mpa_bt_minuta').classList.toggle('ativa', qual === 'minuta');
+  $('mpa_texto').value = qual === 'minuta' ? m.minuta : m.analise;
+  if (!d.open) d.showModal();
+}
+
+// ── os Ajustes do 🧠 ─────────────────────────────────────────────────────────────────────────────────────────────
+async function mostrarIa() {
+  try {
+    const s = await invoke('ia_situacao');
+    $('ia_chave_sit').textContent = s.chave.guardada ? '— guardada (' + s.chave.fim + ')' : '— nenhuma guardada';
+    $('bt_ia_chave_apagar').hidden = !s.chave.guardada;
+    $('ia_chave').placeholder = s.chave.guardada ? 'colar outra chave para trocar' : 'sk-ant-…';
+    $('ia_google_sit').textContent = !s.google.configurado ? 'Login do Google: ainda não configurado nesta cópia do app (falta o cliente OAuth).'
+      : s.google.entrou ? 'Google: entrou como ' + (s.google.email || 'a sua conta') + '.' : 'Google: não entrou.';
+    $('bt_ia_google').hidden = !s.google.configurado || s.google.entrou;
+    $('bt_ia_google_sair').hidden = !s.google.entrou;
+  } catch (e) { $('ia_chave_sit').textContent = '— ' + ((e && e.message) || e); }
+}
+async function conferirPrompt() {
+  const fonte = $('ia_prompt').value.trim();
+  const msg = $('ia_prompt_msg');
+  msg.textContent = fonte ? 'Lendo o prompt…' : '';
+  estado.ajustes.iaPrompt = fonte;
+  await gravarAjustes();
+  if (!fonte) return;
+  try {
+    const p = await invoke('ia_prompt_ler', { fonte });
+    const origem = { arquivo: 'arquivo', google: 'Google Docs', microsoft: 'OneDrive/SharePoint' }[p.tipo] || p.tipo;
+    msg.innerHTML = '<span class="ok">✓ ' + esc(p.titulo) + ' (' + esc(origem) + ') · ' + p.caracteres.toLocaleString('pt-BR') + ' caracteres</span>';
+  } catch (e) { msg.innerHTML = '<span class="msg-erro">' + esc((e && e.message) || e) + '</span>'; }
 }
 
 const mapasLidos = {};
@@ -910,6 +1088,12 @@ function ligar() {
     if (mi) escolherMinutas(mi.dataset.minuta);
     const co = ev.target.closest('[data-colar]');
     if (co) abrirColar(co.dataset.colar);
+    const ve = ev.target.closest('[data-ver]');
+    if (ve) invoke('visor_abrir', { caminho: ve.dataset.ver, rotulo: ve.dataset.rotulo || '' }).catch((e) => avisar(String((e && e.message) || e)));
+    const mp = ev.target.closest('[data-mpa]');
+    if (mp && !mp.disabled) rodarMpa(mp.dataset.mpa);
+    const mv = ev.target.closest('[data-mpa-ver]');
+    if (mv) verMpa(mv.dataset.mpaVer);
     const sp = ev.target.closest('[data-separar]');
     if (sp) mexerNoCaso(estado.fila.find((x) => x.id === +sp.dataset.separar), 'só');
   };
@@ -920,8 +1104,33 @@ function ligar() {
   $('bt_colar_reid').onclick = reidColado;
   $('bt_colar_copiar').onclick = () => copiarDe($('colar_saida'), $('bt_colar_copiar'));
   $('bt_colar_fechar').onclick = () => $('dlg_colar').close();
-  $('bt_ajustes').onclick = abrirAjustes;
-  $('bt_motor').onclick = abrirAjustes;
+  $('bt_ajustes').onclick = () => abrirAjustes();
+  $('bt_motor').onclick = () => abrirAjustes();
+  $('bt_ia_chave').onclick = async () => {
+    try { await invoke('ia_chave_guardar', { chave: $('ia_chave').value }); $('ia_chave').value = ''; }
+    catch (e) { avisar(String((e && e.message) || e)); }
+    mostrarIa();
+  };
+  $('bt_ia_chave_apagar').onclick = async () => { try { await invoke('ia_chave_apagar'); } catch (e) { avisar(String(e)); } mostrarIa(); };
+  $('bt_ia_prompt_arquivo').onclick = async () => {
+    const r = await T.dialog.open({ multiple: false, directory: false, filters: [{ name: 'Prompt', extensions: ['txt', 'md', 'markdown'] }] });
+    if (r) { $('ia_prompt').value = r; conferirPrompt(); }
+  };
+  $('bt_ia_prompt_conferir').onclick = conferirPrompt;
+  $('ia_prompt').onchange = conferirPrompt;
+  $('ia_modelo').onchange = () => { estado.ajustes.iaModelo = $('ia_modelo').value; gravarAjustes(); };
+  $('bt_ia_google').onclick = async () => {
+    $('ia_google_sit').textContent = 'Termine o login no navegador que abriu…';
+    try { await invoke('ia_google_entrar'); } catch (e) { avisar(String((e && e.message) || e)); }
+    mostrarIa();
+    if (/docs\.google\.com/.test($('ia_prompt').value)) conferirPrompt();
+  };
+  $('bt_ia_google_sair').onclick = async () => { try { await invoke('ia_google_sair'); } catch (e) { avisar(String(e)); } mostrarIa(); };
+  $('mpa_bt_analise').onclick = () => verMpa($('dlg_mpa').dataset.mapa, 'analise');
+  $('mpa_bt_minuta').onclick = () => verMpa($('dlg_mpa').dataset.mapa, 'minuta');
+  $('bt_mpa_copiar').onclick = () => copiarDe($('mpa_texto'), $('bt_mpa_copiar'));
+  $('bt_mpa_pasta').onclick = () => { const m = estado.mpa[$('dlg_mpa').dataset.mapa]; if (m) invoke('revelar', { caminho: m.real }); };
+  $('bt_mpa_fechar').onclick = () => $('dlg_mpa').close();
   $('bt_inst_padrao').onclick = () => { $('inst').value = estado.instPadrao.split(/\s*;\s*|\n+/).filter(Boolean).join('\n'); };
   $('bt_ajustes_cancelar').onclick = () => $('dlg_ajustes').close();
   $('dlg_ajustes').querySelector('form').onsubmit = (ev) => { ev.preventDefault(); salvarAjustes().then(() => $('dlg_ajustes').close()); };
@@ -1010,6 +1219,29 @@ async function testeDePontaAPonta(p) {
       const [m] = await reidNoCard(i.saida.mapa, [caminho]);
       rel.minutaNoCard = { doc: i.nome, tokens: toks.length, etapa: m.etapa, erro: m.erro, saida: m.saida, n: m.n, sobras: m.sobras,
         texto: m.saida ? await invoke('ler_texto', { caminho: m.saida }) : null, bloco: !!document.querySelector('.minuta [data-minuta]') };
+    }
+    if (p.mpa) {
+      // o 🧠 com a Anthropic de mentira (SKIA_CLAUDE_URL) e um prompt em arquivo: a análise, a minuta, o porteiro e os arquivos
+      const i = estado.fila.find((x) => x.saida && x.saida.mapa);
+      estado.ajustes.iaPrompt = p.mpa.prompt;
+      const m = await rodarMpa(i.saida.mapa);
+      rel.mpa = { etapa: m.etapa, erro: m.erro, proximo: m.proximo, suspensa: m.suspensa, anonimo: m.anonimo, real: m.real, sobras: m.sobras,
+        botao: !!document.querySelector('[data-mpa]'), olho: document.querySelectorAll('[data-ver]').length,
+        textoAnon: m.anonimo ? await invoke('ler_texto', { caminho: m.anonimo }) : null,
+        textoReal: m.real ? await invoke('ler_texto', { caminho: m.real }) : null };
+      if (p.mpa.vazar) {
+        // o porteiro: um "prompt" que leva um nome do mapa em claro tem de ser barrado antes de sair
+        const dic = await estado.worker.pedir('dicionario', { mapa: await mapaDoCaso(i.saida.mapa) });
+        const pes = dic.lista.find((x) => /PES|REU|VIT|TEST/.test(x.tipo || '') && String(x.valor || '').split(' ').length >= 2);
+        await invoke('gravar_texto', { caminho: p.mpa.vazar, texto: 'Prompt de prova que cita ' + (pes ? pes.valor : 'NINGUEM') + ' em claro, o que não pode sair.\n' });
+        estado.ajustes.iaPrompt = p.mpa.vazar;
+        const m2 = await rodarMpa(i.saida.mapa);
+        rel.mpa.vazar = { etapa: m2.etapa, erro: m2.erro, achou: !!pes };
+      }
+      if (p.mpa.visor) {
+        try { await invoke('visor_abrir', { caminho: i.saida.pdf, rotulo: 'anonimizado' }); rel.mpa.visor = 'ok'; }
+        catch (e) { rel.mpa.visor = String((e && e.message) || e); }
+      }
     }
     if (p.reidentificar) {
       const q = p.reidentificar;
