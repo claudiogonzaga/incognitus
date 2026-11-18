@@ -11,6 +11,7 @@
 //! (`init_como_modulo`). A lista de comandos está aqui, no build.rs e em permissions/default.toml.
 mod chaveiro;
 mod claude;
+mod docx;
 mod ferramentas;
 mod google;
 mod ia;
@@ -19,6 +20,8 @@ mod prompt;
 mod visor;
 mod acordado;
 mod ner;
+mod outras;
+mod pastas;
 mod pdf;
 mod reid;
 
@@ -409,6 +412,98 @@ async fn gravar_texto(caminho: String, texto: String) -> Result<(), String> {
     em_segundo_plano(move || gravar_atomico(Path::new(&caminho), texto.as_bytes())).await
 }
 
+/// A minuta do editor da janela, em .docx (o Word, o LibreOffice, o Pages e o Google Docs abrem).
+#[tauri::command]
+async fn gravar_docx(caminho: String, paragrafos: Vec<docx::Paragrafo>) -> Result<(), String> {
+    em_segundo_plano(move || {
+        let p = Path::new(&caminho);
+        if !eh_docx(p) {
+            return Err("a minuta só é gravada em .docx".into());
+        }
+        gravar_atomico(p, &docx::montar(&paragrafos)?)
+    })
+    .await
+}
+
+fn eh_docx(p: &Path) -> bool {
+    p.extension().map(|e| e.to_string_lossy().eq_ignore_ascii_case("docx")).unwrap_or(false)
+}
+
+/// Abre um .docx no editor de texto do computador (o programa padrão: Word, LibreOffice, Pages…). Só .docx que existe:
+/// a janela não manda o sistema abrir outra coisa.
+#[tauri::command]
+fn abrir_documento(caminho: String) -> Result<(), String> {
+    let p = PathBuf::from(&caminho);
+    if !eh_docx(&p) || !p.is_file() {
+        return Err("só abro um .docx que já foi gravado".into());
+    }
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg(&p).spawn();
+    #[cfg(target_os = "windows")]
+    let r = std::process::Command::new("explorer").arg(&p).spawn();
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let r = std::process::Command::new("xdg-open").arg(&p).spawn();
+    r.map(|_| ()).map_err(|e| format!("não consegui abrir o documento: {e}"))
+}
+
+/// Abre o template (o modelo) que a minuta usou: o arquivo da pasta de modelos (.docx, .txt, .md) no programa padrão, ou o
+/// link do Google Docs, do Drive, do OneDrive ou do SharePoint no navegador. Outro endereço, não.
+#[tauri::command]
+fn abrir_modelo(alvo: String) -> Result<(), String> {
+    let a = alvo.trim();
+    let abrir: String = if a.starts_with("https://") {
+        let host = a[8..].split(['/', '?', '#']).next().unwrap_or("").to_ascii_lowercase();
+        let ok = ["docs.google.com", "drive.google.com", "1drv.ms", "onedrive.live.com"].contains(&host.as_str()) || host.ends_with(".sharepoint.com");
+        if !ok || a.contains(char::is_whitespace) {
+            return Err("só abro modelos do Google Docs, do Drive, do OneDrive e do SharePoint".into());
+        }
+        a.to_string()
+    } else {
+        let p = PathBuf::from(a);
+        let ext = p.extension().map(|x| x.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
+        if !["docx", "txt", "md", "gdoc"].contains(&ext.as_str()) || !p.is_file() {
+            return Err("não achei o arquivo do modelo (foi movido ou apagado?)".into());
+        }
+        a.to_string()
+    };
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg(&abrir).spawn();
+    #[cfg(target_os = "windows")]
+    let r = if abrir.starts_with("https://") {
+        std::process::Command::new("rundll32").arg("url.dll,FileProtocolHandler").arg(&abrir).spawn()
+    } else {
+        std::process::Command::new("explorer").arg(&abrir).spawn()
+    };
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let r = std::process::Command::new("xdg-open").arg(&abrir).spawn();
+    r.map(|_| ()).map_err(|e| format!("não consegui abrir o modelo: {e}"))
+}
+
+// ── a Mesa de trabalho (18/11/2026): os casos e os campos do Graphé (status, autor, prazo, feedbacks…), gravados num
+// arquivo só, nos dados do app. O formato já é o da sincronização futura (docs/SINCRONIZACAO.md): cada campo guarda o
+// valor, a hora e quem mudou; os caminhos dos arquivos ficam numa parte "local", que nunca é sincronizada.
+const ARQUIVO_MESA: &str = "mesa.json";
+
+#[tauri::command]
+async fn mesa_ler(estado: State<'_, Estado>) -> Result<String, String> {
+    let p = estado.0.dados.join(ARQUIVO_MESA);
+    em_segundo_plano(move || Ok(std::fs::read_to_string(p).unwrap_or_default())).await
+}
+
+#[tauri::command]
+async fn mesa_gravar(estado: State<'_, Estado>, texto: String) -> Result<(), String> {
+    if texto.len() > 20_000_000 || serde_json::from_str::<serde_json::Value>(&texto).is_err() {
+        return Err("a mesa não pôde ser gravada (formato)".into());
+    }
+    let p = estado.0.dados.join(ARQUIVO_MESA);
+    em_segundo_plano(move || {
+        let tmp = p.with_extension("json.tmp");
+        std::fs::write(&tmp, texto).map_err(|e| format!("não consegui gravar a mesa: {e}"))?;
+        std::fs::rename(&tmp, &p).map_err(|e| format!("não consegui gravar a mesa: {e}"))
+    })
+    .await
+}
+
 #[tauri::command]
 fn revelar(caminho: String) -> Result<(), String> {
     let p = PathBuf::from(&caminho);
@@ -491,6 +586,55 @@ async fn ner_ler(estado: State<'_, Estado>, arquivo: String) -> Result<tauri::ip
     let dados = estado.0.dados.clone();
     let b = em_segundo_plano(move || ner::ler(&dados, &arquivo)).await?;
     Ok(tauri::ipc::Response::new(b))
+}
+
+// ── a busca nos modelos da pasta (17/11/2026): o BERT de frases, a lista da pasta e o índice dos vetores ──────────────
+
+#[tauri::command]
+async fn busca_estado(estado: State<'_, Estado>) -> Result<ner::EstadoNer, String> {
+    let dados = estado.0.dados.clone();
+    em_segundo_plano(move || Ok(ner::estado_de(&ner::BUSCA, &dados))).await
+}
+
+#[tauri::command]
+async fn busca_baixar(estado: State<'_, Estado>) -> Result<ner::EstadoNer, String> {
+    ner::baixar_de(&ner::BUSCA, &estado.0.dados).await
+}
+
+#[tauri::command]
+async fn busca_ler(estado: State<'_, Estado>, arquivo: String) -> Result<tauri::ipc::Response, String> {
+    let dados = estado.0.dados.clone();
+    let b = em_segundo_plano(move || ner::ler_de(&ner::BUSCA, &dados, &arquivo)).await?;
+    Ok(tauri::ipc::Response::new(b))
+}
+
+/// Os modelos da pasta do computador (e das subpastas): .docx, .txt, .md e os .gdoc do Google Drive para computador.
+#[tauri::command]
+async fn modelos_listar(pasta: String) -> Result<Vec<pastas::ArquivoModelo>, String> {
+    em_segundo_plano(move || pastas::listar_local(Path::new(&pasta))).await
+}
+
+const INDICE_MODELOS: &str = "busca-modelos.json";
+
+/// O índice da busca (os vetores dos modelos, para não refazer a cada 🧠). "" se ainda não há.
+#[tauri::command]
+async fn indice_ler(estado: State<'_, Estado>) -> Result<String, String> {
+    let p = estado.0.dados.join(INDICE_MODELOS);
+    em_segundo_plano(move || Ok(std::fs::read_to_string(p).unwrap_or_default())).await
+}
+
+#[tauri::command]
+async fn indice_gravar(estado: State<'_, Estado>, texto: String) -> Result<(), String> {
+    if texto.len() > 80_000_000 {
+        return Err("o índice da busca ficou grande demais".into());
+    }
+    let p = estado.0.dados.join(INDICE_MODELOS);
+    em_segundo_plano(move || {
+        let tmp = p.with_extension("json.tmp");
+        std::fs::write(&tmp, texto).map_err(|e| format!("não consegui gravar o índice: {e}"))?;
+        std::fs::rename(&tmp, &p).map_err(|e| format!("não consegui gravar o índice: {e}"))
+    })
+    .await
 }
 
 /// Erros e marcos do front no stderr (para diagnóstico; nunca leva texto dos autos).
@@ -577,6 +721,11 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             docx_partes,
             gravar_reidentificado,
             gravar_texto,
+            gravar_docx,
+            abrir_documento,
+            abrir_modelo,
+            mesa_ler,
+            mesa_gravar,
             revelar,
             ajustes_ler,
             ajustes_gravar,
@@ -588,6 +737,12 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             ner_estado,
             ner_baixar,
             ner_ler,
+            busca_estado,
+            busca_baixar,
+            busca_ler,
+            modelos_listar,
+            indice_ler,
+            indice_gravar,
             registrar,
             e2e_plano,
             e2e_gravar,
@@ -598,8 +753,11 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             ia::ia_google_entrar,
             ia::ia_google_cancelar,
             ia::ia_google_sair,
+            ia::abrir_feedback,
             ia::ia_prompt_ler,
             ia::ia_enviar,
+            ia::ia_modelos,
+            ia::ia_pasta_listar,
             visor::visor_abrir
         ])
         .register_asynchronous_uri_scheme_protocol(visor::ESQUEMA, visor::servir)
@@ -708,7 +866,7 @@ mod testes {
         // cada comando do build.rs está no conjunto `default`; o `api` só tem comandos que existem
         let build = include_str!("../build.rs");
         let comandos: Vec<String> = build.split('"').skip(1).step_by(2).map(|c| c.to_string()).collect();
-        assert_eq!(comandos.len(), 40);
+        assert_eq!(comandos.len(), 54);
         let toml = include_str!("../permissions/default.toml");
         let (padrao, api) = toml.split_once("[[set]]").expect("o conjunto api");
         for c in &comandos {

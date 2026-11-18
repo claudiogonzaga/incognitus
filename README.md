@@ -9,8 +9,9 @@ do Graphé** — o mesmo fluxo do lote automático (preparar → classificador �
 mesmo cabeçalho de autos anonimizados — e **reidentifica as minutas** que a IA devolve, com o mapa de cada processo,
 como o 🔓 do Graphé. **Tudo roda no computador**: nenhum PDF ou mapa sai dele, e não há telemetria. As conexões de
 sempre são, ao abrir, a procura por versão nova do app e das regras (só leitura do GitHub público), que os Ajustes
-desligam. Texto só sai quando a pessoa clica no **🧠 Melhor Próximo Ato**, com a chave da Anthropic dela: vai o texto
-**anonimizado** do caso e o prompt que ela escolheu, conferidos antes por um porteiro contra o mapa.
+desligam. Texto só sai quando a pessoa clica no **🧠 Gerar minuta** (o Melhor Próximo Ato), com a chave da Anthropic
+dela: vai o texto **anonimizado** do caso, o prompt que ela escolheu e, se ela os pôs, o Guia de Formatação, o RPP e os
+modelos do Livro que a IA pedir — conferidos antes por um porteiro contra o mapa.
 
 
 ## Como usar
@@ -66,31 +67,91 @@ desligam. Texto só sai quando a pessoa clica no **🧠 Melhor Próximo Ato**, c
   data, a hora, o número do documento e o "Num. … - Pág.", que a IA usa para citar o ID. No corpo dos autos vale a
   regra do Graphé: servidores, autoridades e advogados ficam em claro.
 
-### Ver o PDF (👁)
+### A Mesa de trabalho (18/11/2026)
 
-Cada card pronto tem **👁 Anonimizado** e **👁 Original** (este, para PDF e .txt): o arquivo abre numa janela do
+A tela inicial é um painel só, a **Mesa de trabalho**: **+ Arquivos**, **+ Pasta**, **⚙ Opções** (a saída, o .txt, juntar
+documentos, a anonimização rigorosa e o seu nome), **◧ Painel** e **Anonimizar**. Cada caso é uma linha, com as colunas e os
+status do Graphé: **PJE** (verde quando anonimizado) · **Status** · **Autor** · **Prazo** · **Minuta** · **Template** ·
+**Autos** · **Pasta do caso** · **Retorno** (💬 feedback à equipe · 🤖 feedback para a IA · 🎓 aprendizado da anonimização).
+Clicar na linha abre a faixa de detalhe, com os botões do caso. O **painel lateral** mostra os casos em sequência, com os
+campos editáveis (requerido, próximo ato, autor, prazo, urgência, status), as badges e os feedbacks. A mesa fica gravada em
+`mesa.json`, nos dados do app, num formato já pensado para sincronizar entre computadores (`docs/SINCRONIZACAO.md`; a
+sincronização ainda não existe). Nos Ajustes e nas Opções, as explicações ficam atrás de um **ⓘ**.
+
+### O card pronto
+
+(16/11/2026, pedido do Promotor: "um painelzinho de botões e não três cards".) Os botões do card ficam numa fileira só:
+**Anonimizado** (o olho com a tarja), **Original** (o olho aberto), **Mostrar na pasta** e **Lista CONFIRA**; no
+primeiro card de cada caso, também **🧠 Gerar minuta** e **Reidentificar minuta…**. O que eles produzem aparece em
+linhas curtas logo abaixo.
+
+### Ver o PDF
+
+Cada card pronto tem **Anonimizado** e **Original** (este, para PDF e .txt): o arquivo abre numa janela do
 próprio Incognitus, com o leitor de PDF do sistema (o do WebKit no Mac, o do Edge no Windows), sem passar pelo Finder.
 A janela só lê o arquivo; o original nunca é copiado nem alterado.
 
 ### 🧠 Melhor Próximo Ato
 
 (15/11/2026, pedido do Promotor: o Incognitus vai crescendo até virar o próprio Graphé.) No card de cada caso pronto,
-o botão **🧠 Melhor Próximo Ato** faz o que o 🧠 do Graphé faz: a **análise** (Fase 1) e, logo depois, sozinha, a
-**minuta** (Fase 2) na mesma conversa, salvo quando a análise termina com `MINUTA: SUSPENSA — o que falta`. O modelo
-padrão é o do Graphé (Claude Opus 5.5, esforço alto, até 32 mil tokens de resposta); o Sonnet 5.5 é a opção mais barata.
+o botão **🧠 Gerar minuta** faz a **análise** e a **minuta** numa resposta só: a peça vem depois da linha da tesoura
+(`✂️ ---- INÍCIO DA MINUTA ---- ✂️`), e o app a separa ali (17/11/2026: antes a minuta era pedida de novo, à parte; isso
+só acontece agora se a resposta vier sem a tesoura). A minuta abre com a análise antes da tesoura; **✂️ Cortar a
+análise**, no editor, deixa só a peça. Nada de peça quando a análise termina com `MINUTA: SUSPENSA — o que falta`. Até
+128 mil tokens de resposta; se ainda assim a resposta for cortada no limite, o app pede a continuação na mesma conversa
+e cola os pedaços.
 
-- **O prompt é de quem usa**: o app não traz nenhum. Nos Ajustes, escolhe-se um arquivo **.txt ou .md**, ou cola-se o
-  link de um **Google Docs** (o caminho principal) ou de um arquivo do **OneDrive/SharePoint**. O prompt é lido de novo
-  a cada 🧠, para valer a versão atual. O Google Docs é lido pela API do Docs com o **login do Google** de quem usa
-  (OAuth para computador, com PKCE; só `openid email` e `documents.readonly`): abre o Doc que a conta já pode abrir. O
-  link da Microsoft precisa estar compartilhado com "qualquer pessoa com o link" (o login da Microsoft ainda não está
-  no app).
+- **A IA, o modelo e o esforço** (17/11/2026): o **⚙** ao lado do 🧠 Gerar minuta escolhe a IA — Anthropic (Claude;
+  padrão: Opus 5.5, esforço alto), OpenAI, Google Gemini ou DeepInfra —, o modelo (a lista sugerida ou "Buscar os da
+  minha conta") e o nível de esforço. A chave de cada IA fica no chaveiro do sistema. A conversa é montada no formato
+  da Anthropic, passa pelo porteiro e só depois é traduzida para o formato da IA escolhida (`modulo/ias.js`); o custo
+  só é calculado para o Claude.
+- **Os prompts são de quem usa**: o prompt para **gerar** a análise e a minuta, o **Guia de Formatação** e o prompt
+  para **corrigir** a minuta (a pré-correção, botão **🔎 Pré-correção** na janela do 🧠). O app traz uma versão
+  **light**, genérica, de cada um (`modulo/padroes/`), para começar; cada pessoa põe os seus. O RPP não tem padrão.
+- **A pasta de modelos** (sem Livro de Modelos): uma pasta do computador (inclusive a do Google Drive para computador,
+  com os `.gdoc`, e a do OneDrive/SharePoint sincronizada), o link de uma pasta do **Google Drive** (com o login do
+  Google e a permissão de ler as pastas do Drive, pedida à parte) ou o link de uma pasta do **OneDrive/SharePoint**
+  compartilhada com "qualquer pessoa com o link". Um BERT de frases (multilingual-e5-small, baixado na primeira vez)
+  lê os modelos no computador; a IA recebe os 30 mais parecidos com o caso e as ferramentas `buscar_modelos` e
+  `ler_modelo`.
+- **Corrigir com um clique**: na tabela 🎓 da janela do 🧠, "Não é dado pessoal" ensina o app (o nome de uma
+  autoridade, por exemplo, passa a ficar em claro) e o porteiro deixa de trocá-lo.
+- **Onde ficam os prompts**: nos Ajustes, escolhe-se um arquivo (**.txt, .md ou .docx**),
+  escreve-se o texto ali mesmo (**Escrever…**, guardado nos ajustes do computador) ou cola-se o link de um **Google
+  Docs** (o caminho principal) ou de um arquivo do **OneDrive/SharePoint**. O prompt é lido de novo a cada 🧠, para
+  valer a versão atual. O Google é lido com o **login do Google** de quem usa (OAuth para computador, com PKCE; só
+  `openid email`, `documents.readonly` e `spreadsheets.readonly`; `drive.readonly` só para quem usa a pasta de modelos
+  do Drive por link): abre o que a conta já pode abrir. O link da Microsoft
+  precisa estar compartilhado com "qualquer pessoa com o link" (o login da Microsoft ainda não está no app).
+- **O Guia de Formatação, o RPP e o Livro de Modelos** (16/11/2026, como no 🧠 do Graphé), opcionais, do mesmo jeito
+  que o prompt (arquivo, texto escrito ali ou link). O Guia e o RPP vão inteiros, junto do prompt, como anexos. Do
+  Livro vai só o **catálogo** (ID, nome e etiquetas de cada modelo): a IA escolhe e lê o modelo com a ferramenta
+  `ler_modelo` (até 3 por etapa), e o app abre o link do modelo e devolve o texto. O Livro pode ser a **planilha do
+  Google** do Graphé (NOME_MINUTA · link · ETIQUETAS; vale a aba do link, ou a que tem "modelo" no nome), um documento
+  com uma linha por modelo (nome e link), ou um documento com os próprios modelos, cada um debaixo de um título. Os
+  nomes do caso que aparecerem no prompt, no Guia, no RPP ou num modelo vão como os tokens. O que não abrir vai à IA
+  como "não veio" e aparece no card.
 - **A chave da Anthropic** fica no chaveiro do sistema (Keychain no Mac, Gerenciador de Credenciais no Windows), e só
   o Rust a lê, na hora de chamar a API.
 - **O que sai**: o prompt e o texto anonimizado do caso inteiro (o cabeçalho e cada documento com as páginas
   numeradas). Antes de cada envio, o **porteiro** (o mesmo do Graphé Desktop, `modulo/porteiro.js`) confere o pedido
-  contra o mapa do caso e **barra** o que tiver em claro um nome, CPF, telefone, e-mail ou outro dado que a
-  anonimização trocou por token. O mapa nunca sai.
+  contra o mapa do caso; se achar em claro um nome, CPF, telefone, e-mail ou outro dado que a anonimização trocou por
+  token, **troca-o ali mesmo pelo token** (o repasse; o card diz quantos trechos foram). Só o que ele não pode alterar
+  (o raciocínio assinado de uma resposta anterior da IA) ele **mostra** (o dado, o token e o trecho em volta) e
+  **pergunta** se envia assim mesmo (16/11/2026, pedidos do Promotor: o porteiro pede confirmação, não impede o envio; e
+  "identificou dados em claro? reaplica a função para esses dados"). O mapa nunca sai.
+- **Aprendizado** (botão no alto e **Ensinar…** no card): uma tabela, só neste computador, do que **é** dado pessoal
+  (sempre tarjado, mesmo que as regras não peguem: ganha um token «DADO_nn» no mapa do caso) e do que **não é** (fica
+  em claro, mesmo que as regras tarjem: o token sai do mapa). Dá para buscar, acrescentar, trocar o sim/não e apagar; do
+  card, a janela lista o que foi tarjado naquele caso, com o botão "Não é dado pessoal". O porteiro também ensina: o
+  que ele acha em claro e tarja entra na tabela (origem: porteiro). Vale a partir da próxima anonimização.
+- **Fale com o desenvolvedor**: abre no navegador um formulário do Google (endereço fixo no app); o app não manda nada
+  sozinho.
+- **O repasse também roda na anonimização**: depois do motor e antes de gravar, cada página é conferida contra o mapa
+  do próprio caso, e o dado que ainda estiver em claro (nome por cima de quebra de linha, documento com outra
+  pontuação, trecho que uma regra deixou passar) vira o token no PDF, no .txt e no texto que o 🧠 manda. O card avisa:
+  "repasse do porteiro: N trechos que tinham ficado em claro foram tarjados".
 - **O que volta**: a análise e a minuta, que voltam aos nomes reais com o mapa do caso. Ficam dois arquivos: o
   anonimizado (`… — MPA 22h41_anon.md`), ao lado do PDF, e o com os nomes reais (`… — MPA 22h41 (nomes reais).md`), na
   subpasta "NÃO ENVIAR À IA (nomes reais)". O card mostra o próximo ato, o custo estimado e **Ver** (a análise e a
@@ -102,10 +163,10 @@ padrão é o do Graphé (Claude Opus 5.5, esforço alto, até 32 mil tokens de r
 ### Reidentificar
 
 **No card do caso** (14/11/2026, pedido do Promotor): a minuta que a IA escreveu sobre os autos anonimizados volta aos
-nomes ali mesmo, sem trocar de aba. Cada caso pronto tem o bloco **Minuta da IA**:
-**Reidentificar minuta…** (.docx, .txt ou .md), **Colar texto** (uma janelinha com o resultado para copiar) ou arrastar
-a minuta para o card. Vale o mapa daquele caso. Num caso com vários documentos, o bloco fica no primeiro card (o mapa é
-um só). Arrastada para fora dos cards, a minuta .docx/.txt entra na fila para ser anonimizada, como antes.
+nomes ali mesmo, sem trocar de aba. O botão **Reidentificar minuta…** do card abre uma janelinha: escolher o arquivo
+(.docx, .txt ou .md; a cópia sai ao lado, com "(reidentificado)" no nome) ou colar o texto (o resultado fica para
+copiar). Também dá para arrastar a minuta para o card. Vale o mapa daquele caso. Num caso com vários documentos, o
+botão fica no primeiro card (o mapa é um só). Arrastada para fora dos cards, a minuta .docx/.txt entra na fila para ser anonimizada, como antes.
 
 ![A aba Reidentificar, com dados fictícios](docs/reidentificar.png)
 

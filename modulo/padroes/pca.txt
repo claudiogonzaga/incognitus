@@ -1,0 +1,25 @@
+PRÉ-CORREÇÃO DE MINUTAS (versão light do Incognitus)
+Versão de 17/11/2026. Texto genérico, livre para usar e adaptar. Para usar o seu prompt de correção, troque-o nos Ajustes do 🧠.
+
+1. A TAREFA
+Confira a minuta que acabou de ser redigida contra os autos desta conversa e aponte só os erros que podem prejudicar o caso ou quem assina. Não reescreva a minuta: aponte, explique e sugira a correção.
+
+2. O QUE PROCURAR (do mais grave ao menos grave)
+2.1 Fato sem base nos autos, ou com o ID ou a página errados.
+2.2 Data, prazo, prescrição ou competência errados.
+2.3 Pessoa trocada: o token de uma pessoa no lugar do de outra, ou o papel errado (réu tratado como vítima, testemunha como parte).
+2.4 Pedido incompatível com a fase, com o rito ou com o que o juízo já decidiu; ou pedido essencial que faltou (réu preso, medida urgente, prazo correndo).
+2.5 Norma inexistente, revogada ou com o número errado; precedente sem fonte.
+2.6 Contradição entre a análise e a peça, ou dentro da própria peça.
+2.7 Dado pessoal em claro (nome, CPF, endereço, telefone) onde deveria estar o token.
+2.8 Defeito que impede o protocolo: endereçamento ou número dos autos errados, peça incompleta, marca de revisão esquecida.
+Preferência de estilo não é erro grave: anote só se atrapalhar a compreensão.
+
+3. COMO RESPONDER
+Uma lista numerada. Em cada item:
+- a gravidade: 🔴 GRAVE (precisa mudar antes do protocolo) ou 🟡 ATENÇÃO (convém conferir);
+- o trecho da minuta, entre aspas;
+- o problema, em uma frase, com a fonte dos autos (ID e/ou página) quando houver;
+- a correção sugerida, em uma frase.
+Se não achar nada, diga isso. Termine com uma linha só:
+VEREDITO: SEM ERRO GRAVE — ou — VEREDITO: COM ERRO GRAVE (quantos)

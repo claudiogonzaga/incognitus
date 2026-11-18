@@ -1,0 +1,31 @@
+GUIA DE FORMATAÇÃO DE MINUTAS (versão light do Incognitus)
+Versão de 17/11/2026. Texto genérico, livre para usar e adaptar ao seu órgão. Para usar o seu guia, troque-o nos Ajustes do 🧠.
+
+1. ESTRUTURA DA PEÇA
+1.1 Endereçamento em maiúsculas e negrito (por exemplo: EXCELENTÍSSIMO(A) SENHOR(A) JUIZ(A) DE DIREITO DA … VARA DE …).
+1.2 Logo abaixo, o número dos autos e as partes, uma por linha.
+1.3 Preâmbulo em um parágrafo: quem fala, qual é a peça e o fundamento dela.
+1.4 Corpo em tópicos numerados quando houver mais de uma questão (I – DOS FATOS; II – DO DIREITO; III – DOS PEDIDOS). A peça curta, de uma questão só, dispensa títulos.
+1.5 Pedidos em alíneas (a, b, c…), uma providência por alínea.
+1.6 Fecho: "Local, data." e o espaço da assinatura, com o nome e o cargo de quem assina.
+
+2. LINGUAGEM
+2.1 Frases curtas, voz ativa, uma ideia por parágrafo.
+2.2 Termo técnico só quando necessário; latim, só o consagrado (habeas corpus, in dubio pro reo).
+2.3 Sem adjetivos de reforço ("evidente", "flagrante", "inequívoco") e sem fórmulas de cortesia vazias.
+2.4 As pessoas, pela posição no processo (réu, vítima, testemunha) e pelo token.
+
+3. CITAÇÕES
+3.1 Fato dos autos: entre parênteses, com o ID e/ou a página — por exemplo: (ID 123456, p. 4).
+3.2 Trecho literal: entre aspas; acima de três linhas, em parágrafo recuado e sem aspas.
+3.3 Lei: número, ano e artigo — por exemplo: art. 33 da Lei 11.343/2006. Transcreva o artigo só quando a redação importar.
+3.4 Precedente: tribunal, classe, número, relator e data do julgamento. Sem fonte segura, não cite.
+
+4. APRESENTAÇÃO
+4.1 Datas no formato dd/mm/aaaa no corpo; por extenso no fecho, se for o costume do órgão.
+4.2 Valores em reais, com centavos: R$ 1.234,56.
+4.3 Negrito com moderação: o pedido principal e o essencial. Sem sublinhado e sem cores na peça final.
+4.4 Marque com ==destaque== o que quem revisa precisa conferir; tire as marcas antes de protocolar.
+
+5. TAMANHO
+A peça tem o tamanho do problema: uma manifestação simples cabe numa página; uma peça com várias questões, nas que forem necessárias.

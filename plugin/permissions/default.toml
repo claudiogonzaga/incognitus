@@ -7,12 +7,14 @@ permissions = [
   "allow-preparar-arquivo", "allow-extrair-texto", "allow-ocr-pagina", "allow-limpar-arquivo", "allow-texto-documento",
   "allow-gravar-saida", "allow-pasta-padrao", "allow-listar-pdfs", "allow-expandir-caminhos",
   "allow-ler-texto", "allow-docx-partes", "allow-gravar-reidentificado", "allow-gravar-texto",
+  "allow-gravar-docx", "allow-abrir-documento", "allow-abrir-modelo", "allow-mesa-ler", "allow-mesa-gravar",
   "allow-motor-ativo", "allow-motor-checar", "allow-motor-baixar", "allow-motor-instalar", "allow-motor-voltar",
   "allow-ner-estado", "allow-ner-baixar", "allow-ner-ler",
+  "allow-busca-estado", "allow-busca-baixar", "allow-busca-ler", "allow-modelos-listar", "allow-indice-ler", "allow-indice-gravar",
   "allow-e2e-plano", "allow-e2e-gravar", "allow-e2e-fim",
   "allow-ia-situacao", "allow-ia-chave-guardar", "allow-ia-chave-apagar", "allow-ia-google-entrar", "allow-ia-google-cancelar", "allow-ia-google-sair",
-  "allow-ia-prompt-ler", "allow-ia-enviar",
-  "allow-visor-abrir",
+  "allow-ia-prompt-ler", "allow-ia-enviar", "allow-ia-modelos", "allow-ia-pasta-listar",
+  "allow-visor-abrir", "allow-abrir-feedback",
 ]
 
 # O que o hospedeiro (Graphé Desktop) chama da janela principal dele para ler os autos no MPA: a cópia temporária do PDF,

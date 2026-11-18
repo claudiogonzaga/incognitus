@@ -19,6 +19,7 @@ Uso: python3 testes/e2e.py [executável]   (padrão: src-tauri/target/debug/inco
 import hashlib
 import http.server
 import json
+import re
 import os
 import shutil
 import socket
@@ -108,7 +109,8 @@ def publicar_motor_teste(pasta, adulterar=False):
 
 def anthropic_de_mentira():
     """Uma Anthropic de mentira para o 🧠: guarda cada pedido e responde em streaming (SSE), como a de verdade. A análise
-    e a minuta citam os tokens que vieram nos autos (para a reidentificação ter o que devolver)."""
+    e a minuta citam os tokens que vieram nos autos (para a reidentificação ter o que devolver). Com a ferramenta
+    ler_modelo no pedido (o Livro de Modelos), o primeiro pedido da análise devolve a consulta do modelo M1."""
     import re as _re
     pedidos = []
 
@@ -121,21 +123,56 @@ def anthropic_de_mentira():
             corpo = self.rfile.read(n).decode("utf-8")
             pedidos.append({"cabecalhos": {k.lower(): v for k, v in self.headers.items()}, "corpo": json.loads(corpo)})
             p = pedidos[-1]["corpo"]
-            autos = p["messages"][0]["content"][0]["text"]
+            msgs = p["messages"]
+            autos = msgs[0]["content"][0]["text"]
             toks = [t for t in dict.fromkeys(_re.findall(r"«[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9_]{2,39}»", autos)) if t != "«PAPEL_nn»"][:3]
-            if len(p["messages"]) == 1:
-                texto = ("ANÁLISE (de mentira). Os autos tratam de " + ", ".join(toks) + ".\n\nPRÓXIMO ATO: Denúncia\nMINUTA: SEGUIR")
+            pedidos_do_usuario = " ".join(b.get("text", "") for mm in msgs if mm["role"] == "user" and isinstance(mm["content"], list)
+                                          for b in mm["content"] if b.get("type") == "text")
+            inicio = {"type": "message_start", "message": {"id": "msg_x", "type": "message", "role": "assistant", "model": p["model"], "content": [],
+                                                           "stop_reason": None, "usage": {"input_tokens": 1000, "output_tokens": 1}}}
+            nomes_ferr = [f.get("name") for f in p.get("tools") or []]
+            consulta = None
+            if "buscar_modelos" in nomes_ferr and len(msgs) == 1:
+                consulta = ("buscar_modelos", {"consulta": "denúncia por tráfico de drogas"})
+            elif "buscar_modelos" in nomes_ferr and len(msgs) == 3:
+                ult = msgs[-1]["content"][0].get("content") if isinstance(msgs[-1]["content"], list) else ""
+                ach = _re.findall(r"^(P\d+) \|", str(ult), _re.M)
+                consulta = ("ler_modelo", {"id": ach[0] if ach else "P0"})
+            if consulta:
+                evs = [inicio,
+                       {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "toolu_busca_" + str(len(msgs)), "name": consulta[0], "input": {}}},
+                       {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": json.dumps(consulta[1], ensure_ascii=False)}},
+                       {"type": "content_block_stop", "index": 0},
+                       {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 30}},
+                       {"type": "message_stop"}]
+            elif p.get("tools") and len(msgs) == 1:
+                evs = [inicio,
+                       {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "toolu_prova_1", "name": "ler_modelo", "input": {}}},
+                       {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": '{"id": "M1"}'}},
+                       {"type": "content_block_stop", "index": 0},
+                       {"type": "message_delta", "delta": {"stop_reason": "tool_use", "stop_sequence": None}, "usage": {"output_tokens": 30}},
+                       {"type": "message_stop"}]
             else:
-                texto = "EXCELENTÍSSIMO SENHOR JUIZ (minuta de mentira)\n\nO Ministério Público denuncia " + " e ".join(toks) + ".\n"
-            evs = [
-                {"type": "message_start", "message": {"id": "msg_x", "type": "message", "role": "assistant", "model": p["model"], "content": [],
-                                                      "stop_reason": None, "usage": {"input_tokens": 1000, "output_tokens": 1}}},
-                {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}},
-                {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": texto}},
-                {"type": "content_block_stop", "index": 0},
-                {"type": "message_delta", "delta": {"stop_reason": "end_turn", "stop_sequence": None}, "usage": {"output_tokens": 200}},
-                {"type": "message_stop"},
-            ]
+                parada = "end_turn"
+                if "redija a minuta" not in pedidos_do_usuario:
+                    texto = ("ANÁLISE (de mentira). Os autos tratam de " + ", ".join(toks) + ".\n\nPRÓXIMO ATO: Denúncia\nMINUTA: SEGUIR")
+                    if "PROVA DA TESOURA" in str(p.get("system") or ""):
+                        texto = TESOURA(toks)
+                    if "PROVA DO CORTE" in str(p.get("system") or ""):
+                        # a resposta cortada no limite, no meio de uma palavra; a continuação traz o resto
+                        corte = texto.index("Denúncia") + 3
+                        if "Continue EXATAMENTE" in pedidos_do_usuario:
+                            texto = texto[corte:]
+                        else:
+                            texto, parada = texto[:corte], "max_tokens"
+                else:
+                    texto = "EXCELENTÍSSIMO SENHOR JUIZ (minuta de mentira)\n\nO Ministério Público denuncia " + " e ".join(toks) + ".\n"
+                evs = [inicio,
+                       {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}},
+                       {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": texto}},
+                       {"type": "content_block_stop", "index": 0},
+                       {"type": "message_delta", "delta": {"stop_reason": parada, "stop_sequence": None}, "usage": {"output_tokens": 200}},
+                       {"type": "message_stop"}]
             sse = "".join(f"event: {ev['type']}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n" for ev in evs).encode("utf-8")
             self.send_response(200)
             self.send_header("content-type", "text/event-stream")
@@ -150,6 +187,47 @@ def anthropic_de_mentira():
 
 
 CHAVE_DE_PROVA = "-".join(["sk", "ant", "prova", "e2e", "0000000000000000"])
+
+
+def TESOURA(toks):
+    """A resposta do MPA mestre: a análise, a linha da tesoura, a peça e, no fim, as duas linhas de controle."""
+    return ("ANÁLISE (de mentira). Copie só a peça, que começa depois da linha da tesoura. Os autos tratam de " + ", ".join(toks) + ".\n\n"
+            "**✂️ -------------------------- INÍCIO DA MINUTA -------------------------- ✂️**\n\n"
+            "EXCELENTÍSSIMO SENHOR JUIZ (minuta de mentira, na mesma resposta)\n\nO Ministério Público denuncia " + " e ".join(toks) + ".\n\n"
+            "PRÓXIMO ATO: Denúncia\nMINUTA: SEGUIR")
+
+
+def openai_de_mentira():
+    """Uma OpenAI de mentira (chat completions em streaming): devolve a análise com a peça depois da tesoura."""
+    import re as _re
+    pedidos = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            n = int(self.headers.get("content-length") or 0)
+            corpo = json.loads(self.rfile.read(n).decode("utf-8"))
+            pedidos.append({"caminho": self.path, "cabecalhos": {k.lower(): v for k, v in self.headers.items()}, "corpo": corpo})
+            autos = " ".join(m.get("content") or "" for m in corpo["messages"] if m["role"] == "user")
+            toks = [x for x in dict.fromkeys(_re.findall(r"«[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9_]{2,39}»", autos)) if x != "«PAPEL_nn»"][:3]
+            texto = TESOURA(toks)
+            evs = [{"model": corpo["model"], "choices": [{"index": 0, "delta": {"role": "assistant", "content": texto[:40]}}]},
+                   {"choices": [{"index": 0, "delta": {"content": texto[40:]}}]},
+                   {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]},
+                   {"choices": [], "usage": {"prompt_tokens": 900, "completion_tokens": 120}}]
+            sse = ("".join("data: " + json.dumps(e, ensure_ascii=False) + "\n\n" for e in evs) + "data: [DONE]\n\n").encode("utf-8")
+            self.send_response(200)
+            self.send_header("content-type", "text/event-stream")
+            self.send_header("content-length", str(len(sse)))
+            self.end_headers()
+            self.wfile.write(sse)
+
+    porta = porta_livre()
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", porta), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, f"http://127.0.0.1:{porta}/v1", pedidos
 
 
 def rodar_app(plano, url_motor, dados, extra_env=None):
@@ -333,9 +411,18 @@ def secao_casos(dados):
     srv_ia, url_ia, pedidos = anthropic_de_mentira()
     prompt = os.path.join(pasta_c, "prompt de prova.md")
     open(prompt, "w", encoding="utf-8").write("# Prompt de prova\nVocê é o assessor jurídico fictício do teste de ponta a ponta.\n")
+    # o Guia (arquivo), o RPP (escrito no app) e o Livro de Modelos (arquivo com os próprios modelos, um por título)
+    guia = os.path.join(pasta_c, "guia de prova.md")
+    open(guia, "w", encoding="utf-8").write("# Guia de Formatação de prova\nFonte fictícia, corpo 12, margens fictícias da casa.\n")
+    livro = os.path.join(pasta_c, "livro de prova.md")
+    open(livro, "w", encoding="utf-8").write(
+        "# Denúncia — modelo fictício de prova\n" + "EXCELENTÍSSIMO SENHOR JUIZ. O Ministério Público oferece DENÚNCIA contra [NOME]. " * 3 + "\n\n"
+        "# Arquivamento — modelo fictício de prova\n" + "Promoção de arquivamento fictícia, pelos fundamentos de prova. " * 3 + "\n\n"
+        "# Curto demais\nnão vira modelo\n")
     rel = rodar_app({"arquivos": arqs, "saida": saida, "txt": True, "extracao": os.path.join(SAIDA, "extracao-caso"),
                      "relatorio": os.path.join(SAIDA, "relatorio-caso.json"),
-                     "mpa": {"prompt": prompt, "vazar": os.path.join(pasta_c, "prompt que vaza.md"), "visor": True}},
+                     "mpa": {"prompt": prompt, "vazar": os.path.join(pasta_c, "prompt que vaza.md"), "visor": True, "corte": True, "aprender": True, "conversa": True,
+                             "livro": {"guia": guia, "livro": livro}}},
                     "http://127.0.0.1:9/", dados, {"SKIA_CLAUDE_URL": url_ia, "SKIA_CHAVE_DE_PROVA": CHAVE_DE_PROVA})
     srv_ia.shutdown()
     por = {it["nome"]: it for it in rel["itens"]}
@@ -367,7 +454,7 @@ def secao_casos(dados):
     confere(mp.get("botao") and (mp.get("olho") or 0) >= 4, f"o card tem o 🧠 e os 👁 (anonimizado e original): {mp.get('olho')} botão(ões) 👁")
     confere(mp.get("visor") == "ok", f"o 👁 abre o PDF anonimizado numa janela do app ({mp.get('visor')})")
     confere(mp.get("etapa") == "pronto" and mp.get("proximo") == "Denúncia" and not mp.get("suspensa"), "o 🧠 fez a análise e a minuta (MINUTA: SEGUIR)")
-    ped = [p for p in pedidos]
+    ped = pedidos[:2]   # o 🧠 só com o prompt; depois vêm os do Livro (3) e os do repasse do porteiro (2)
     confere(len(ped) == 2 and len(ped[1]["corpo"]["messages"]) == 3 and ped[1]["corpo"]["messages"][1]["role"] == "assistant",
             f"duas chamadas, como no Graphé: a análise e, na mesma conversa, a minuta ({len(ped)} pedido(s))")
     tudo = json.dumps([p["corpo"] for p in ped], ensure_ascii=False).upper()
@@ -383,9 +470,81 @@ def secao_casos(dados):
     voltou = [v["valor"] for v in mapas[0]["tokens"].values() if v.get("valor") and v["valor"] in tr]
     confere("NÃO ENVIAR À IA" in (mp.get("real") or "") and not sobrou and voltou and "INÍCIO DA MINUTA" in tr,
             f"a análise e a minuta com os nomes reais ficam na subpasta privada, sem tokens ({len(voltou)} dado(s) de volta)" + (f" — sobrou {sobrou}" if sobrou else ""))
+    # o 🧠 com o Guia, o RPP e o Livro de Modelos
+    lv, pl = mp.get("livro") or {}, pedidos[2:5]
+    print(f"  🧠 com o Livro: {lv.get('etapa')} · modelos {lv.get('modelos')} · anexos {lv.get('anexos')} · {len(pl)} pedido(s)"
+          + (f" · ERRO {lv.get('erro')}" if lv.get("erro") else "") + (f" · avisos {lv.get('avisos')}" if lv.get("avisos") else ""))
+    confere(lv.get("etapa") == "pronto" and lv.get("catalogo") == 2 and lv.get("modelos") == ["M1 — Denúncia — modelo fictício de prova"],
+            f"o Livro em arquivo vira o catálogo (2 modelos; o curto fica de fora) e a IA lê o M1 pela ferramenta ({lv.get('modelos')})")
+    s0 = (pl[0]["corpo"].get("system") or "") if pl else ""
+    confere(len(pl) == 3 and [t["name"] for t in pl[0]["corpo"].get("tools", [])] == ["ler_modelo"]
+            and s0.startswith("# Prompt de prova") and "GUIA DE FORMATAÇÃO" in s0 and "Fonte fictícia, corpo 12" in s0
+            and "RPP — REGRAS" in s0 and "M1 | Denúncia — modelo fictício de prova" in s0 and "CONTEXTO DESTA EXECUÇÃO" in s0,
+            "o system leva o prompt, o Guia, o RPP e o catálogo do Livro, e o pedido leva a ferramenta ler_modelo")
+    res = [b for b in (pl[1]["corpo"]["messages"][-1]["content"] if len(pl) > 1 else []) if b.get("type") == "tool_result"]
+    confere(len(res) == 1 and res[0]["tool_use_id"] == "toolu_prova_1" and "TEXTO DO MODELO" in res[0]["content"] and "oferece DENÚNCIA" in res[0]["content"],
+            "a consulta volta à IA com o texto do modelo (tool_result), na mesma etapa")
+    tudo_l = json.dumps([x["corpo"] for x in pl], ensure_ascii=False)
+    confere(bool(lv.get("pessoa")) and lv["pessoa"] not in tudo_l and lv.get("token") in s0,
+            "o nome do caso que o RPP cita vai como o token, não em claro" + (f" ({lv.get('token')})" if lv.get("token") else ""))
+    confere(len(pl) == 3 and len(pl[2]["corpo"]["messages"]) == 5 and "redija a minuta" in json.dumps(pl[2]["corpo"]["messages"][-1], ensure_ascii=False),
+            "a minuta segue a mesma conversa, com a consulta e a análise")
+    # o repasse do porteiro: o nome que ficou em claro nos autos sai trocado pelo token, sem pergunta
+    rp, pr = mp.get("repasse") or {}, pedidos[5:7]
+    tudo_r = json.dumps([x["corpo"] for x in pr], ensure_ascii=False)
+    print(f"  repasse do porteiro: {rp.get('etapa')} · {rp.get('tarjados')} trecho(s) · perguntou {rp.get('perguntou')} · {len(pr)} pedido(s)"
+          + (f" · ERRO {rp.get('erro')}" if rp.get("erro") else ""))
+    confere(rp.get("etapa") == "pronto" and rp.get("tarjados") == 1 and not rp.get("perguntou") and len(pr) == 2
+            and any("tarjou 1 trecho" in a for a in (rp.get("avisos") or [])),
+            f"o porteiro troca sozinho pelo token o nome que ficou em claro nos autos, e o 🧠 segue sem pergunta ({rp.get('avisos')})")
+    confere(bool(rp.get("pessoa")) and rp["pessoa"] not in tudo_r and rp["pessoa"].split(" ")[-1] not in tudo_r
+            and ("não pegou: " + (rp.get("token") or "?") + ".") in tudo_r,
+            "nos dois pedidos, o trecho vai com o token no lugar do nome (que estava quebrado em linhas)")
+    rc = mp.get("repasseCaso") or {}
+    confere(rc.get("total") == 2 and rc.get("porDoc") == [2, 0] and rc.get("pagina") and rc.get("txt"),
+            f"na anonimização, o repasse tarja a página e o .txt antes de gravar ({rc})")
     vz = mp.get("vazar") or {}
-    confere(vz.get("achou") and vz.get("etapa") == "erro" and "porteiro" in (vz.get("erro") or "") and len(pedidos) == 2,
-            f"o porteiro barra o pedido com um nome do mapa em claro, e nada sai ({vz.get('erro')})")
+    confere(vz.get("achou") and (vz.get("perguntou") or [0])[0] >= 1 and vz.get("etapa") == "erro" and "cancelado" in (vz.get("erro") or "")
+            and len(pedidos) == 14,   # 10 até a resposta cortada, mais os 4 da conversa (análise, minuta, complemento e pergunta)
+            f"sem o repasse, o porteiro pergunta antes de mandar o nome em claro, e com Cancelar nada sai ({vz.get('perguntou')} · {vz.get('erro')})")
+    # o aprendizado
+    ap = mp.get("aprender") or {}
+    confere(ap.get("ensinados") == 1 and ap.get("claros") == 1 and ap.get("pagina") and ap.get("mapa") and ap.get("volta") == "Cite Zebedeu.",
+            f"o aprendizado: o dado ensinado vira «DADO_01» (e volta na reidentificação); o que não é pessoal fica em claro e sai do mapa ({ap})")
+    confere(ap.get("porteiro") and ap.get("total") == 1 and ap.get("botao"),
+            "o que o porteiro tarja entra sozinho na tabela do aprendizado; o card tem o Ensinar… e o topo, o Aprendizado e o Fale com o desenvolvedor")
+    # a resposta cortada no limite de tamanho: o app pede a continuação e cola os pedaços
+    ct, pc = mp.get("corte") or {}, pedidos[7:10]
+    print(f"  resposta cortada: {ct.get('etapa')} · {ct.get('proximo')} · {len(pc)} pedido(s)" + (f" · ERRO {ct.get('erro')}" if ct.get("erro") else ""))
+    confere(ct.get("etapa") == "pronto" and ct.get("proximo") == "Denúncia" and ct.get("minuta") and "PRÓXIMO ATO: Denúncia" in (ct.get("analise") or ""),
+            "a análise cortada no limite continua de onde parou, e os pedaços se colam sem emenda (PRÓXIMO ATO: Denúncia)")
+    confere(len(pc) == 3 and all(x["corpo"].get("max_tokens") == 128000 for x in pc) and len(pc[1]["corpo"]["messages"]) == 3
+            and "Continue EXATAMENTE" in json.dumps(pc[1]["corpo"]["messages"][-1], ensure_ascii=False) and len(pc[2]["corpo"]["messages"]) == 5,
+            "o teto da resposta é de 128 mil tokens; a continuação e a minuta seguem na mesma conversa")
+    # a janela do 🧠: quem usa responde na mesma conversa (complementa a minuta e pergunta), e a minuta vira .docx
+    cv, pv = mp.get("conversa") or {}, pedidos[-2:]
+    ult = lambda x: json.dumps(x["corpo"]["messages"][-1], ensure_ascii=False)
+    print(f"  conversa: {cv.get('etapa')} · mensagens {cv.get('antes')} → {cv.get('depois')} → {cv.get('fim')} · janela {cv.get('janela')} itens · editor {cv.get('editor')} caracteres"
+          + (f" · ERRO {cv.get('erro') or cv.get('erroDocx') or cv.get('janelaErro')}" if cv.get("erro") or cv.get("erroDocx") or cv.get("janelaErro") else ""))
+    confere(cv.get("etapa") == "pronto" and cv.get("antes") == 4 and cv.get("depois") == 6 and cv.get("fim") == 8 and cv.get("minuta"),
+            "a resposta de quem usa segue a mesma conversa: a análise, a minuta, o complemento e a pergunta")
+    confere(len(pv) == 2 and "Reescreva a peça inteira" in ult(pv[0]) and bool(cv.get("token")) and cv["token"] in ult(pv[0])
+            and cv.get("pessoa") not in json.dumps(pv[0]["corpo"], ensure_ascii=False) and len(pv[0]["corpo"]["messages"]) == 5,
+            "o complemento vai com o nome do caso trocado pelo token" + (f" ({cv.get('token')})" if cv.get("token") else ""))
+    confere(len(pv) == 2 and "Quem pediu a análise pergunta" in ult(pv[1]) and "Qual é o prazo?" in ult(pv[1]) and len(pv[1]["corpo"]["messages"]) == 7,
+            "a pergunta também, sem mexer na análise nem na minuta")
+    dx = cv.get("docx") or ""
+    ok_docx = False
+    if dx and os.path.isfile(dx):
+        with zipfile.ZipFile(dx) as z:
+            xml = z.read("word/document.xml").decode("utf-8")
+            ok_docx = "minuta de mentira" in xml and z.namelist()[0] == "[Content_Types].xml" and "«" not in xml
+    confere(ok_docx and "NÃO ENVIAR" in dx and dx.endswith(" — minuta.docx") and cv.get("paragrafos", 0) >= 2,
+            f"a minuta sai em .docx, com os nomes reais, na subpasta que não vai à IA ({os.path.basename(dx)})")
+    its = cv.get("itens") or []
+    confere(cv.get("quill") and not cv.get("janelaErro") and (cv.get("janela") or 0) >= 8 and cv.get("painel") and (cv.get("editor") or 0) > 20 and cv.get("editado")
+            and cv.get("botao") == "Complementar a minuta ➤" and its.count("fala:eu") == 2 and its.count("fala:ia") == 4 and "passo:" in its,
+            "a janela do 🧠 desenha os passos e as bolhas, o painel do aprendizado abre, e o editor carrega a minuta e guarda a edição")
     t_rel = texto_pdf(por[N["relatorio"]]["saida"]["pdf"])
     confere("DOCUMENTOS DESTE CASO (3" in t_rel, "o cabeçalho lista os documentos do caso")
     # Separar (outra rodada, noutra pasta): o termo sai do caso, e os dois casos são refeitos
@@ -398,9 +557,110 @@ def secao_casos(dados):
             f"Separar tira o documento do caso e refaz os dois (termo: {ct.get('n')}, custódia: {ca2.get('n')})")
 
 
+def secao_tesoura(dados):
+    print("8. a minuta numa resposta só (a linha da tesoura), pela Anthropic e por outra IA (a OpenAI de mentira)")
+    pasta_t = os.path.join(BASE, "tesoura")
+    shutil.rmtree(pasta_t, ignore_errors=True)
+    os.makedirs(pasta_t)
+    pdf = os.path.join(pasta_t, "outro caso.pdf")
+    open(pdf, "wb").write(gerar_pdfs.pdf_texto([gerar_pdfs.CASO_OUTRO.splitlines()]))
+    prompt = os.path.join(pasta_t, "prompt da tesoura.md")
+    open(prompt, "w", encoding="utf-8").write("# Prompt de prova\nPROVA DA TESOURA: a análise e a peça na mesma resposta.\n")
+    for ia in ("anthropic", "openai"):
+        if ia == "anthropic":
+            srv_ia, url_ia, pedidos = anthropic_de_mentira()
+            env = {"SKIA_CLAUDE_URL": url_ia, "SKIA_CHAVE_DE_PROVA": CHAVE_DE_PROVA}
+        else:
+            srv_ia, url_ia, pedidos = openai_de_mentira()
+            env = {"SKIA_OUTRA_IA_URL": url_ia, "SKIA_CHAVE_DE_PROVA": CHAVE_DE_PROVA}
+        mpa = {"prompt": prompt}
+        if ia == "openai":
+            mpa["ia"] = {"provedor": "openai", "modelo": "gpt-5", "esforco": "medium"}
+        rel = rodar_app({"arquivos": [pdf], "saida": os.path.join(pasta_t, "saida-" + ia), "txt": False,
+                         "extracao": os.path.join(SAIDA, "extracao-tesoura-" + ia), "relatorio": os.path.join(SAIDA, "relatorio-tesoura-" + ia + ".json"),
+                         "mpa": mpa}, "http://127.0.0.1:9/", dados, env)
+        srv_ia.shutdown()
+        mp = rel.get("mpa") or {}
+        tr, ta = mp.get("textoReal") or "", mp.get("textoAnon") or ""
+        print(f"  {ia}: {mp.get('etapa')} · {mp.get('proximo')} · {len(pedidos)} pedido(s)" + (f" · ERRO {mp.get('erro')}" if mp.get("erro") else ""))
+        confere(mp.get("etapa") == "pronto" and mp.get("proximo") == "Denúncia" and len(pedidos) == 1,
+                f"{ia}: a análise e a minuta num pedido só ({len(pedidos)} pedido(s); antes eram dois)")
+        confere(tr.count("INÍCIO DA MINUTA") == 1 and tr.count("EXCELENTÍSSIMO") == 1 and ta.count("EXCELENTÍSSIMO") == 1
+                and tr.index("PRÓXIMO ATO") < tr.index("INÍCIO DA MINUTA") and "na mesma resposta" in tr.split("INÍCIO DA MINUTA")[1],
+                f"{ia}: a peça vem uma vez, depois da linha da tesoura; as linhas de controle ficam antes dela")
+        if ia == "openai" and pedidos:
+            c = pedidos[0]["corpo"]
+            confere(pedidos[0]["caminho"].endswith("/chat/completions") and pedidos[0]["cabecalhos"].get("authorization") == "Bearer " + CHAVE_DE_PROVA
+                    and c.get("model") == "gpt-5" and c.get("reasoning_effort") == "medium" and c.get("stream") is True
+                    and c["messages"][0]["role"] == "system" and c["messages"][0]["content"].startswith("# Prompt de prova")
+                    and "x-api-key" not in pedidos[0]["cabecalhos"],
+                    "openai: o pedido sai no formato da OpenAI (system, esforço médio, streaming), com a chave no Bearer")
+            reais = ["GENOVEVO", "TESTECICRANO", "111.444"]
+            vaz = [x for x in reais if x in json.dumps(c, ensure_ascii=False).upper()]
+            confere(not vaz, "openai: só os autos anonimizados saem (nenhum nome real)" + (f" — ACHEI {vaz}" if vaz else ""))
+
+
+MODELOS_FICTICIOS = {
+    "Denúncia - tráfico de drogas.txt": "EXCELENTÍSSIMO SENHOR JUIZ DE DIREITO. O Ministério Público oferece DENÚNCIA contra [NOME], pela prática do "
+        "crime do art. 33 da Lei 11.343/2006 (tráfico de drogas): trazia consigo, para venda, porções de entorpecente. Requer o recebimento da denúncia.",
+    "Arquivamento de inquérito.txt": "Promoção de arquivamento do inquérito policial: ausência de justa causa, sem indícios de autoria nem prova da "
+        "materialidade. Requer o arquivamento, com as comunicações de praxe.",
+    os.path.join("Recursos", "Contrarrazões da acusação.md"): "CONTRARRAZÕES AO RECURSO DE APELAÇÃO interposto pela defesa. A sentença condenatória "
+        "deve ser mantida: a prova é firme e a dosimetria, adequada. Requer o desprovimento do recurso.",
+    os.path.join("Cível", "Ação civil pública - improbidade.txt"): "AÇÃO CIVIL PÚBLICA POR ATO DE IMPROBIDADE ADMINISTRATIVA. O Ministério Público, "
+        "com base na Lei 8.429/1992, pede o ressarcimento do dano ao erário e a indisponibilidade de bens.",
+}
+
+
+def secao_pasta(dados):
+    print("9. a pasta de modelos com a busca por BERT (SKIA_BUSCA_DIR apontando para o modelo já baixado)")
+    bd = os.environ.get("SKIA_BUSCA_DIR", "")
+    if not (bd and os.path.exists(os.path.join(bd, "model.onnx"))):
+        print("  (pulei: sem o modelo em SKIA_BUSCA_DIR)")
+        return
+    base = os.path.join(BASE, "pasta-modelos")
+    shutil.rmtree(base, ignore_errors=True)
+    pasta = os.path.join(base, "meus modelos")
+    for nome, texto in MODELOS_FICTICIOS.items():
+        os.makedirs(os.path.dirname(os.path.join(pasta, nome)), exist_ok=True)
+        open(os.path.join(pasta, nome), "w", encoding="utf-8").write(texto + "\n")
+    open(os.path.join(pasta, "~$aberto.docx"), "w").write("lixo do Word")
+    pdf = os.path.join(base, "outro caso.pdf")
+    open(pdf, "wb").write(gerar_pdfs.pdf_texto([gerar_pdfs.CASO_OUTRO.splitlines()]))
+    prompt = os.path.join(base, "prompt.md")
+    open(prompt, "w", encoding="utf-8").write("# Prompt de prova\nUse os modelos de quem pede.\n")
+    srv_ia, url_ia, pedidos = anthropic_de_mentira()
+    rel = rodar_app({"arquivos": [pdf], "saida": os.path.join(base, "saida"), "txt": False,
+                     "extracao": os.path.join(SAIDA, "extracao-pasta"), "relatorio": os.path.join(SAIDA, "relatorio-pasta.json"),
+                     "mpa": {"prompt": prompt, "pasta": pasta}}, "http://127.0.0.1:9/", dados,
+                    {"SKIA_CLAUDE_URL": url_ia, "SKIA_CHAVE_DE_PROVA": CHAVE_DE_PROVA, "SKIA_BUSCA_DIR": bd})
+    srv_ia.shutdown()
+    mp = rel.get("mpa") or {}
+    print(f"  🧠 com a pasta: {mp.get('etapa')} · modelos lidos {mp.get('modelos')} · {len(pedidos)} pedido(s)" + (f" · ERRO {mp.get('erro')}" if mp.get("erro") else "") + (f" · avisos {mp.get('avisos')}" if mp.get("avisos") else ""))
+    s0 = (pedidos[0]["corpo"].get("system") or "") if pedidos else ""
+    confere(len(pedidos) >= 3 and [f["name"] for f in pedidos[0]["corpo"].get("tools", [])] == ["buscar_modelos", "ler_modelo"]
+            and "MODELOS DE QUEM PEDE" in s0 and s0.count(" | ") >= 4 and "aberto" not in s0,
+            "o system leva os modelos da pasta (sem o ~$ do Word) e o pedido, as ferramentas buscar_modelos e ler_modelo")
+    res = [b for b in (pedidos[1]["corpo"]["messages"][-1]["content"] if len(pedidos) > 1 else []) if b.get("type") == "tool_result"]
+    prim = (re.findall(r"^P\d+ \| ([^|]+)\|", res[0]["content"], re.M) or [""])[0].strip() if res else ""
+    confere(prim.startswith("Denúncia - tráfico"), f"o BERT põe o modelo da denúncia por tráfico no topo da busca ({prim or 'nada'})")
+    confere(mp.get("etapa") == "pronto" and any("tráfico" in x for x in (mp.get("modelos") or [])),
+            "a IA lê o modelo achado (ler_modelo pelo ID da busca) e o 🧠 termina")
+    tudo = json.dumps([p["corpo"] for p in pedidos], ensure_ascii=False)
+    confere(base not in tudo and os.path.expanduser("~") not in tudo, "o caminho da pasta no computador não vai à IA (só o nome e a subpasta)")
+
+
 def main():
     if not os.path.exists(EXE):
         raise SystemExit("falta o executável: npx tauri build --debug --no-bundle")
+    if os.environ.get("SKIA_E2E_SO") in ("tesoura", "pasta"):   # só a seção 8 ou a 9
+        os.makedirs(SAIDA, exist_ok=True)
+        if os.environ.get("SKIA_E2E_SO") == "tesoura":
+            secao_tesoura(os.path.join(SAIDA, "dados-tesoura"))
+        else:
+            secao_pasta(os.path.join(SAIDA, "dados-pasta"))
+        print("\nRESULTADO: " + ("tudo certo" if not falhas else f"{len(falhas)} falha(s)"))
+        sys.exit(1 if falhas else 0)
     if os.environ.get("SKIA_E2E_SO") == "casos":   # só a seção 7
         os.makedirs(SAIDA, exist_ok=True)
         secao_casos(os.path.join(SAIDA, "dados-casos"))
@@ -436,7 +696,7 @@ def main():
             print("    aviso: " + a)
     confere(all(it["etapa"] == "pronto" for it in rel["itens"]) and len(rel["itens"]) == 3, "os 3 arquivos ficaram prontos")
     mc = rel.get("minutaNoCard") or {}
-    confere(mc.get("bloco"), "o card pronto tem o bloco 'Minuta da IA' (Reidentificar minuta…)")
+    confere(mc.get("bloco"), "o card pronto tem o Reidentificar minuta… no painel de botões")
     confere(mc.get("etapa") == "pronto" and mc.get("n") == mc.get("tokens") and mc.get("tokens", 0) >= 1 and not mc.get("sobras"),
             f"a minuta da IA reidentificada no card, com o mapa do caso: {mc.get('n')} de {mc.get('tokens')} token(s), sobras {mc.get('sobras')} {mc.get('erro') or ''}")
     confere(bool(mc.get("texto")) and "«" not in mc["texto"] and os.path.basename(mc.get("saida") or "") == "minuta da IA (reidentificado).txt",
@@ -536,6 +796,8 @@ def main():
 
     secao_rigorosa(dados)
     secao_casos(dados)
+    secao_tesoura(dados)
+    secao_pasta(dados)
 
     print()
     print("RESULTADO: " + ("tudo certo" if not falhas else f"{len(falhas)} falha(s)"))

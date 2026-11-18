@@ -7,7 +7,10 @@
 //!   · 429, 5xx e "overloaded": até 3 tentativas, com espera crescente (nada é cobrado nelas);
 //!   · 400 que recusa o fallback (é beta): o pedido segue sem ele, sem contar tentativa;
 //!   · 401/403 (a chave), 404 ou 400 de modelo e 400 sem crédito: erro na hora, com a explicação;
-//!   · sem resposta, ou a conexão que cai no meio: erro, sem nova tentativa (a Anthropic pode ter cobrado).
+//!   · sem resposta, ou a Anthropic que interrompe a resposta com um erro: erro, sem nova tentativa.
+//! Uma regra é só daqui (17/11/2026): a conexão que cai no meio da resposta (a rede derruba, a resposta vem cortada ou
+//! fica sem sinal) é refeita uma vez, sozinha. A Anthropic pode ter cobrado o pedaço que caiu, mas refazer só este
+//! pedido sai mais barato do que a pessoa recomeçar a rodada inteira. O Graphé não repete nesse caso.
 //! A recusa da triagem de segurança (stop_reason "refusal") volta como resposta: quem a transforma em erro é o
 //! núcleo, como no Graphé.
 
@@ -27,11 +30,13 @@ pub struct Opcoes {
     pub espera: Duration,
     /// Sem nenhum byte por este tempo, a conexão é dada como caída (a Anthropic manda "ping" enquanto a IA pensa).
     pub sem_sinal: Duration,
+    /// Quantas vezes o pedido é refeito quando a conexão cai no meio da resposta.
+    pub quedas: u32,
 }
 
 impl Default for Opcoes {
     fn default() -> Self {
-        Opcoes { url: URL_PADRAO.into(), tentativas: 3, espera: Duration::from_millis(1500), sem_sinal: Duration::from_secs(180) }
+        Opcoes { url: URL_PADRAO.into(), tentativas: 3, espera: Duration::from_millis(1500), sem_sinal: Duration::from_secs(180), quedas: 1 }
     }
 }
 
@@ -41,11 +46,21 @@ pub struct Resposta {
     pub ms: u64,
     pub code: u16,
     pub tentativas: u32,
+    /// Quantas vezes a conexão caiu no meio da resposta e o pedido foi refeito.
+    pub quedas: u32,
+}
+
+/// O que deu errado na leitura da resposta: a conexão que caiu (o pedido pode ser refeito) ou o resto (não se repete).
+enum Falha {
+    Queda(String),
+    Outra(String),
 }
 
 pub fn cliente() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(30))
+        // sinal de vida no TCP: roteador e filtro de rede derrubam a conexão longa que parece parada
+        .tcp_keepalive(Duration::from_secs(30))
         .build()
         .map_err(|e| format!("não consegui preparar a conexão HTTP: {e}"))
 }
@@ -60,7 +75,19 @@ fn motivo(e: &reqwest::Error) -> String {
     } else if e.is_connect() {
         "sem conexão com a Anthropic".into()
     } else {
-        e.to_string()
+        // O reqwest só diz "error decoding response body"; a causa de verdade (conexão fechada pelo outro lado,
+        // reiniciada pela rede…) vem atrás, na cadeia do erro. Ela vai junto, para a queda não ficar sem explicação.
+        use std::error::Error as _;
+        let mut partes = vec![e.to_string()];
+        let mut causa = e.source();
+        while let Some(c) = causa {
+            let t = c.to_string();
+            if !partes.contains(&t) {
+                partes.push(t);
+            }
+            causa = c.source();
+        }
+        corta(&partes.join(": "), 240)
     }
 }
 
@@ -83,6 +110,7 @@ pub async fn enviar(
         .collect();
     let t0 = Instant::now();
     let mut tentativa = 0u32;
+    let mut quedas = 0u32;
     let mut ultimo_erro = String::new();
     while tentativa < op.tentativas {
         if tentativa > 0 {
@@ -102,8 +130,22 @@ pub async fn enviar(
         };
         let code = resp.status().as_u16();
         if code == 200 {
-            let json = ler_streaming(resp, op.sem_sinal).await?;
-            return Ok(Resposta { json, ms: t0.elapsed().as_millis() as u64, code, tentativas: tentativa + 1 });
+            match ler_streaming(resp, op.sem_sinal).await {
+                Ok(json) => return Ok(Resposta { json, ms: t0.elapsed().as_millis() as u64, code, tentativas: tentativa + 1, quedas }),
+                Err(Falha::Queda(_)) if quedas < op.quedas => {
+                    quedas += 1;
+                    tokio::time::sleep(op.espera).await;
+                    continue;
+                }
+                Err(Falha::Queda(e)) => {
+                    return Err(if quedas > 0 {
+                        format!("{e} O app já tinha refeito o pedido sozinho e a conexão caiu outra vez: confira a internet.")
+                    } else {
+                        e
+                    })
+                }
+                Err(Falha::Outra(e)) => return Err(e),
+            }
         }
         let texto = resp.text().await.unwrap_or_default();
         let baixo = texto.to_lowercase();
@@ -117,7 +159,7 @@ pub async fn enviar(
         }
         if code == 401 || code == 403 {
             return Err(format!(
-                "A chave da Anthropic foi recusada (inválida ou expirada, código {code}). Guarde a chave certa nos Ajustes."
+                "A chave da Anthropic foi recusada (inválida ou expirada, código {code}). Guarde a chave certa nas Configurações."
             ));
         }
         if code == 404 || (code == 400 && baixo.contains("model")) {
@@ -137,26 +179,28 @@ pub async fn enviar(
 }
 
 /// Lê os eventos do streaming (linhas "data: {...}", um evento por linha em branco) e remonta a mensagem.
-async fn ler_streaming(mut resp: reqwest::Response, sem_sinal: Duration) -> Result<Value, String> {
+async fn ler_streaming(mut resp: reqwest::Response, sem_sinal: Duration) -> Result<Value, Falha> {
     let mut m = Montagem::default();
     let mut buf: Vec<u8> = Vec::new();
     let mut dados = String::new();
     loop {
         let pedaco = match tokio::time::timeout(sem_sinal, resp.chunk()).await {
             Err(_) => {
-                return Err(format!(
+                return Err(Falha::Queda(format!(
                     "A conexão com a Anthropic ficou {} s sem sinal e foi dada como caída. Tente de novo.",
                     sem_sinal.as_secs()
-                ))
+                )))
             }
-            Ok(Err(e)) => return Err(format!("A conexão com a Anthropic caiu no meio da resposta ({}). Tente de novo.", motivo(&e))),
+            Ok(Err(e)) => {
+                return Err(Falha::Queda(format!("A conexão com a Anthropic caiu no meio da resposta ({}). Tente de novo.", motivo(&e))))
+            }
             Ok(Ok(None)) => break,
             Ok(Ok(Some(b))) => b,
         };
         buf.extend_from_slice(&pedaco);
         while let Some(i) = buf.iter().position(|&b| b == b'\n') {
             let bruta: Vec<u8> = buf.drain(..=i).collect();
-            m.linha(&String::from_utf8_lossy(&bruta), &mut dados)?;
+            m.linha(&String::from_utf8_lossy(&bruta), &mut dados).map_err(Falha::Outra)?;
         }
         if m.fim {
             break;
@@ -164,11 +208,16 @@ async fn ler_streaming(mut resp: reqwest::Response, sem_sinal: Duration) -> Resu
     }
     if !buf.is_empty() {
         let resto = String::from_utf8_lossy(&buf).to_string();
-        m.linha(&resto, &mut dados)?;
+        m.linha(&resto, &mut dados).map_err(Falha::Outra)?;
     }
-    m.linha("", &mut dados)?;
-    m.mensagem()
+    m.linha("", &mut dados).map_err(Falha::Outra)?;
+    if !m.fim {
+        return Err(Falha::Queda(CORTADA.into()));
+    }
+    m.mensagem().map_err(Falha::Outra)
 }
+
+const CORTADA: &str = "A resposta da Anthropic veio cortada: a conexão terminou antes do fim. Tente de novo.";
 
 /// A mensagem sendo remontada, evento a evento.
 #[derive(Default)]
@@ -296,7 +345,7 @@ impl Montagem {
 
     fn mensagem(self) -> Result<Value, String> {
         if !self.fim {
-            return Err("A resposta da Anthropic veio cortada: a conexão terminou antes do fim. Tente de novo.".into());
+            return Err(CORTADA.into());
         }
         let mut msg = self.msg.ok_or("A resposta da Anthropic veio sem a mensagem.")?;
         msg.insert("content".into(), Value::Array(self.blocos.into_iter().filter(|b| !b.is_null()).collect()));
@@ -362,7 +411,7 @@ mod testes {
     }
 
     fn opcoes(url: &str) -> Opcoes {
-        Opcoes { url: url.into(), tentativas: 3, espera: Duration::from_millis(1), sem_sinal: Duration::from_secs(5) }
+        Opcoes { url: url.into(), tentativas: 3, espera: Duration::from_millis(1), sem_sinal: Duration::from_secs(5), quedas: 1 }
     }
 
     fn cab() -> BTreeMap<String, String> {
@@ -468,20 +517,42 @@ mod testes {
     }
 
     #[tokio::test]
-    async fn resposta_cortada_ou_interrompida_vira_erro() {
+    async fn a_conexao_que_cai_no_meio_e_refeita_uma_vez() {
         let mut cortada = conversa();
         cortada.truncate(8);
-        let s = servidor(vec![sse(&cortada)]);
+        // caiu uma vez: o pedido é refeito sozinho, igual, e a resposta inteira volta com a queda anotada
+        let s = servidor(vec![sse(&cortada), sse(&conversa())]);
+        let r = enviar(&cliente().unwrap(), &opcoes(&s.url), "sk-ant-x", PEDIDO, &cab()).await.unwrap();
+        assert_eq!((r.quedas, r.tentativas), (1, 1));
+        assert_eq!(r.json["content"][1]["text"], "Olá, mundo «Sócrates»", "nada do pedaço que caiu se mistura à resposta");
+        {
+            let pedidos = s.pedidos.lock().unwrap();
+            assert_eq!(pedidos.len(), 2);
+            assert_eq!(pedidos[0].1, pedidos[1].1, "o pedido refeito é o mesmo");
+        }
+        // caiu duas vezes: erro, e não há terceira
+        let s = servidor(vec![sse(&cortada), sse(&cortada)]);
         let e = enviar(&cliente().unwrap(), &opcoes(&s.url), "sk-ant-x", PEDIDO, &cab()).await.unwrap_err();
-        assert!(e.contains("veio cortada"), "{e}");
+        assert!(e.contains("veio cortada") && e.contains("caiu outra vez"), "{e}");
+        assert_eq!(s.pedidos.lock().unwrap().len(), 2);
+        // sem a nova tentativa (quedas: 0), o erro é o de antes
+        let s = servidor(vec![sse(&cortada)]);
+        let mut op = opcoes(&s.url);
+        op.quedas = 0;
+        let e = enviar(&cliente().unwrap(), &op, "sk-ant-x", PEDIDO, &cab()).await.unwrap_err();
+        assert!(e.contains("veio cortada") && !e.contains("outra vez"), "{e}");
+        assert_eq!(s.pedidos.lock().unwrap().len(), 1);
+    }
 
+    #[tokio::test]
+    async fn a_resposta_que_a_anthropic_interrompe_vira_erro() {
         let mut sobrecarga = conversa();
         sobrecarga.truncate(4);
         sobrecarga.push(json!({"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}));
         let s = servidor(vec![sse(&sobrecarga)]);
         let e = enviar(&cliente().unwrap(), &opcoes(&s.url), "sk-ant-x", PEDIDO, &cab()).await.unwrap_err();
         assert!(e.contains("sobrecarregada no meio da resposta"), "{e}");
-        assert_eq!(s.pedidos.lock().unwrap().len(), 1, "no meio da resposta não se tenta de novo");
+        assert_eq!(s.pedidos.lock().unwrap().len(), 1, "o erro que a Anthropic manda no meio da resposta não se repete");
     }
 
     #[tokio::test]

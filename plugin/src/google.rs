@@ -28,14 +28,18 @@ pub const PROVA_VAR: &str = "SKIA_PROVA_GOOGLE";
 pub const CLIENTE_DE_PROVA: &str = "cliente-de-prova.apps.googleusercontent.com";
 pub const SEGREDO_DE_PROVA: &str = "segredo-de-prova";
 
-pub const ESCOPO: &str = "openid email https://www.googleapis.com/auth/documents.readonly";
+// 16/11/2026: + spreadsheets.readonly, para o Livro de Modelos numa planilha do Google (como o do Graphé)
+pub const ESCOPO: &str = "openid email https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly";
+/// A leitura das pastas do Drive (17/11/2026, a pasta de modelos por link): pedida só por quem usa a pasta do Drive pelo
+/// link, num login à parte que soma esta permissão às de antes (include_granted_scopes). O login de sempre não a pede.
+pub const ESCOPO_DRIVE: &str = "https://www.googleapis.com/auth/drive.readonly";
 const PRAZO_DO_LOGIN: Duration = Duration::from_secs(300);
 /// A prova é renovada quando faltam menos de 5 minutos para ela vencer.
 const FOLGA: u64 = 300;
 const B64: base64::engine::GeneralPurpose = base64::engine::general_purpose::URL_SAFE_NO_PAD;
 
 pub const SEM_CLIENTE: &str = "O login do Google ainda não está configurado nesta cópia do app (falta o cliente OAuth do Incognitus).";
-pub const VENCIDO: &str = "O login do Google venceu ou foi retirado: entre de novo nos Ajustes (🧠 Melhor Próximo Ato).";
+pub const VENCIDO: &str = "O login do Google venceu ou foi retirado: entre de novo nas Configurações (🧠 Melhor Próximo Ato).";
 pub const CANCELADO: &str = "O login do Google foi cancelado.";
 
 #[derive(Clone, Debug, PartialEq)]
@@ -119,13 +123,14 @@ pub fn desafio(verificador: &str) -> String {
     B64.encode(Sha256::digest(verificador.as_bytes()))
 }
 
-pub fn endereco_de_autorizacao(ep: &Enderecos, cli: &Cliente, retorno: &str, desafio: &str, estado: &str) -> String {
+pub fn endereco_de_autorizacao(ep: &Enderecos, cli: &Cliente, retorno: &str, desafio: &str, estado: &str, escopo: &str) -> String {
     let mut u = reqwest::Url::parse(&ep.autorizar).expect("o endereço de autorização é fixo");
     u.query_pairs_mut()
         .append_pair("client_id", &cli.id)
         .append_pair("redirect_uri", retorno)
         .append_pair("response_type", "code")
-        .append_pair("scope", ESCOPO)
+        .append_pair("scope", escopo)
+        .append_pair("include_granted_scopes", "true")
         .append_pair("code_challenge", desafio)
         .append_pair("code_challenge_method", "S256")
         .append_pair("state", estado)
@@ -277,6 +282,8 @@ pub fn ler_prova(jwt: &str) -> Result<Prova, String> {
 pub struct Entrada {
     pub prova: Prova,
     pub renovacao: String,
+    /// as permissões que o Google deu (o "scope" da resposta), para saber se as pastas do Drive estão liberadas
+    pub escopos: String,
 }
 
 fn sem_conexao(e: &reqwest::Error) -> String {
@@ -320,7 +327,8 @@ pub async fn trocar_codigo(http: &reqwest::Client, ep: &Enderecos, cli: &Cliente
         .and_then(Value::as_str)
         .filter(|s| !s.is_empty())
         .ok_or("o Google não devolveu a renovação do login: clique de novo em Entrar com o Google")?;
-    Ok(Entrada { prova, renovacao: renovacao.to_string() })
+    let escopos = v.get("scope").and_then(Value::as_str).unwrap_or("").to_string();
+    Ok(Entrada { prova, renovacao: renovacao.to_string(), escopos })
 }
 
 /// Uma prova nova, pela renovação. VENCIDO quando o Google não a aceita mais (a pessoa tirou o acesso, trocou a senha).
@@ -335,7 +343,7 @@ pub async fn revogar(http: &reqwest::Client, ep: &Enderecos, renovacao: &str) {
 }
 
 /// O login inteiro: o porteiro em 127.0.0.1, o navegador (pela função `abrir`), a volta e a troca do código.
-pub async fn entrar<F>(http: &reqwest::Client, ep: &Enderecos, cli: &Cliente, abrir: F, cancelado: Arc<AtomicBool>) -> Result<Entrada, String>
+pub async fn entrar<F>(http: &reqwest::Client, ep: &Enderecos, cli: &Cliente, abrir: F, cancelado: Arc<AtomicBool>, escopo: &str) -> Result<Entrada, String>
 where
     F: FnOnce(&str) -> Result<(), String>,
 {
@@ -344,7 +352,7 @@ where
     let retorno = format!("http://127.0.0.1:{porta}");
     let verificador = aleatorio(48)?;
     let estado = aleatorio(18)?;
-    abrir(&endereco_de_autorizacao(ep, cli, &retorno, &desafio(&verificador), &estado))?;
+    abrir(&endereco_de_autorizacao(ep, cli, &retorno, &desafio(&verificador), &estado, escopo))?;
     let codigo = tauri::async_runtime::spawn_blocking(move || esperar_retorno(&l, &estado, PRAZO_DO_LOGIN, &cancelado))
         .await
         .map_err(|e| format!("o porteiro do login parou: {e}"))??;
@@ -424,12 +432,16 @@ mod testes {
 
     #[test]
     fn o_endereco_de_autorizacao_pede_o_email_e_so_a_leitura_dos_docs_e_nao_leva_o_segredo() {
-        let u = endereco_de_autorizacao(&Enderecos::do_google(), &cli(), "http://127.0.0.1:5555", "desafio", "estado");
+        let u = endereco_de_autorizacao(&Enderecos::do_google(), &cli(), "http://127.0.0.1:5555", "desafio", "estado", ESCOPO);
         let u = reqwest::Url::parse(&u).unwrap();
         assert_eq!(u.host_str(), Some("accounts.google.com"));
         let q: HashMap<String, String> = u.query_pairs().into_owned().collect();
-        assert_eq!(q["scope"], "openid email https://www.googleapis.com/auth/documents.readonly");
-        assert!(!q["scope"].contains("drive") && !q["scope"].contains("spreadsheets"));
+        assert_eq!(q["scope"], "openid email https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly");
+        assert!(!q["scope"].contains("drive"));
+        assert_eq!(q["include_granted_scopes"], "true");
+        let d = endereco_de_autorizacao(&Enderecos::do_google(), &cli(), "http://127.0.0.1:5555", "desafio", "estado", &format!("{ESCOPO} {ESCOPO_DRIVE}"));
+        let qd: HashMap<String, String> = reqwest::Url::parse(&d).unwrap().query_pairs().into_owned().collect();
+        assert!(qd["scope"].ends_with("documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.readonly"));
         assert_eq!(q["code_challenge_method"], "S256");
         assert_eq!(q["redirect_uri"], "http://127.0.0.1:5555");
         assert!(!u.as_str().contains(SEGREDO_DE_PROVA));
@@ -466,7 +478,7 @@ mod testes {
             });
             Ok(())
         };
-        let e = rt().block_on(entrar(&reqwest::Client::new(), &ep, &cli(), abrir, Arc::new(AtomicBool::new(false)))).unwrap();
+        let e = rt().block_on(entrar(&reqwest::Client::new(), &ep, &cli(), abrir, Arc::new(AtomicBool::new(false)), ESCOPO)).unwrap();
         assert_eq!(e.prova.email, "assessora@example.invalid");
         assert_eq!(e.renovacao, "renovacao-1");
         assert_eq!(e.prova.acesso, "acesso-1");
@@ -491,7 +503,7 @@ mod testes {
             });
             Ok(())
         };
-        let r = rt().block_on(entrar(&reqwest::Client::new(), &ep, &cli(), abrir, cancelado));
+        let r = rt().block_on(entrar(&reqwest::Client::new(), &ep, &cli(), abrir, cancelado, ESCOPO));
         assert_eq!(r.err().unwrap(), CANCELADO);
         // a pessoa clicou em "Cancelar" na página do Google
         let abrir = |url: &str| -> Result<(), String> {
@@ -502,7 +514,7 @@ mod testes {
             });
             Ok(())
         };
-        let r = rt().block_on(entrar(&reqwest::Client::new(), &ep, &cli(), abrir, Arc::new(AtomicBool::new(false))));
+        let r = rt().block_on(entrar(&reqwest::Client::new(), &ep, &cli(), abrir, Arc::new(AtomicBool::new(false)), ESCOPO));
         assert!(r.err().unwrap().contains("cancelou"));
     }
 

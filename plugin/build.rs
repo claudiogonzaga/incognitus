@@ -10,15 +10,19 @@ const COMANDOS: &[&str] = &[
     "gravar_saida", "pasta_padrao", "listar_pdfs", "expandir_caminhos",
     // reidentificação
     "ler_texto", "docx_partes", "gravar_reidentificado", "gravar_texto",
+    // a minuta do 🧠 no editor: o .docx e a abertura dele no editor de texto do computador
+    "gravar_docx", "abrir_documento", "abrir_modelo", "mesa_ler", "mesa_gravar",
     // o motor e a atualização assinada dele
     "motor_ativo", "motor_checar", "motor_baixar", "motor_instalar", "motor_voltar",
     // o modelo da anonimização rigorosa (opcional)
     "ner_estado", "ner_baixar", "ner_ler",
+    // a busca nos modelos da pasta: o BERT de frases, a lista da pasta e o índice
+    "busca_estado", "busca_baixar", "busca_ler", "modelos_listar", "indice_ler", "indice_gravar",
     // teste de ponta a ponta (só no app avulso, com SKIA_E2E)
     "e2e_plano", "e2e_gravar", "e2e_fim",
     // o 🧠 Melhor Próximo Ato: a chave da Anthropic, o login do Google, o prompt e o envio
     "ia_situacao", "ia_chave_guardar", "ia_chave_apagar", "ia_google_entrar", "ia_google_cancelar", "ia_google_sair",
-    "ia_prompt_ler", "ia_enviar",
+    "ia_prompt_ler", "ia_enviar", "ia_modelos", "ia_pasta_listar", "abrir_feedback",
     // o 👁: o PDF numa janela do próprio app
     "visor_abrir",
 ];

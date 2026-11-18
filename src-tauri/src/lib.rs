@@ -60,7 +60,28 @@ pub fn run() {
             std::process::exit(2);
         }
     }
-    montar(tauri::Builder::default()).run(contexto()).expect("erro ao montar o Incognitus");
+    // 18/11/2026 (pedido do usuário): a janela nascia como uma tela de uma cor só até a página carregar. Agora ela nasce
+    // escondida e aparece com a página pronta (o fundo romano já pintado); se o aviso de página pronta não vier, aparece
+    // em 4 segundos de qualquer jeito.
+    montar(tauri::Builder::default())
+        .on_page_load(|webview, carga| {
+            if matches!(carga.event(), tauri::webview::PageLoadEvent::Finished) && webview.label() == "main" {
+                let _ = webview.window().show();
+            }
+        })
+        .setup(|app| {
+            use tauri::Manager;
+            let h = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(4));
+                if let Some(w) = h.get_webview_window("main") {
+                    let _ = w.show();
+                }
+            });
+            Ok(())
+        })
+        .run(contexto())
+        .expect("erro ao montar o Incognitus");
 }
 
 #[cfg(test)]

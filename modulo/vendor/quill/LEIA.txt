@@ -1,0 +1,2 @@
+Quill 2.0.3 (https://quilljs.com), BSD-3-Clause. Copiado de registry.npmjs.org/quill/-/quill-2.0.3.tgz (dist/quill.js e dist/quill.snow.css), sem alteração.
+É o editor da minuta do 🧠 (17/11/2026).

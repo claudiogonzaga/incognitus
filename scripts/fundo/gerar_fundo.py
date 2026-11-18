@@ -131,17 +131,23 @@ def render(svg, lado, tmp, nome):
     return Image.open(png).convert("RGBA")
 
 
+# 18/11/2026 (pedido do usuário): a inscrição saiu do fundo — cortada pela janela, parecia incompleta ("…ABIT FORMA MAN") —
+# e foi para debaixo do nome, no alto da janela. FUNDO_INSCRICAO=1 a desenha de novo.
+COM_INSCRICAO = os.environ.get("FUNDO_INSCRICAO") == "1"
+
+
 def gravar(saida_webp, lado=1500, opacidade=0.62):
     fonte, pos, (ini, fim) = letras(lado)
     with tempfile.TemporaryDirectory() as tmp:
         im = render(montar(), lado, tmp, "base")
-        # a inscrição, gravada na pedra: sépia translúcida, a borda um pouco borrada como a tinta na aquarela
-        txt = Image.new("RGBA", im.size, (0, 0, 0, 0))
-        d = ImageDraw.Draw(txt)
-        for c, x in pos:
-            d.text((x, BASE * lado / W), c, font=fonte, fill=(62, 42, 28, 190), anchor="ls")
-        im.alpha_composite(txt.filter(ImageFilter.GaussianBlur(0.7)))
-        im.alpha_composite(render(topo_svg(ini - 7, fim + 7), lado, tmp, "topo"))
+        if COM_INSCRICAO:
+            # a inscrição, gravada na pedra: sépia translúcida, a borda um pouco borrada como a tinta na aquarela
+            txt = Image.new("RGBA", im.size, (0, 0, 0, 0))
+            d = ImageDraw.Draw(txt)
+            for c, x in pos:
+                d.text((x, BASE * lado / W), c, font=fonte, fill=(62, 42, 28, 190), anchor="ls")
+            im.alpha_composite(txt.filter(ImageFilter.GaussianBlur(0.7)))
+            im.alpha_composite(render(topo_svg(ini - 7, fim + 7), lado, tmp, "topo"))
     im.putalpha(im.getchannel("A").point(lambda v: int(v * opacidade)))
     im.save(saida_webp, "WEBP", quality=82, method=6)
     return saida_webp

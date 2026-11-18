@@ -4,79 +4,65 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Incognitus</title>
+<link rel="stylesheet" href="vendor/quill/quill.snow.css">
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
 <header data-tauri-drag-region>
   <div class="titulo" data-tauri-drag-region>
     <img class="logo" src="logo-128.png" alt="" data-tauri-drag-region>
-    <h1 data-tauri-drag-region>Incognitus</h1>
-    <span data-tauri-drag-region>anonimização de autos e reidentificação de minutas, no seu computador</span>
+    <div class="nome" data-tauri-drag-region>
+      <h1 data-tauri-drag-region>Incognitus</h1>
+      <small class="lema" data-tauri-drag-region lang="la">Nomen abit · forma manet</small>
+    </div>
+    <span data-tauri-drag-region>O nome sai, a forma fica.</span>
   </div>
   <div class="topo-direita">
-    <button id="bt_motor" class="selo" title="O motor de anonimização em uso">motor …</button>
-    <button id="bt_ajustes" class="ghost pequeno">Ajustes</button>
+    <button id="bt_motor" class="selo" hidden>motor …</button>
+    <button id="bt_ajustes" class="ghost pequeno com-icone" title="Configurações, Aprendizado e Fale com o desenvolvedor"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.700 1l-2.400-1-2 3.400 2 1.600a7.600 7.600 0 0 0 0 2l-2 1.600 2 3.400 2.400-1a7.400 7.400 0 0 0 1.700 1l.4 2.500h4l.4-2.500a7.400 7.400 0 0 0 1.700-1l2.400 1 2-3.400zM13 15.200a3.200 3.200 0 1 1 0-6.400 3.200 3.200 0 0 1 0 6.400z"/></svg>Configurações</button>
   </div>
 </header>
 <div class="regua" aria-hidden="true"></div>
-<nav class="abas" role="tablist">
+<nav class="abas" role="tablist" hidden>
   <button id="aba_bt_anon" class="aba ativa" role="tab">Anonimizar</button>
   <button id="aba_bt_reid" class="aba" role="tab">Reidentificar</button>
 </nav>
 <div id="novidade" class="novidade" hidden></div>
 
 <main id="aba_anon">
-  <section id="lado">
-    <h2>Arquivos</h2>
-    <div class="linha">
-      <button id="bt_pdfs">Escolher arquivos…</button>
-      <button id="bt_pasta" class="ghost">Uma pasta…</button>
-    </div>
-    <p class="dica">PDF, Word (.docx) ou texto (.txt) — ou arraste os arquivos (ou uma pasta) para a janela</p>
-
-    <h2>Saída</h2>
-    <label class="opcao"><input type="radio" name="saida" value="ao_lado" checked> <span>Ao lado de cada original, na pasta <b>Incognitus — anonimizados</b></span></label>
-    <label class="opcao"><input type="radio" name="saida" value="outra"> <span>Outra pasta:</span></label>
-    <div class="linha">
-      <input id="pasta_saida" type="text" readonly placeholder="nenhuma escolhida">
-      <button id="bt_pasta_saida" class="ghost pequeno">Escolher…</button>
-    </div>
-    <p class="dica">O PDF anonimizado sai com o nome do original terminado em <b>_anon</b> e sem os nomes de pessoa (trocados pelos mesmos tokens do texto). O original nunca é alterado.</p>
-    <label class="opcao"><input id="op_juntar" type="checkbox" checked> <span>Juntar os documentos do mesmo caso</span></label>
-    <p class="dica">Os documentos da mesma leva que são do mesmo caso — o mesmo número de processo, o mesmo CPF ou a mesma pessoa — são anonimizados juntos, com um mapa só: a mesma pessoa leva o mesmo token em todos. A fila mostra o caso; <b>Separar</b> e <b>Juntar a…</b> corrigem.</p>
-    <label class="opcao"><input id="op_txt" type="checkbox"> <span>Gravar também o .txt</span></label>
-    <label class="opcao"><input id="op_rigoroso" type="checkbox"> <span>Anonimização rigorosa <small>(mais lenta)</small></span></label>
-    <p class="dica">Depois das regras, um modelo de inteligência artificial lê o texto e tarja o que ainda parecer nome de
-      pessoa ou endereço. Fica bem mais lento (de 1 a 4 segundos por página) e, na primeira vez, baixa o modelo (110 MB).
-      Tudo continua neste computador. <span id="msg_rigoroso"></span></p>
-    <div class="nota">
-      Junto com cada PDF saem sempre o <b>mapa</b> (o dicionário de cada token com o nome real: a minuta que a IA
-      escrever volta aos nomes pelo botão <b>Reidentificar minuta…</b> do card do caso, ou pela aba <b>Reidentificar</b>, num
-      mapa de outro dia) e a <b>lista CONFIRA</b> (onde olhar antes de usar),
-      numa subpasta “NÃO ENVIAR À IA (nomes reais)”. Eles têm os <b>nomes reais</b>: guarde-os neste computador e nunca
-      os mande à IA — para a IA vai só o PDF anonimizado.
-    </div>
-  </section>
-
   <section id="fila_secao">
     <div class="linha topo">
-      <h2>Fila</h2>
+      <h2>Mesa de trabalho</h2>
+      <span id="resumo" class="suave"></span>
       <div class="topo-direita">
-        <span id="resumo" class="suave"></span>
-        <button id="bt_limpar" class="ghost pequeno">Limpar prontos</button>
+        <button id="bt_pdfs" class="ghost pequeno" title="PDF, Word (.docx) ou texto (.txt). Também dá para arrastar os arquivos, ou uma pasta, para a janela">+ Arquivos</button>
+        <button id="bt_pasta" class="ghost pequeno" title="Todos os documentos de uma pasta">+ Pasta</button>
+        <button id="bt_opcoes" class="ghost pequeno" title="Onde gravar, o .txt, juntar documentos do mesmo caso, a anonimização rigorosa e o seu nome">⚙ Opções</button>
+        <button id="bt_painel" class="ghost pequeno" title="Abre ou fecha o painel lateral: os casos em sequência, com os botões, as badges e os feedbacks">◧ Painel</button>
+        <button id="bt_limpar" class="ghost pequeno" title="Recolhe as linhas tiradas ou concluídas e as prontas sem nada andando (os arquivos ficam na pasta)">🧹 Limpar</button>
       </div>
     </div>
-    <div class="acao-fila">
-      <button id="bt_rodar" class="principal anonimizar" disabled>Anonimizar</button>
-      <button id="bt_parar" class="ghost" hidden>Parar depois deste arquivo</button>
+    <div id="barra_acoes" class="acoes-mesa">
+      <span id="sel_n" class="suave"></span>
+      <button id="bt_rodar" class="pequeno anonimizar" disabled title="Anonimiza as linhas marcadas que ainda não foram anonimizadas; sem nenhuma marcada, todas as que faltam">Anonimizar</button>
+      <button id="bt_parar" class="ghost pequeno" hidden>Parar depois deste</button>
+      <button id="ac_reid" class="ghost pequeno" disabled title="A minuta que a IA escreveu com os tokens volta aos nomes reais, com o mapa do caso (marque um caso)">Desanonimizar minuta…</button>
+      <button id="ac_gerar" class="ghost pequeno" disabled title="A IA lê os autos anonimizados dos casos marcados, faz a análise e redige a minuta">🧠 Gerar minuta</button>
+      <button id="ac_refazer" class="ghost pequeno" disabled title="Gera de novo a análise e a minuta dos casos marcados que já têm minuta">🔁 Refazer minuta</button>
+      <button id="ac_corrigir" class="ghost pequeno" disabled title="A IA confere a minuta com o seu prompt de correção e aponta o que achar, sem reescrevê-la (casos com minuta gerada nesta sessão)">🔎 Corrigir minuta</button>
+      <button id="ac_parar_lote" class="ghost pequeno" hidden>Parar o lote</button>
+      <button id="ac_ia" class="ghost pequeno" title="Escolher a IA, o modelo e o nível de esforço">⚙ IA</button>
     </div>
-    <div id="vazio" class="vazio">Nenhum arquivo na fila.</div>
-    <ol id="fila"></ol>
+    <div id="filtros" class="filtros" hidden></div>
+    <div id="vazio" class="vazio">Nenhum caso na mesa. Use <b>+ Arquivos</b> ou <b>+ Pasta</b>, ou arraste os autos para a janela.</div>
+    <div id="fila" class="mesa"></div>
   </section>
+  <aside id="painel_lateral" hidden></aside>
 </main>
 
 <main id="aba_reid" hidden>
   <section id="reid_lado">
+    <button id="bt_voltar_mesa" class="ghost pequeno">← Voltar à Mesa de trabalho</button>
     <h2>Mapa</h2>
     <button id="bt_mapa">Escolher o mapa…</button>
     <div id="mapa_info" class="dica">É o “… — MAPA (nomes reais).json” que o Incognitus grava ao lado de cada PDF anonimizado
@@ -120,9 +106,12 @@
 </footer>
 
 <dialog id="dlg_colar">
-  <h2>Colar a minuta da IA</h2>
-  <p class="dica">Cole o que a IA devolveu, com os tokens («Thanasis», «REU_01»…). Os nomes voltam com o mapa deste caso; nada sai do computador.</p>
-  <textarea id="colar_entrada" rows="8" spellcheck="false" placeholder="Cole aqui a minuta"></textarea>
+  <h2>Reidentificar a minuta da IA</h2>
+  <p class="dica">A minuta que a IA escreveu com os tokens («Thanasis», «REU_01»…) volta aos nomes reais com o mapa deste
+    caso; nada sai do computador. Escolha o arquivo — a cópia reidentificada sai ao lado dele, com “(reidentificado)” no
+    nome — ou cole o texto aqui embaixo. Também dá para arrastar o arquivo para o card.</p>
+  <button type="button" id="bt_colar_arquivo" class="ghost">Escolher o arquivo da minuta (.docx, .txt ou .md)…</button>
+  <textarea id="colar_entrada" rows="8" spellcheck="false" placeholder="ou cole aqui o texto da minuta"></textarea>
   <button id="bt_colar_reid" class="principal">Reidentificar o texto</button>
   <div id="colar_resultado" hidden>
     <div id="colar_info" style="margin-top:12px"></div>
@@ -131,35 +120,190 @@
   <div class="linha fim"><button id="bt_colar_copiar" class="ghost">Copiar</button><button id="bt_colar_fechar">Fechar</button></div>
 </dialog>
 
-<dialog id="dlg_mpa">
-  <h2>🧠 Melhor Próximo Ato</h2>
-  <div id="mpa_info" class="dica"></div>
-  <div class="linha abas-mpa">
-    <button type="button" id="mpa_bt_analise" class="aba ativa">Análise</button>
-    <button type="button" id="mpa_bt_minuta" class="aba">Minuta</button>
+<dialog id="dlg_mpa" class="mpa">
+  <div class="mpa-topo">
+    <div><h2>🧠 Melhor Próximo Ato</h2><div id="mpa_info" class="mpa-sub"></div></div>
+    <button type="button" id="bt_mpa_fechar" class="mpa-bt x">Fechar</button>
   </div>
-  <textarea id="mpa_texto" rows="16" readonly spellcheck="false"></textarea>
-  <p class="dica">Com os nomes reais (o mapa do caso). O arquivo anonimizado (_anon.md) fica ao lado do PDF; o com os
-    nomes reais, na subpasta “NÃO ENVIAR À IA (nomes reais)”.</p>
+  <div id="mpa_chat" class="mpa-chat"></div>
+  <div id="mpa_aprendeu" class="mpa-aprendeu" hidden></div>
+  <div id="mpa_estado" class="mpa-estado" hidden><span class="mpa-gira"></span><span id="mpa_estado_txt"></span><span id="mpa_relogio" class="mpa-relogio"></span></div>
+  <div class="mpa-comp">
+    <textarea id="mpa_txt" rows="3" spellcheck="true"></textarea>
+    <div class="mpa-fila">
+      <button type="button" id="bt_mpa_aprendeu" class="mpa-bt sec">🎓 O que o app aprendeu nesta rodada</button>
+      <span id="mpa_dica" class="mpa-dica"></span>
+    </div>
+    <div class="mpa-fila fim">
+      <button type="button" id="bt_mpa_reanalise" class="mpa-bt sec">🔁 Refazer a análise</button>
+      <button type="button" id="bt_mpa_pergunta" class="mpa-bt sec">💬 Perguntar</button>
+      <button type="button" id="bt_mpa_pca" class="mpa-bt sec" title="A IA confere a minuta com a PCA (o alarme de erro grave) e aponta o que achar, sem reescrevê-la">🔎 Pré-correção</button>
+      <button type="button" id="bt_mpa_enviar" class="mpa-bt primary">Gerar a minuta ➤</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg_minuta" class="mpa minuta">
+  <div class="mpa-topo">
+    <div><h2>📝 Minuta</h2><div id="minuta_info" class="mpa-sub"></div></div>
+    <button type="button" id="bt_minuta_fechar" class="mpa-bt x">Fechar</button>
+  </div>
+  <div id="minuta_editor" spellcheck="true"></div>
+  <div class="mpa-comp">
+    <div id="minuta_msg" class="mpa-dica"></div>
+    <div class="mpa-fila fim">
+      <button type="button" id="bt_minuta_cortar" class="mpa-bt sec" title="Apaga a análise, até a linha da tesoura: fica só a peça, limpa" hidden>✂️ Cortar a análise</button>
+      <button type="button" id="bt_minuta_copiar" class="mpa-bt sec">Copiar o texto</button>
+      <button type="button" id="bt_minuta_pasta" class="mpa-bt sec" hidden>Mostrar na pasta</button>
+      <button type="button" id="bt_minuta_computador" class="mpa-bt sec">Abrir no Word / LibreOffice</button>
+      <button type="button" id="bt_minuta_salvar" class="mpa-bt primary">Salvar .docx</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg_aprender">
+  <h2>Aprendizado</h2>
+  <p class="dica">Ensine o Incognitus: o que <b>é dado pessoal</b> é sempre tarjado, mesmo que as regras não peguem; o que
+    <b>não é</b> fica em claro, mesmo que as regras tarjem. O porteiro também anota aqui o que ele achou em claro e tarjou.
+    A tabela fica só neste computador e vale a partir da próxima anonimização.</p>
+  <div class="linha apr-novo">
+    <input id="apr_valor" placeholder="um nome, documento, endereço, e-mail…">
+    <select id="apr_tipo"><option value="1">É dado pessoal — tarjar</option><option value="0">Não é dado pessoal — fica em claro</option></select>
+    <button type="button" id="bt_apr_mais">Acrescentar</button>
+  </div>
+  <div id="apr_msg" class="suave"></div>
+  <input id="apr_busca" type="search" placeholder="Buscar na tabela e nos dados do caso…">
+  <div id="apr_caso" hidden>
+    <h3>O que foi tarjado neste caso (<span id="apr_caso_n">0</span>)</h3>
+    <div class="apr-rolo"><table class="apr"><tbody id="apr_caso_corpo"></tbody></table></div>
+  </div>
+  <h3>A tabela (<span id="apr_n">0</span>)</h3>
+  <div class="apr-rolo"><table class="apr">
+    <thead><tr><th>Dado</th><th>É dado pessoal?</th><th>Quem ensinou</th><th></th></tr></thead>
+    <tbody id="apr_corpo"></tbody></table></div>
+  <div class="linha fim"><button type="button" id="bt_apr_fechar">Fechar</button></div>
+</dialog>
+
+<dialog id="dlg_lote">
+  <h2 id="lote_titulo">Lote</h2>
+  <p id="lote_info" class="suave"></p>
+  <label for="lote_n">Quantos casos</label>
+  <input id="lote_n" type="number" min="1" step="1">
+  <label for="lote_ordem">Ordem</label>
+  <select id="lote_ordem">
+    <option value="prazo">O prazo que vence primeiro</option>
+    <option value="urgencia">Os urgentes primeiro, depois o prazo</option>
+    <option value="mesa">A ordem da mesa</option>
+  </select>
+  <label class="opcao"><input id="lote_recursos" type="checkbox"> <span>Recursos primeiro (razões e contrarrazões)</span></label>
+  <label class="opcao"><input id="lote_parar" type="checkbox"> <span>Parar o lote se um caso der erro</span></label>
   <div class="linha fim">
-    <button id="bt_mpa_copiar" class="ghost">Copiar</button>
-    <button id="bt_mpa_pasta" class="ghost">Mostrar na pasta</button>
-    <button id="bt_mpa_fechar">Fechar</button>
+    <button type="button" id="bt_lote_cancelar" class="ghost">Cancelar</button>
+    <button type="button" id="bt_lote_ir">Começar</button>
+  </div>
+</dialog>
+
+<dialog id="dlg_opcoes">
+  <h2>⚙ Opções da anonimização</h2>
+  <label for="op_nome">Seu nome (aparece como autor do que você mudar na mesa)</label>
+  <input id="op_nome" type="text" spellcheck="false" placeholder="como a equipe conhece você">
+  <h2>Saída</h2>
+  <label class="opcao"><input type="radio" name="saida" value="ao_lado" checked> <span>Ao lado de cada original, na pasta <b>Incognitus — anonimizados</b></span></label>
+  <label class="opcao"><input type="radio" name="saida" value="outra"> <span>Outra pasta:</span></label>
+  <div class="linha">
+    <input id="pasta_saida" type="text" readonly placeholder="nenhuma escolhida">
+    <button type="button" id="bt_pasta_saida" class="ghost pequeno">Escolher…</button>
+  </div>
+  <p class="dica">O PDF anonimizado sai com o nome do original terminado em <b>_anon</b> e sem os nomes de pessoa (trocados pelos mesmos tokens do texto). O original nunca é alterado. Junto com cada PDF saem sempre o <b>mapa</b> (o dicionário de cada token com o nome real) e a <b>lista CONFIRA</b>, numa subpasta “NÃO ENVIAR À IA (nomes reais)”: guarde-os neste computador e nunca os mande à IA.</p>
+  <label class="opcao"><input id="op_juntar" type="checkbox" checked> <span>Juntar os documentos do mesmo caso</span></label>
+  <p class="dica">Os documentos da mesma leva que são do mesmo caso — o mesmo número de processo, o mesmo CPF ou a mesma pessoa — são anonimizados juntos, com um mapa só: a mesma pessoa leva o mesmo token em todos. A linha do caso mostra os documentos; <b>Separar</b> e <b>Juntar a…</b> corrigem.</p>
+  <label class="opcao"><input id="op_txt" type="checkbox"> <span>Gravar também o .txt</span></label>
+  <label class="opcao"><input id="op_rigoroso" type="checkbox"> <span>Anonimização rigorosa <small>(mais lenta)</small></span></label>
+  <p class="dica">Depois das regras, um modelo de inteligência artificial lê o texto e tarja o que ainda parecer nome de pessoa ou endereço. Fica bem mais lento (de 1 a 4 segundos por página) e, na primeira vez, baixa o modelo (110 MB). Tudo continua neste computador.</p>
+  <div id="msg_rigoroso" class="suave"></div>
+  <div class="linha fim"><button type="button" id="bt_opcoes_fechar">Fechar</button></div>
+</dialog>
+
+<dialog id="dlg_ia">
+  <h2>⚙ IA, modelo e esforço do 🧠</h2>
+  <p class="dica">Vale para este e para os próximos 🧠. Vão à IA escolhida, com a <b>sua</b> chave, só o texto
+    <b>anonimizado</b> do caso e o seu prompt, depois do porteiro; o mapa não sai do computador.</p>
+  <label for="ia_prov">IA</label>
+  <select id="ia_prov">
+    <option value="anthropic">Anthropic (Claude)</option>
+    <option value="openai">OpenAI (ChatGPT)</option>
+    <option value="gemini">Google Gemini</option>
+    <option value="deepinfra">DeepInfra (modelos abertos)</option>
+  </select>
+  <label for="ia_mod">Modelo</label>
+  <div class="linha">
+    <select id="ia_mod"></select>
+    <input id="ia_mod_outro" type="text" spellcheck="false" placeholder="o nome exato do modelo" hidden>
+    <button type="button" id="bt_ia_listar" class="ghost pequeno" title="Pergunta à IA quais modelos a sua conta pode usar">Buscar os da minha conta</button>
+  </div>
+  <div id="ia_esf_linha">
+    <label for="ia_esf">Nível de esforço</label>
+    <select id="ia_esf"></select>
+    <p id="ia_esf_dica" class="dica"></p>
+  </div>
+  <label for="ia_chave2"><span id="ia_chave_rot">Chave</span> <span id="ia_chave2_sit" class="suave"></span></label>
+  <div class="linha">
+    <input id="ia_chave2" type="password" autocomplete="off" spellcheck="false">
+    <button type="button" id="bt_ia_chave2" class="ghost pequeno">Guardar</button>
+    <button type="button" id="bt_ia_chave2_apagar" class="ghost pequeno" hidden>Apagar</button>
+  </div>
+  <p id="ia_onde" class="dica"></p>
+  <p id="ia_aviso" class="dica" hidden>O prompt do MPA foi feito e testado com o Claude; com outra IA, confira a análise e a
+    minuta com mais cuidado. O custo de cada pedido só é calculado para o Claude: o das outras está no painel delas.</p>
+  <div id="ia_msg" class="suave"></div>
+  <div class="linha fim">
+    <button type="button" id="bt_ia_cancelar" class="ghost">Cancelar</button>
+    <button type="button" id="bt_ia_ok" class="ghost">Guardar a escolha</button>
+    <button type="button" id="bt_ia_gerar" class="cerebro">🧠 Gerar minuta com esta IA</button>
+  </div>
+</dialog>
+
+<dialog id="dlg_porteiro">
+  <h2>⚠ Dados em claro no envio</h2>
+  <p id="porteiro_info" class="dica"></p>
+  <p class="dica">O porteiro troca sozinho pelo token o que acha em claro; estes sobraram num trecho que ele não pode
+    alterar (o raciocínio da IA numa etapa anterior). Confira: se você enviar, eles vão à Anthropic como estão. O mapa e
+    a lista não saem do computador.</p>
+  <ul id="porteiro_lista"></ul>
+  <div class="linha fim">
+    <button type="button" id="bt_porteiro_cancelar" class="ghost">Cancelar</button>
+    <button type="button" id="bt_porteiro_enviar" class="perigo">Enviar mesmo assim</button>
+  </div>
+</dialog>
+
+<dialog id="dlg_editor">
+  <h2 id="editor_titulo">Escrever</h2>
+  <p class="dica">O texto fica guardado neste computador, nos ajustes do Incognitus, e vai à IA a cada 🧠 (com os nomes do
+    caso trocados pelos tokens). Para voltar a um arquivo ou link, é só pô-lo no campo, no lugar do “✎ escrito aqui”.</p>
+  <textarea id="editor_texto" rows="20" spellcheck="true"></textarea>
+  <div class="linha fim">
+    <button type="button" id="bt_editor_cancelar" class="ghost">Cancelar</button>
+    <button type="button" id="bt_editor_usar">Usar este texto</button>
   </div>
 </dialog>
 
 <dialog id="dlg_ajustes">
   <form method="dialog">
-    <h2>Ajustes</h2>
+    <h2>Configurações</h2>
+    <div class="linha atalhos">
+      <button type="button" id="bt_aprender" class="ghost pequeno" title="Ensine o que é e o que não é dado pessoal">Aprendizado</button>
+      <button type="button" id="bt_feedback" class="ghost pequeno" title="Abre um formulário no navegador: sugestões, erros, dúvidas. Não mande dados de processo.">Fale com o desenvolvedor</button>
+    </div>
     <label for="inst">Contatos institucionais que ficam em claro (um por linha: endereço, telefone, CEP ou e-mail da Delegacia, do Fórum, da Promotoria…)</label>
     <textarea id="inst" rows="9" spellcheck="false"></textarea>
     <div class="linha"><button type="button" id="bt_inst_padrao" class="ghost pequeno">Restaurar o padrão</button></div>
     <label class="opcao"><input id="op_checar" type="checkbox"> <span>Procurar atualizações ao abrir o Incognitus (<span class="so-avulso">do aplicativo e </span>das regras)</span></label>
 
     <h2 id="ia_titulo">🧠 Melhor Próximo Ato</h2>
-    <p class="dica">O botão 🧠 do card manda à Anthropic, com a <b>sua</b> chave, o texto <b>anonimizado</b> do caso e o
-      <b>seu</b> prompt, e traz a análise e a minuta, que voltam aos nomes reais com o mapa do caso. O mapa e os nomes reais
-      não saem do computador, e um porteiro confere cada envio contra o mapa antes de ele sair.</p>
+    <p class="dica">O botão <b>🧠 Gerar minuta</b> do card manda à Anthropic, com a <b>sua</b> chave, o texto <b>anonimizado</b>
+      do caso e o <b>seu</b> prompt, e traz a análise e a minuta, que voltam aos nomes reais com o mapa do caso. O mapa não sai
+      do computador; antes de cada envio, um porteiro o confere contra o pedido e, se achar algum dado do mapa em claro, troca-o
+      ali mesmo pelo token (e o card avisa quantos foram). Só o que ele não puder trocar ele mostra, e pergunta se envia assim mesmo.</p>
     <label for="ia_chave">Chave da Anthropic <span id="ia_chave_sit" class="suave"></span></label>
     <div class="linha">
       <input id="ia_chave" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
@@ -167,24 +311,105 @@
       <button type="button" id="bt_ia_chave_apagar" class="ghost pequeno" hidden>Apagar</button>
     </div>
     <p class="dica">Fica no chaveiro do sistema (Keychain no Mac, Gerenciador de Credenciais no Windows), nunca num arquivo.</p>
-    <label for="ia_prompt">Prompt: um arquivo .txt ou .md, ou o link de um Google Docs (ou do OneDrive/SharePoint)</label>
-    <div class="linha">
-      <input id="ia_prompt" type="text" spellcheck="false" placeholder="https://docs.google.com/document/d/…">
-      <button type="button" id="bt_ia_prompt_arquivo" class="ghost pequeno">Arquivo…</button>
-      <button type="button" id="bt_ia_prompt_conferir" class="ghost pequeno">Conferir</button>
+    <p class="dica">Use os seus: o prompt para <b>gerar</b> a minuta, o Guia de Formatação e o prompt para <b>corrigir</b> a minuta.
+      O Incognitus traz uma versão <b>light</b> (genérica) de cada um, para começar: troque-a pelo seu arquivo, pelo seu texto
+      (<b>Escrever…</b> começa da light, para você adaptar) ou pelo link do seu Doc; <b>Padrão</b> traz a light de volta, e o campo
+      vazio fica sem. O RPP não tem padrão: cada um faz o seu.</p>
+    <p class="dica">Cada um destes pode ser um arquivo (.txt, .md ou .docx), um texto escrito aqui (<b>Escrever…</b>) ou o
+      link de um Google Docs, do OneDrive ou do SharePoint; o Livro de Modelos também pode ser o link da planilha do Google
+      (nome, link e etiquetas de cada modelo, como o do Graphé). São lidos de novo a cada 🧠, para valer sempre a versão
+      atual; os nomes do caso que aparecerem neles vão como os tokens.</p>
+    <div class="fonte-ia">
+      <label for="ia_prompt">Prompt para GERAR a análise e a minuta — o Melhor Próximo Ato (obrigatório)</label>
+      <div class="linha">
+        <input id="ia_prompt" type="text" spellcheck="false" placeholder="https://docs.google.com/document/d/…">
+        <button type="button" id="bt_ia_prompt_arquivo" class="ghost pequeno">Arquivo…</button>
+        <button type="button" id="bt_ia_prompt_escrever" class="ghost pequeno">Escrever…</button>
+        <button type="button" id="bt_ia_prompt_padrao" class="ghost pequeno" title="Volta ao padrão que vem no Incognitus">Padrão</button>
+        <button type="button" id="bt_ia_prompt_conferir" class="ghost pequeno">Conferir</button>
+      </div>
+      <div id="ia_prompt_msg" class="suave"></div>
     </div>
-    <div id="ia_prompt_msg" class="suave"></div>
+    <div class="fonte-ia">
+      <label for="ia_guia">Guia de Formatação (opcional)</label>
+      <div class="linha">
+        <input id="ia_guia" type="text" spellcheck="false" placeholder="https://docs.google.com/document/d/…">
+        <button type="button" id="bt_ia_guia_arquivo" class="ghost pequeno">Arquivo…</button>
+        <button type="button" id="bt_ia_guia_escrever" class="ghost pequeno">Escrever…</button>
+        <button type="button" id="bt_ia_guia_padrao" class="ghost pequeno" title="Volta ao padrão que vem no Incognitus">Padrão</button>
+        <button type="button" id="bt_ia_guia_conferir" class="ghost pequeno">Conferir</button>
+      </div>
+      <div id="ia_guia_msg" class="suave"></div>
+    </div>
+    <div class="fonte-ia">
+      <label for="ia_rpp">RPP — Regras, Preferências e Particularidades (opcional; cada um faz o seu — não há padrão)</label>
+      <div class="linha">
+        <input id="ia_rpp" type="text" spellcheck="false" placeholder="https://docs.google.com/document/d/…">
+        <button type="button" id="bt_ia_rpp_arquivo" class="ghost pequeno">Arquivo…</button>
+        <button type="button" id="bt_ia_rpp_escrever" class="ghost pequeno">Escrever…</button>
+        <button type="button" id="bt_ia_rpp_conferir" class="ghost pequeno">Conferir</button>
+      </div>
+      <div id="ia_rpp_msg" class="suave"></div>
+    </div>
+    <div class="fonte-ia">
+      <label for="ia_livro">Livro de Modelos (opcional)</label>
+      <div class="linha">
+        <input id="ia_livro" type="text" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/…">
+        <button type="button" id="bt_ia_livro_arquivo" class="ghost pequeno">Arquivo…</button>
+        <button type="button" id="bt_ia_livro_escrever" class="ghost pequeno">Escrever…</button>
+        <button type="button" id="bt_ia_livro_conferir" class="ghost pequeno">Conferir</button>
+      </div>
+      <div id="ia_livro_msg" class="suave"></div>
+      <p class="dica">A planilha (ou um documento) com uma linha por modelo: o nome, o link do Doc do modelo e as etiquetas.
+        A IA recebe a lista e lê só os modelos que escolher, até 3 por etapa. Sem links, um documento com os próprios
+        modelos, cada um debaixo de um título, também serve.</p>
+    </div>
+    <div class="fonte-ia">
+      <label for="ia_pasta">Pasta de modelos (opcional; vale quando não há Livro de Modelos)</label>
+      <div class="linha">
+        <input id="ia_pasta" type="text" spellcheck="false" placeholder="uma pasta do computador, ou o link de uma pasta do Google Drive, do OneDrive ou do SharePoint">
+        <button type="button" id="bt_ia_pasta" class="ghost pequeno">Escolher pasta…</button>
+        <button type="button" id="bt_ia_pasta_indexar" class="ghost pequeno">Ler de novo</button>
+      </div>
+      <div class="linha"><button type="button" id="bt_ia_pasta_drive" class="ghost pequeno" hidden>Permitir pastas do Drive</button></div>
+      <div id="ia_pasta_msg" class="suave"></div>
+      <p class="dica">A pasta pode ser: <b>do computador</b> (inclusive a do Google Drive para computador, com os Google Docs, e a do
+        OneDrive, também a de uma biblioteca do SharePoint sincronizada pelo app do OneDrive); o link de uma <b>pasta do Google
+        Drive</b> (com o seu login do Google e a permissão de ler as pastas do Drive); ou o link de uma pasta do <b>OneDrive</b> ou do
+        <b>SharePoint</b> compartilhada com “qualquer pessoa com o link”. Valem .docx, .txt, .md e Google Docs, nas subpastas também.</p>
+      <p class="dica">Um BERT de frases (multilingual-e5-small, baixado na primeira vez, 135 MB) lê os seus modelos aqui no
+        computador e acha os mais parecidos com o caso; a IA recebe os 30 mais parecidos e pode buscar outros descrevendo o
+        ato. Vão à IA só o nome dos modelos e o texto dos que ela ler: use modelos sem dados de pessoas.</p>
+    </div>
+    <div class="fonte-ia">
+      <label for="ia_pca">Prompt para CORRIGIR a minuta — a pré-correção (opcional; o botão 🔎 Pré-correção na janela do 🧠)</label>
+      <div class="linha">
+        <input id="ia_pca" type="text" spellcheck="false" placeholder="https://docs.google.com/document/d/…">
+        <button type="button" id="bt_ia_pca_arquivo" class="ghost pequeno">Arquivo…</button>
+        <button type="button" id="bt_ia_pca_escrever" class="ghost pequeno">Escrever…</button>
+        <button type="button" id="bt_ia_pca_padrao" class="ghost pequeno" title="Volta ao padrão que vem no Incognitus">Padrão</button>
+        <button type="button" id="bt_ia_pca_conferir" class="ghost pequeno">Conferir</button>
+      </div>
+      <div id="ia_pca_msg" class="suave"></div>
+    </div>
     <div class="linha"><span id="ia_google_sit" class="suave"></span>
       <button type="button" id="bt_ia_google" class="ghost pequeno">Entrar com o Google</button>
       <button type="button" id="bt_ia_google_sair" class="ghost pequeno" hidden>Sair</button>
     </div>
-    <p class="dica">O Google Docs é lido com o seu login do Google, só para leitura: abre o Doc que a sua conta já pode
-      abrir. O link do OneDrive/SharePoint precisa estar compartilhado com “qualquer pessoa com o link”.</p>
-    <label for="ia_modelo">Modelo</label>
-    <select id="ia_modelo">
-      <option value="claude-opus-5-5">Claude Opus 5.5 (como no Graphé)</option>
-      <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (mais barato)</option>
+    <p class="dica">O Google Docs e a planilha são lidos com o seu login do Google, só para leitura: abre o que a sua conta
+      já pode abrir. O link do OneDrive/SharePoint precisa estar compartilhado com “qualquer pessoa com o link”.</p>
+    <label>IA, modelo e esforço</label>
+    <div class="linha"><span id="ia_escolha_txt" class="suave"></span>
+      <button type="button" id="bt_ia_escolher" class="ghost pequeno">Escolher…</button></div>
+    <p class="dica">Também no ⚙ ao lado do 🧠 Gerar minuta, em cada card. A chave acima é a da Anthropic; a da OpenAI, a do
+      Gemini e a da DeepInfra se guardam na mesma janela da escolha.</p>
+    <label for="ia_minuta_abrir">Onde abrir a minuta</label>
+    <select id="ia_minuta_abrir">
+      <option value="app">Aqui no Incognitus (editor de texto próprio, grava em .docx)</option>
+      <option value="computador">No editor de texto do computador (Word, LibreOffice, Pages…)</option>
     </select>
+    <p class="dica">A minuta vem com os nomes reais e fica só neste computador, na subpasta “NÃO ENVIAR À IA (nomes reais)”.
+      O editor daqui é o Quill (código aberto); o .docx que ele grava abre no Word, no LibreOffice e no Google Docs.</p>
 
     <h2>Motor de anonimização</h2>
     <div id="motor_info" class="caixa"></div>
@@ -210,7 +435,10 @@
   </form>
 </dialog>
 
+<script src="vendor/quill/quill.js"></script>
 <script src="porteiro.js"></script>
+<script src="ias.js"></script>
+<script src="busca.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

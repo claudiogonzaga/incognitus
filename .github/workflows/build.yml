@@ -75,6 +75,12 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml -p incognitus -p tauri-plugin-anonimizacao
 
       - name: build
+        env:
+          # o cliente OAuth "App para computador" do Incognitus (projeto incognitus-514913), para o 🧠 ler o prompt de um
+          # Google Docs; vai compilado no app (option_env! em plugin/src/google.rs). Sem os segredos, o app sai sem o
+          # login do Google e o resto funciona igual.
+          INCOGNITUS_GOOGLE_CLIENT_ID: ${{ secrets.INCOGNITUS_GOOGLE_CLIENT_ID }}
+          INCOGNITUS_GOOGLE_CLIENT_SECRET: ${{ secrets.INCOGNITUS_GOOGLE_CLIENT_SECRET }}
         run: npx tauri build --target ${{ matrix.alvo }} --bundles ${{ matrix.sidecars == 'mac' && 'app,dmg' || 'msi' }}
 
       - uses: actions/upload-artifact@v4
