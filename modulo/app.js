@@ -2418,6 +2418,42 @@ function abrirEditorMinuta(mapa) {
   $('bt_minuta_pasta').hidden = !m.docx;
   if (!d.open) d.showModal();
 }
+/** A minuta no Google Docs (18/11/2026, pedido do usuário: "aqui poderia ter a opção de abrir no Google Docs também"). O
+ *  .docx sobe ao Drive de quem usa e abre no navegador. É o único caminho que tira os nomes reais do computador: por isso
+ *  a pergunta antes do primeiro envio de cada minuta. Na segunda vez, o documento de lá é aberto como está; só se o texto
+ *  daqui mudou depois do envio é que a janela pergunta se o de lá deve ser substituído. */
+async function minutaNoGoogleDocs(mapa, caminho) {
+  const m = estado.mpa[mapa], q = editorMinuta(), dizer = (t) => { $('minuta_msg').textContent = t; };
+  const texto = q ? q.getText() : '';
+  let trocar = false;
+  if (!estado.e2e) {
+    let s = await invoke('ia_situacao');
+    if (!s.google || !s.google.configurado) throw new Error('Esta cópia do Incognitus não tem o login do Google.');
+    if (!m.gdoc) {
+      const ok = await T.dialog.ask('A minuta vai, com os nomes reais, para o seu Google Drive' + (s.google.email ? ' (' + s.google.email + ')' : '')
+        + ', como um documento novo do Google Docs. Só você a vê, até compartilhar.\n\nÉ o único caso em que os nomes reais saem deste computador. Mandar?',
+        { title: 'Abrir no Google Docs', kind: 'warning', okLabel: 'Mandar ao Google Docs', cancelLabel: 'Cancelar' });
+      if (!ok) { dizer('Nada foi enviado ao Google Docs.'); return null; }
+    } else if (m.gdoc.texto !== texto) {
+      trocar = await T.dialog.ask('Esta minuta já está no Google Docs, e o texto daqui mudou depois do envio.\n\nSubstituir o documento de lá pelo texto daqui? O que foi escrito lá se perde.',
+        { title: 'Abrir no Google Docs', kind: 'warning', okLabel: 'Substituir o de lá', cancelLabel: 'Só abrir o de lá' });
+    }
+    if (!s.google.entrou || !s.google.escrever) {
+      dizer('Abrindo o Google no navegador: dê ao Incognitus a permissão de criar documentos no seu Drive…');
+      await invoke('ia_google_entrar', { escrever: true });
+      s = await invoke('ia_situacao');
+      if (!s.google.escrever) throw new Error('O Google não deu a permissão de criar documentos no Drive: marque a caixa dessa permissão na tela do login.');
+    }
+  }
+  dizer('Enviando a minuta ao Google Docs…');
+  const r = await invoke('ia_gdocs_enviar', { caminho, existente: m.gdoc ? m.gdoc.id : null, trocar });
+  m.gdoc = { id: r.id, link: r.link, texto: r.feito === 'aberto' ? m.gdoc.texto : texto };
+  const rec = mesa.casos && Object.values(mesa.casos).find((c) => c.local && c.local.mapa === mapa);
+  if (rec && rec.local.minutaGdoc !== r.id) { rec.local.minutaGdoc = r.id; gravarMesa(); }
+  dizer({ criado: 'A minuta está no seu Google Docs e abriu no navegador.', substituido: 'O documento do Google Docs ficou com o texto daqui e abriu no navegador.',
+    aberto: 'O documento que já estava no Google Docs abriu no navegador (o texto de lá não foi mexido).' }[r.feito] || 'Aberto no Google Docs.');
+  return r;
+}
 /** A minuta conforme o ajuste "Onde abrir a minuta": no editor daqui, ou em .docx no editor de texto do computador. */
 async function abrirMinuta(mapa) {
   if (estado.ajustes.minutaAbrir !== 'computador') return abrirEditorMinuta(mapa);
@@ -3141,6 +3177,7 @@ function ligar() {
     $('minuta_msg').textContent = cortarAnaliseNoEditor() ? '✂️ Análise cortada: ficou só a peça (para voltar: ⌘Z / Ctrl+Z).' : 'Não há a linha da tesoura neste texto.';
   };
   $('bt_minuta_computador').onclick = () => comMinuta((caminho) => invoke('abrir_documento', { caminho }));
+  $('bt_minuta_gdocs').onclick = () => { const mapa = $('dlg_minuta').dataset.mapa; comMinuta((caminho) => minutaNoGoogleDocs(mapa, caminho)); };
   $('bt_minuta_pasta').onclick = () => { const m = estado.mpa[$('dlg_minuta').dataset.mapa]; if (m && m.docx) invoke('revelar', { caminho: m.docx }); };
   $('bt_minuta_copiar').onclick = () => {
     if (quillMinuta) navigator.clipboard.writeText(quillMinuta.getText()).then(() => { $('minuta_msg').textContent = 'Texto copiado.'; }).catch(() => {});
@@ -3328,7 +3365,13 @@ async function testeDePontaAPonta(p) {
         await responderMpa(mapaC, 'pergunta', 'Qual é o prazo?');
         let docx = null, erroDocx = null;
         try { docx = await gravarMinutaDocx(mapaC); } catch (e) { erroDocx = String((e && e.message) || e); }
-        rel.mpa.conversa = { etapa: m6.etapa, erro: m6.erro, antes, depois, fim: m6.conv ? m6.conv.msgs.length : 0, minuta: !!m6.minuta, real: m6.real, docx, erroDocx,
+        // a minuta no Google Docs (um Drive de mentira): o primeiro clique cria o documento; o segundo só abre o que já está lá
+        let gdocs = null;
+        if (p.mpa.gdocs && docx) {
+          try { const g1 = await minutaNoGoogleDocs(mapaC, docx), g2 = await minutaNoGoogleDocs(mapaC, docx); gdocs = { um: g1, dois: g2, botao: !!$('bt_minuta_gdocs') }; }
+          catch (e) { gdocs = { erro: String((e && e.message) || e) }; }
+        }
+        rel.mpa.conversa = { etapa: m6.etapa, erro: m6.erro, antes, depois, fim: m6.conv ? m6.conv.msgs.length : 0, minuta: !!m6.minuta, real: m6.real, docx, erroDocx, gdocs,
           pessoa: pesC ? pesC.valor : null, token: pesC ? pesC.token : null, paragrafos: m6.minuta ? paragrafosDaMinuta(m6).length : 0,
           itens: (m6.itens || []).map((x) => x.t + ':' + (x.quem || x.tipo || '')), quill: !!window.Quill };
         try {

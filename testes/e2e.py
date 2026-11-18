@@ -230,6 +230,37 @@ def openai_de_mentira():
     return srv, f"http://127.0.0.1:{porta}/v1", pedidos
 
 
+def drive_de_mentira():
+    """Um Google Drive de mentira para "Abrir no Google Docs": cria o documento no POST e diz que ele existe no GET."""
+    pedidos = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def _resp(self, corpo):
+            b = json.dumps(corpo).encode("utf-8")
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+
+        def do_POST(self):
+            n = int(self.headers.get("content-length") or 0)
+            pedidos.append({"metodo": "POST", "caminho": self.path, "cabecalhos": {k.lower(): v for k, v in self.headers.items()}, "corpo": self.rfile.read(n)})
+            self._resp({"id": "docDeMentira00001"})
+
+        def do_GET(self):
+            pedidos.append({"metodo": "GET", "caminho": self.path, "cabecalhos": {k.lower(): v for k, v in self.headers.items()}, "corpo": b""})
+            self._resp({"id": "docDeMentira00001", "trashed": False})
+
+    porta = porta_livre()
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", porta), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, f"http://127.0.0.1:{porta}", pedidos
+
+
 def rodar_app(plano, url_motor, dados, extra_env=None):
     caminho = os.path.join(SAIDA, "plano-" + uuid.uuid4().hex[:6] + ".json")
     json.dump(plano, open(caminho, "w", encoding="utf-8"), ensure_ascii=False)
@@ -419,12 +450,14 @@ def secao_casos(dados):
         "# Denúncia — modelo fictício de prova\n" + "EXCELENTÍSSIMO SENHOR JUIZ. O Ministério Público oferece DENÚNCIA contra [NOME]. " * 3 + "\n\n"
         "# Arquivamento — modelo fictício de prova\n" + "Promoção de arquivamento fictícia, pelos fundamentos de prova. " * 3 + "\n\n"
         "# Curto demais\nnão vira modelo\n")
+    srv_drive, url_drive, pedidos_drive = drive_de_mentira()
     rel = rodar_app({"arquivos": arqs, "saida": saida, "txt": True, "extracao": os.path.join(SAIDA, "extracao-caso"),
                      "relatorio": os.path.join(SAIDA, "relatorio-caso.json"),
-                     "mpa": {"prompt": prompt, "vazar": os.path.join(pasta_c, "prompt que vaza.md"), "visor": True, "corte": True, "aprender": True, "conversa": True,
+                     "mpa": {"prompt": prompt, "vazar": os.path.join(pasta_c, "prompt que vaza.md"), "visor": True, "corte": True, "aprender": True, "conversa": True, "gdocs": True,
                              "livro": {"guia": guia, "livro": livro}}},
-                    "http://127.0.0.1:9/", dados, {"SKIA_CLAUDE_URL": url_ia, "SKIA_CHAVE_DE_PROVA": CHAVE_DE_PROVA})
+                    "http://127.0.0.1:9/", dados, {"SKIA_CLAUDE_URL": url_ia, "SKIA_CHAVE_DE_PROVA": CHAVE_DE_PROVA, "SKIA_DRIVE_URL": url_drive})
     srv_ia.shutdown()
+    srv_drive.shutdown()
     por = {it["nome"]: it for it in rel["itens"]}
     N = gerar_pdfs.CASO_NOMES
     for it in rel["itens"]:
@@ -541,6 +574,14 @@ def secao_casos(dados):
             ok_docx = "minuta de mentira" in xml and z.namelist()[0] == "[Content_Types].xml" and "«" not in xml
     confere(ok_docx and "NÃO ENVIAR" in dx and dx.endswith(" — minuta.docx") and cv.get("paragrafos", 0) >= 2,
             f"a minuta sai em .docx, com os nomes reais, na subpasta que não vai à IA ({os.path.basename(dx)})")
+    # a minuta no Google Docs: o .docx sobe uma vez só; o segundo clique abre o que já está lá
+    gd = cv.get("gdocs") or {}
+    sobe = [x for x in pedidos_drive if x["metodo"] == "POST"]
+    confere(not gd.get("erro") and (gd.get("um") or {}).get("feito") == "criado" and (gd.get("dois") or {}).get("feito") == "aberto" and gd.get("botao")
+            and (gd.get("um") or {}).get("link") == "https://docs.google.com/document/d/docDeMentira00001/edit" and len(sobe) == 1
+            and sobe[0]["caminho"].startswith("/upload/drive/v3/files?uploadType=multipart") and b"PK\x03\x04" in sobe[0]["corpo"]
+            and b"application/vnd.google-apps.document" in sobe[0]["corpo"] and "minuta" in sobe[0]["corpo"][:400].decode("utf-8", "replace"),
+            f"Abrir no Google Docs: o .docx sobe uma vez, vira documento do Google, e o segundo clique só abre o de lá ({gd.get('erro') or len(pedidos_drive)})")
     its = cv.get("itens") or []
     confere(cv.get("quill") and not cv.get("janelaErro") and (cv.get("janela") or 0) >= 8 and cv.get("painel") and (cv.get("editor") or 0) > 20 and cv.get("editado")
             and cv.get("botao") == "Complementar a minuta ➤" and its.count("fala:eu") == 2 and its.count("fala:ia") == 4 and "passo:" in its,

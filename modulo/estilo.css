@@ -420,8 +420,7 @@ button.com-icone { display:inline-flex; align-items:center; gap:6px; }
 button.com-icone .ic { width:15px; height:15px; }
 header .topo-direita button.ghost { background:var(--m-sur); color:var(--m-head); border-color:var(--m-line); border-radius:6px; font-weight:600; }
 header .topo-direita button.ghost:hover { border-color:var(--m-head); }
-#fila_secao .linha.topo { border-bottom:3px solid transparent;
-  border-image:repeating-linear-gradient(90deg, #c4622d 0 6px, #f6e6d2 6px 8px, #2b1a14 8px 14px, #f6e6d2 14px 16px) 3; }
+/* 18/11/2026: a faixa de tesselas embaixo do cabeçalho da Mesa saiu (pedido do usuário); fica só a régua de cima */
 .st { background:#eddcc8; }
 dialog { background:var(--m-sur); }
 #dlg_ajustes .atalhos { margin:0 0 6px; } #dlg_ajustes .atalhos > button { flex:none; }

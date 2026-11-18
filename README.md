@@ -156,6 +156,11 @@ e cola os pedaços.
   anonimizado (`… — MPA 22h41_anon.md`), ao lado do PDF, e o com os nomes reais (`… — MPA 22h41 (nomes reais).md`), na
   subpasta "NÃO ENVIAR À IA (nomes reais)". O card mostra o próximo ato, o custo estimado e **Ver** (a análise e a
   minuta numa janela, com **Copiar**).
+- **Abrir no Google Docs** (18/11/2026): no editor da minuta, ao lado de "Abrir no Word / LibreOffice". O .docx sobe
+  para o Google Drive de quem usa, vira um documento do Google Docs e abre no navegador. É o único caminho pelo qual os
+  **nomes reais** saem do computador: só no clique, depois de uma confirmação, para a conta do Google da própria pessoa.
+  A permissão pedida é a `drive.file` (o app só alcança os arquivos que ele mesmo criou). No segundo clique, o documento
+  de lá é aberto como está; se o texto daqui mudou, a janela pergunta antes de substituir.
 - **O login do Google precisa do cliente OAuth do app** ("App para computador", no Google Cloud): o arquivo
   `google_cliente.json` na pasta de dados do app, ou `INCOGNITUS_GOOGLE_CLIENT_ID`/`_SECRET` no ambiente do build.
   Sem ele, o Google Docs não abre (o arquivo .txt/.md continua valendo).

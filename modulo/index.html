@@ -156,6 +156,7 @@
       <button type="button" id="bt_minuta_copiar" class="mpa-bt sec">Copiar o texto</button>
       <button type="button" id="bt_minuta_pasta" class="mpa-bt sec" hidden>Mostrar na pasta</button>
       <button type="button" id="bt_minuta_computador" class="mpa-bt sec">Abrir no Word / LibreOffice</button>
+      <button type="button" id="bt_minuta_gdocs" class="mpa-bt sec" title="Manda a minuta ao seu Google Drive, como um documento do Google Docs, e abre no navegador">Abrir no Google Docs</button>
       <button type="button" id="bt_minuta_salvar" class="mpa-bt primary">Salvar .docx</button>
     </div>
   </div>
@@ -409,7 +410,9 @@
       <option value="computador">No editor de texto do computador (Word, LibreOffice, Pages…)</option>
     </select>
     <p class="dica">A minuta vem com os nomes reais e fica só neste computador, na subpasta “NÃO ENVIAR À IA (nomes reais)”.
-      O editor daqui é o Quill (código aberto); o .docx que ele grava abre no Word, no LibreOffice e no Google Docs.</p>
+      O editor daqui é o Quill (código aberto); o .docx que ele grava abre no Word e no LibreOffice. O botão “Abrir no
+      Google Docs”, no editor, é o único que tira a minuta do computador: ela vai, com os nomes reais, para o seu Google
+      Drive, só quando você clica e confirma.</p>
 
     <h2>Motor de anonimização</h2>
     <div id="motor_info" class="caixa"></div>

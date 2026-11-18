@@ -6,7 +6,7 @@
 //! envio a janela confere o pedido contra o mapa (o porteiro, modulo/porteiro.js) e barra o que tiver dado em claro.
 //! A chave e a renovação do login ficam no chaveiro e não vão a arquivo, a log nem à janela.
 use crate::outras::Provedor;
-use crate::{chaveiro, claude, google, outras, pastas, prompt};
+use crate::{chaveiro, claude, gdocs, google, outras, pastas, prompt};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -128,6 +128,8 @@ pub struct SituacaoGoogle {
     email: String,
     /// a permissão de ler as pastas do Drive (a pasta de modelos por link) foi dada
     drive: bool,
+    /// a permissão de criar documentos no Drive (a minuta no Google Docs) foi dada
+    escrever: bool,
 }
 
 #[derive(Serialize)]
@@ -170,22 +172,22 @@ pub async fn ia_situacao(estado: State<'_, EstadoIa>) -> Result<Situacao, String
         .collect();
     let chave = lidas[0].clone();
     let configurado = google::cliente(&ia.dados).is_some();
-    let (entrou, email, drive) = if de_prova("SKIA_CHAVE_DE_PROVA").is_some() {
-        (false, String::new(), false)
+    let (entrou, email, drive, escrever) = if de_prova("SKIA_CHAVE_DE_PROVA").is_some() {
+        (false, String::new(), false, false)
     } else {
         let s = ia.servico.clone();
         bloqueante(move || {
             let r = chaveiro::ler(&s, google::CONTA_RENOVACAO)?;
             let e = chaveiro::ler(&s, CONTA_EMAIL)?.unwrap_or_default();
-            let d = chaveiro::ler(&s, CONTA_ESCOPOS)?.unwrap_or_default().contains(google::ESCOPO_DRIVE);
-            Ok((r.is_some(), e, d))
+            let escopos = chaveiro::ler(&s, CONTA_ESCOPOS)?.unwrap_or_default();
+            Ok((r.is_some(), e, escopos.contains(google::ESCOPO_DRIVE), escopos.contains(google::ESCOPO_ARQUIVOS)))
         })
         .await?
     };
     Ok(Situacao {
         chave: SituacaoChave { guardada: chave.is_some(), fim: chave.map(|c| chaveiro::final_da_chave(&c)).unwrap_or_default() },
         chaves,
-        google: SituacaoGoogle { configurado, entrou, email, drive: entrou && drive },
+        google: SituacaoGoogle { configurado, entrou, email, drive: entrou && drive, escrever: entrou && escrever },
     })
 }
 
@@ -275,14 +277,23 @@ pub struct Entrou {
 }
 
 /// O login do Google. Com `drive`, pede também a leitura das pastas do Drive (a pasta de modelos por link), somada às
-/// permissões de antes.
+/// permissões de antes. Com `escrever`, a de criar documentos no Drive (a minuta no Google Docs).
 #[tauri::command]
-pub async fn ia_google_entrar(estado: State<'_, EstadoIa>, drive: Option<bool>) -> Result<Entrou, String> {
+pub async fn ia_google_entrar(estado: State<'_, EstadoIa>, drive: Option<bool>, escrever: Option<bool>) -> Result<Entrou, String> {
     let ia = estado.0.clone();
     let cli = google::cliente(&ia.dados).ok_or(google::SEM_CLIENTE)?;
     let cancelado = Arc::new(AtomicBool::new(false));
     *ia.cancelar.lock().unwrap() = cancelado.clone();
-    let escopo = if drive.unwrap_or(false) { format!("{} {}", google::ESCOPO, google::ESCOPO_DRIVE) } else { google::ESCOPO.to_string() };
+    // o que já foi dado antes continua pedido: um login novo não tira a permissão das pastas nem a de criar documentos
+    let s = ia.servico.clone();
+    let antes = bloqueante(move || chaveiro::ler(&s, CONTA_ESCOPOS)).await.ok().flatten().unwrap_or_default();
+    let mut escopo = google::ESCOPO.to_string();
+    for (pedido, e) in [(drive, google::ESCOPO_DRIVE), (escrever, google::ESCOPO_ARQUIVOS)] {
+        if pedido.unwrap_or(false) || antes.contains(e) {
+            escopo.push(' ');
+            escopo.push_str(e);
+        }
+    }
     let e = google::entrar(&ia.http, &google::enderecos(), &cli, abrir_no_navegador, cancelado, &escopo).await?;
     let (s, renovacao, email, escopos) = (ia.servico.clone(), e.renovacao.clone(), e.prova.email.clone(), e.escopos.clone());
     bloqueante(move || {
@@ -386,6 +397,32 @@ pub async fn ia_pasta_listar(estado: State<'_, EstadoIa>, pasta: String) -> Resu
             pastas::listar_microsoft(&ia.http, &link, teste.as_deref()).await
         }
     }
+}
+
+/// A minuta no Google Docs (18/11/2026): o .docx que o editor gravou sobe para o Drive de quem usa, vira um documento do
+/// Google Docs e abre no navegador. Só .docx que existe; o endereço que abre é montado aqui, do id.
+#[tauri::command]
+pub async fn ia_gdocs_enviar(estado: State<'_, EstadoIa>, caminho: String, existente: Option<String>, trocar: Option<bool>) -> Result<gdocs::NoDocs, String> {
+    let ia = estado.0.clone();
+    let p = std::path::PathBuf::from(&caminho);
+    let eh_docx = p.extension().map(|e| e.to_string_lossy().eq_ignore_ascii_case("docx")).unwrap_or(false);
+    if !eh_docx || !p.is_file() {
+        return Err("só mando ao Google Docs um .docx que já foi gravado".into());
+    }
+    let nome = p.file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Minuta".into());
+    let bytes = bloqueante(move || std::fs::read(&p).map_err(|e| format!("não consegui ler a minuta: {e}"))).await?;
+    let (base, acesso) = match de_prova("SKIA_DRIVE_URL") {
+        Some(b) => (b, "acesso-de-prova".to_string()),
+        None => {
+            let (a, _) = acesso_google(&ia).await.map_err(|e| if e.contains("entre com o Google") { gdocs::ERRO_SEM_ESCRITA.to_string() } else { e })?;
+            (pastas::DRIVE_BASE.to_string(), a)
+        }
+    };
+    let r = gdocs::enviar(&ia.http, &base, &acesso, &nome, &bytes, existente.as_deref(), trocar.unwrap_or(false)).await?;
+    if std::env::var_os("SKIA_E2E").is_none() {
+        abrir_no_navegador(&r.link)?;
+    }
+    Ok(r)
 }
 
 /// O pedido que a janela montou (já conferido pelo porteiro dela) vai à Anthropic com a chave do chaveiro.

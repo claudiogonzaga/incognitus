@@ -33,6 +33,9 @@ pub const ESCOPO: &str = "openid email https://www.googleapis.com/auth/documents
 /// A leitura das pastas do Drive (17/11/2026, a pasta de modelos por link): pedida só por quem usa a pasta do Drive pelo
 /// link, num login à parte que soma esta permissão às de antes (include_granted_scopes). O login de sempre não a pede.
 pub const ESCOPO_DRIVE: &str = "https://www.googleapis.com/auth/drive.readonly";
+/// Criar documentos no Drive (18/11/2026, a minuta no Google Docs): a `drive.file` só alcança os arquivos que o próprio
+/// app criou. Pedida só por quem clica em "Abrir no Google Docs", somada às permissões de antes.
+pub const ESCOPO_ARQUIVOS: &str = "https://www.googleapis.com/auth/drive.file";
 const PRAZO_DO_LOGIN: Duration = Duration::from_secs(300);
 /// A prova é renovada quando faltam menos de 5 minutos para ela vencer.
 const FOLGA: u64 = 300;

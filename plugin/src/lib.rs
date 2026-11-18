@@ -13,6 +13,7 @@ mod chaveiro;
 mod claude;
 mod docx;
 mod ferramentas;
+mod gdocs;
 mod google;
 mod ia;
 mod motor;
@@ -758,6 +759,7 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             ia::ia_enviar,
             ia::ia_modelos,
             ia::ia_pasta_listar,
+            ia::ia_gdocs_enviar,
             visor::visor_abrir
         ])
         .register_asynchronous_uri_scheme_protocol(visor::ESQUEMA, visor::servir)
@@ -866,7 +868,7 @@ mod testes {
         // cada comando do build.rs está no conjunto `default`; o `api` só tem comandos que existem
         let build = include_str!("../build.rs");
         let comandos: Vec<String> = build.split('"').skip(1).step_by(2).map(|c| c.to_string()).collect();
-        assert_eq!(comandos.len(), 54);
+        assert_eq!(comandos.len(), 55);
         let toml = include_str!("../permissions/default.toml");
         let (padrao, api) = toml.split_once("[[set]]").expect("o conjunto api");
         for c in &comandos {

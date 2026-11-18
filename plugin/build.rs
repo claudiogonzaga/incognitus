@@ -22,7 +22,7 @@ const COMANDOS: &[&str] = &[
     "e2e_plano", "e2e_gravar", "e2e_fim",
     // o 🧠 Melhor Próximo Ato: a chave da Anthropic, o login do Google, o prompt e o envio
     "ia_situacao", "ia_chave_guardar", "ia_chave_apagar", "ia_google_entrar", "ia_google_cancelar", "ia_google_sair",
-    "ia_prompt_ler", "ia_enviar", "ia_modelos", "ia_pasta_listar", "abrir_feedback",
+    "ia_prompt_ler", "ia_enviar", "ia_modelos", "ia_pasta_listar", "ia_gdocs_enviar", "abrir_feedback",
     // o 👁: o PDF numa janela do próprio app
     "visor_abrir",
 ];
