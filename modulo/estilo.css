@@ -445,3 +445,14 @@ header .titulo > span { font:italic 13px/1.3 Georgia, "Times New Roman", serif; 
 #contexto_lista .ctx mark { background:#f3cdb4; color:#3a120d; padding:0 2px; border-radius:2px; }
 #contexto_lista .ctx button { margin:0; flex:none; }
 #cofre_msg code { display:block; margin:6px 0; padding:8px; background:#fff; border:1px solid var(--m-line, #d9c4ab); border-radius:4px; font:13px/1.5 ui-monospace, Menlo, Consolas, monospace; -webkit-user-select:all; user-select:all; overflow-wrap:anywhere; }
+
+/* a janela Sobre (19/11/2026): os conceitos da lei, o que o app faz e os limites */
+#dlg_sobre { width:min(720px, 94vw); }
+.sobre { max-height:64vh; overflow:auto; padding-right:6px; font-size:13px; line-height:1.55; color:#2a221a; -webkit-user-select:text; user-select:text; }
+.sobre h3 { margin:16px 0 4px; font:700 12px/1.4 Arial, Helvetica, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--m-head, #5e1c15); }
+.sobre p { margin:0 0 8px; }
+.sobre ul { margin:0 0 8px; padding-left:18px; }
+.sobre li { margin:0 0 5px; }
+.sobre .sobre-resumo { padding:9px 11px; border-left:3px solid var(--m-ac, #9a3324); border-radius:4px; background:#fbeede; }
+.sobre .sobre-pe { margin-top:14px; padding-top:8px; border-top:1px dotted var(--m-line, #d9c4ab); font-size:11.5px; color:var(--m-soft, #6b5b4b); }
+

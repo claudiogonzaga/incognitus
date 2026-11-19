@@ -19,6 +19,7 @@
   </div>
   <div class="topo-direita">
     <button id="bt_motor" class="selo" hidden>motor …</button>
+    <button id="bt_sobre" class="ghost pequeno com-icone" title="O que é anonimizar e pseudonimizar pela lei, o que o Incognitus faz e os limites dele"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm-1 6h2v7h-2zm0-3h2v2h-2z"/></svg>Sobre</button>
     <button id="bt_ajustes" class="ghost pequeno com-icone" title="Configurações, Aprendizado e Fale com o desenvolvedor"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.700 1l-2.400-1-2 3.400 2 1.600a7.600 7.600 0 0 0 0 2l-2 1.600 2 3.400 2.400-1a7.400 7.400 0 0 0 1.700 1l.4 2.500h4l.4-2.500a7.400 7.400 0 0 0 1.700-1l2.400 1 2-3.400zM13 15.200a3.200 3.200 0 1 1 0-6.400 3.200 3.200 0 0 1 0 6.400z"/></svg>Configurações</button>
   </div>
 </header>
@@ -236,6 +237,52 @@
   </div>
   <div id="cofre_msg" class="suave" data-cru></div>
   <div class="linha fim"><button type="button" id="bt_opcoes_fechar">Fechar</button></div>
+</dialog>
+
+<dialog id="dlg_sobre">
+  <h2>Sobre o Incognitus</h2>
+  <div class="sobre" data-cru>
+    <p class="sobre-resumo">O Incognitus <b>pseudonimiza</b> autos e documentos: troca os dados pessoais por marcadores e guarda, só neste computador, o mapa que desfaz a troca. Não é uma anonimização irreversível, e o resultado depende de conferência humana.</p>
+
+    <h3>O que a lei chama de anonimização</h3>
+    <p>Pela LGPD (Lei 13.709/2018), <b>dado anonimizado</b> é o “relativo a titular que não possa ser identificado, considerando a utilização de meios técnicos razoáveis e disponíveis na ocasião de seu tratamento” (art. 5º, III). <b>Anonimização</b> é o uso desses meios para que o dado perca “a possibilidade de associação, direta ou indireta, a um indivíduo” (art. 5º, XI).</p>
+    <p>O dado anonimizado não é dado pessoal, salvo quando o processo for revertido com meios próprios ou puder ser revertido com <b>esforços razoáveis</b> (art. 12). O que é razoável se mede por fatores objetivos, como o custo e o tempo para reverter, conforme a tecnologia disponível (art. 12, § 1º). O critério da lei é esse, e não a impossibilidade absoluta de reverter.</p>
+
+    <h3>O que a lei chama de pseudonimização</h3>
+    <p>É “o tratamento por meio do qual um dado perde a possibilidade de associação, direta ou indireta, a um indivíduo, senão pelo uso de informação adicional mantida separadamente pelo controlador em ambiente controlado e seguro” (art. 13, § 4º). A palavra da lei é pseudonimização; “pseudoanonimização” é a forma popular.</p>
+    <p>A diferença está na <b>informação adicional guardada à parte</b>: quem a tem volta ao nome. Por isso, para quem guarda essa informação, o dado continua sendo dado pessoal. A pseudonimização é uma medida de segurança, que reduz o risco; ela não tira o dado do alcance da lei.</p>
+
+    <h3>O que o Incognitus faz</h3>
+    <ul>
+      <li>Troca nomes, CPF, RG, endereços, telefones, e-mails, placas e outros identificadores por marcadores (por exemplo, «REU_01» e «VITIMA_01»). A mesma pessoa leva o mesmo marcador no caso inteiro.</li>
+      <li>Com a opção de contexto ligada, troca também o município e a comarca, o cargo, o nome de empresa, de fazenda, o apelido e o número do processo. As datas ficam.</li>
+      <li>Guarda o <b>mapa</b> (a informação adicional da lei) só neste computador, numa subpasta à parte e cifrado. O mapa nunca vai à IA.</li>
+      <li>Depois que a IA devolve a minuta, recoloca os nomes reais, também neste computador.</li>
+      <li>Refaz o PDF só com o texto: as imagens, as fotos e as assinaturas desenhadas do original não vão para o PDF anonimizado.</li>
+    </ul>
+    <p>Em termos legais, isso é <b>pseudonimização</b>. Para você, que tem o mapa, os autos continuam sendo dados pessoais. Para quem recebe só o texto, sem o mapa, ele se aproxima do dado anonimizado na medida em que ninguém consiga, com esforços razoáveis, descobrir de quem se fala. Essa avaliação é jurídica, é de quem usa e muda de caso para caso.</p>
+
+    <h3>Limites</h3>
+    <ul>
+      <li><b>O contexto identifica.</b> “O único tabelião do município”, “filho do prefeito”, o bairro, um fato que saiu no jornal: nada disso é nome, e tudo isso aponta para alguém. O alerta de contexto mostra os trechos que as regras reconhecem, não todos.</li>
+      <li><b>A troca é automática e pode falhar.</b> As regras (e, na leitura rigorosa, o modelo de linguagem) erram, sobretudo em texto de digitalização ruim (OCR), em nome incomum ou grafado de modos diferentes. Confira antes de enviar.</li>
+      <li><b>Autoridades ficam em claro.</b> Juiz, promotor, delegado, servidor e advogado não são trocados, e o nome deles pode revelar a comarca.</li>
+      <li><b>O nome do arquivo</b> anonimizado ainda traz o número do processo. Renomeie o arquivo se for anexá-lo a uma IA.</li>
+      <li><b>Sigilo.</b> Em segredo de justiça, infância e juventude, família e investigação sigilosa, avalie se o texto pode sair, mesmo tarjado.</li>
+      <li><b>O que continua em claro neste computador:</b> os autos originais, a análise e a minuta com os nomes reais e a tabela do aprendizado. Proteja o computador e a pasta.</li>
+      <li><b>O Incognitus não substitui a revisão.</b> A responsabilidade pela peça e pelo tratamento dos dados continua sendo de quem assina.</li>
+    </ul>
+
+    <h3>Boas práticas</h3>
+    <ul>
+      <li>Na IA que usar, desligue a opção que permite treinar o modelo com as suas conversas, mesmo com o texto tarjado.</li>
+      <li>Prefira contas e contratos em que o fornecedor se obriga a não reter nem reutilizar o conteúdo.</li>
+      <li>Envie só o necessário para a tarefa.</li>
+      <li>Guarde a chave de recuperação do mapa num lugar seguro (Opções, Mapa cifrado).</li>
+    </ul>
+    <p class="sobre-pe">Este texto é informativo e não é parecer jurídico. Confira as normas do seu órgão e as do CNJ ou do CNMP sobre o uso de inteligência artificial. <span id="sobre_versao"></span></p>
+  </div>
+  <div class="linha fim"><button type="button" id="bt_sobre_fechar">Fechar</button></div>
 </dialog>
 
 <dialog id="dlg_contexto">

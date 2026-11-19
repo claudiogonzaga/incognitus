@@ -170,6 +170,9 @@ e cola os pedaços.
   ser desligado nas Opções; o que for ensinado como "não é dado pessoal" fica em claro. Limites conhecidos: o nome do
   arquivo de saída ainda leva o número do processo; os nomes de autoridades continuam em claro pela regra do motor; a
   profissão comum ("lavrador", "médico") não é cargo.
+- **Sobre** (19/11/2026): o botão ao lado das Configurações explica, pelos conceitos da LGPD (arts. 5º, III e XI, 12 e
+  13, § 4º), o que é anonimização e pseudonimização, o que o Incognitus faz (pseudonimização, com o mapa guardado à
+  parte) e os limites dele.
 - **O alerta de contexto**: o que sobra e regra nenhuma troca com segurança ("o único…", "filho do prefeito", "dono
   do posto", o tamanho da cidade, o bairro, a rodovia) é apontado na linha do caso, com o trecho, e a janela pergunta
   antes do primeiro envio do caso à IA. **Tarjar** ensina o trecho como dado pessoal.

@@ -3104,6 +3104,12 @@ function ligar() {
   $('bt_colar_copiar').onclick = () => copiarDe($('colar_saida'), $('bt_colar_copiar'));
   $('bt_colar_fechar').onclick = () => $('dlg_colar').close();
   $('bt_ajustes').onclick = () => abrirAjustes();
+  $('bt_sobre').onclick = () => {
+    $('sobre_versao').textContent = 'Incognitus ' + (estado.versaoApp || '') + (estado.motor && estado.motor.manifesto ? ' · motor ' + estado.motor.manifesto.versao : '') + '.';
+    $('dlg_sobre').showModal();
+    document.querySelector('#dlg_sobre .sobre').scrollTop = 0;
+  };
+  $('bt_sobre_fechar').onclick = () => $('dlg_sobre').close();
   $('bt_aprender').onclick = () => abrirAprendizado(null);
   $('bt_feedback').onclick = () => invoke('abrir_feedback').catch((e) => avisar(String((e && e.message) || e)));
   $('bt_apr_fechar').onclick = () => $('dlg_aprender').close();
@@ -3332,6 +3338,7 @@ async function iniciar() {
   invoke('info_app').then((info) => {
     const f = info.ferramentas;
     $('versao_app').textContent = 'Incognitus ' + info.versao;
+    estado.versaoApp = info.versao;
     $('ferramentas_info').textContent = 'Incognitus ' + info.versao + ' · ' + (f.Ok ? f.Ok.join(' · ') : 'PROBLEMA nas ferramentas: ' + f.Err);
     if (f.Err) avisar('As ferramentas embutidas (pdftotext, pdftoppm, tesseract) não rodaram: ' + f.Err);
   });
