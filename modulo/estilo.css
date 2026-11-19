@@ -432,3 +432,16 @@ dialog { background:var(--m-sur); }
 .titulo .nome { display:flex; flex-direction:column; gap:3px; }
 .titulo .lema { font:600 9.5px/1 var(--romana); letter-spacing:.24em; text-transform:uppercase; color:var(--m-head); padding-left:2px; }
 header .titulo > span { font:italic 13px/1.3 Georgia, "Times New Roman", serif; color:var(--m-soft); }
+
+/* o alerta de contexto (19/11/2026) */
+.faixa .alerta-ctx { display:flex; align-items:center; gap:8px; padding:5px 8px; border-left:3px solid var(--m-ac, #9a3324); border-radius:4px; background:#fbeede; color:#5e1c15; }
+.faixa .alerta-ctx button { margin:0; }
+#dlg_contexto { width:min(760px, 94vw); }
+#contexto_lista { max-height:52vh; overflow:auto; margin:8px 0; }
+#contexto_lista h3 { margin:12px 0 2px; font:700 12px/1.4 Arial, Helvetica, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--m-head, #5e1c15); }
+#contexto_lista h3 small { display:block; font-weight:400; letter-spacing:0; text-transform:none; color:var(--m-soft, #6b5b4b); }
+#contexto_lista .ctx { display:flex; align-items:flex-start; gap:8px; padding:5px 0; border-top:1px dotted var(--m-line, #d9c4ab); font-size:12.5px; }
+#contexto_lista .ctx p { flex:1; margin:0; color:var(--m-soft, #6b5b4b); overflow-wrap:anywhere; -webkit-user-select:text; user-select:text; }
+#contexto_lista .ctx mark { background:#f3cdb4; color:#3a120d; padding:0 2px; border-radius:2px; }
+#contexto_lista .ctx button { margin:0; flex:none; }
+#cofre_msg code { display:block; margin:6px 0; padding:8px; background:#fff; border:1px solid var(--m-line, #d9c4ab); border-radius:4px; font:13px/1.5 ui-monospace, Menlo, Consolas, monospace; -webkit-user-select:all; user-select:all; overflow-wrap:anywhere; }

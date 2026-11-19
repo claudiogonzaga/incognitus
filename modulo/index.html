@@ -222,7 +222,28 @@
   <label class="opcao"><input id="op_rigoroso" type="checkbox"> <span>Anonimização rigorosa <small>(mais lenta)</small></span></label>
   <p class="dica">Depois das regras, um modelo de inteligência artificial lê o texto e tarja o que ainda parecer nome de pessoa ou endereço. Fica bem mais lento (de 1 a 4 segundos por página) e, na primeira vez, baixa o modelo (110 MB). Tudo continua neste computador.</p>
   <div id="msg_rigoroso" class="suave"></div>
+  <h2>Contexto</h2>
+  <label class="opcao"><input id="op_contexto" type="checkbox" checked> <span>Tarjar também o contexto</span></label>
+  <p class="dica">Além dos nomes e documentos, saem do texto o <b>município e a comarca</b>, o <b>cargo</b> (prefeito, vereador, tabelião, secretário…), o nome de <b>empresa</b> e de estabelecimento, de <b>fazenda</b>, sítio ou gleba, o <b>apelido</b> e o <b>número do processo</b> (os quatro últimos dígitos dele dizem a comarca). Cada um vira um marcador («MUNICIPIO_01», «CARGO_01»…) e volta na reidentificação. As datas ficam.</p>
+  <label class="opcao"><input id="op_alerta" type="checkbox" checked> <span>Alerta de contexto</span></label>
+  <p class="dica">Depois de anonimizar, o Incognitus aponta os trechos que ainda podem identificar alguém sem nome nenhum (“o único…”, “filho do prefeito”, “dono do posto”, o tamanho da cidade, o bairro) e pergunta antes de mandar o caso à IA.</p>
+  <h2>Mapa cifrado</h2>
+  <label class="opcao"><input id="op_cifrar" type="checkbox" checked> <span>Cifrar o mapa no disco</span></label>
+  <p class="dica">O mapa (o dicionário que devolve os nomes) é gravado cifrado: quem copiar a pasta não consegue abri-lo. A chave fica no chaveiro do sistema, só neste computador. Para abrir os mapas em outro computador, ou depois de formatar este, guarde a <b>chave de recuperação</b> num lugar seguro. Os mapas antigos, em claro, continuam abrindo.</p>
+  <div class="linha">
+    <button type="button" id="bt_cofre_mostrar" class="ghost pequeno">Mostrar a chave de recuperação</button>
+    <button type="button" id="bt_cofre_importar" class="ghost pequeno">Usar a chave de outro computador…</button>
+  </div>
+  <div id="cofre_msg" class="suave" data-cru></div>
   <div class="linha fim"><button type="button" id="bt_opcoes_fechar">Fechar</button></div>
+</dialog>
+
+<dialog id="dlg_contexto">
+  <h2>Alerta de contexto</h2>
+  <p class="dica">Estes trechos continuam no texto anonimizado e podem identificar alguém mesmo sem o nome. O Incognitus só aponta: quem decide é você. <b>Tarjar</b> ensina o trecho como dado pessoal (vale a partir da próxima anonimização do caso).</p>
+  <div id="contexto_lista" data-cru></div>
+  <div id="contexto_msg" class="suave"></div>
+  <div class="linha fim"><button type="button" id="bt_contexto_fechar">Fechar</button></div>
 </dialog>
 
 <dialog id="dlg_ia">
@@ -440,6 +461,7 @@
 
 <script src="vendor/quill/quill.js"></script>
 <script src="porteiro.js"></script>
+<script src="contexto.js"></script>
 <script src="ias.js"></script>
 <script src="busca.js"></script>
 <script src="app.js"></script>

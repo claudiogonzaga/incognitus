@@ -13,7 +13,7 @@ permissions = [
   "allow-busca-estado", "allow-busca-baixar", "allow-busca-ler", "allow-modelos-listar", "allow-indice-ler", "allow-indice-gravar",
   "allow-e2e-plano", "allow-e2e-gravar", "allow-e2e-fim",
   "allow-ia-situacao", "allow-ia-chave-guardar", "allow-ia-chave-apagar", "allow-ia-google-entrar", "allow-ia-google-cancelar", "allow-ia-google-sair",
-  "allow-ia-prompt-ler", "allow-ia-enviar", "allow-ia-modelos", "allow-ia-pasta-listar", "allow-ia-gdocs-enviar",
+  "allow-ia-prompt-ler", "allow-ia-enviar", "allow-ia-modelos", "allow-ia-pasta-listar", "allow-ia-gdocs-enviar", "allow-cofre-situacao", "allow-cofre-chave-mostrar", "allow-cofre-chave-importar",
   "allow-visor-abrir", "allow-abrir-feedback",
 ]
 

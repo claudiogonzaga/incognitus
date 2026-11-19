@@ -641,6 +641,58 @@ def secao_tesoura(dados):
             confere(not vaz, "openai: só os autos anonimizados saem (nenhum nome real)" + (f" — ACHEI {vaz}" if vaz else ""))
 
 
+CONTEXTO_FICTICIO = """PODER JUDICIÁRIO DO ESTADO DE MATO GROSSO
+COMARCA DE VALE FICTÍCIO DO NORTE
+VARA ÚNICA
+Processo nº 1000777-22.2026.8.11.0099
+A Promotoria de Justiça de Vale Fictício do Norte/MT oferece denúncia contra
+GENOVEVO TESTECICRANO DA SILVA, CPF 111.444.777-35, natural de Serra Inventada-MT,
+residente na Fazenda Boa Esperança II, zona rural do Município de Vale Fictício do Norte.
+Consta que, no dia 12/03/2026, o denunciado, que é o único tabelião do município,
+de 8 mil habitantes, e filho do prefeito, esteve no Supermercado Bom Preço
+e depois no Sítio Recanto Feliz.
+A vítima é dona do Bar do Tonhão e sócia da empresa Agro Fictícia Comércio de Grãos Ltda.
+O Secretário Municipal de Saúde e uma vereadora foram ouvidos.
+A Fazenda Pública não se manifestou. A SSP/MT foi oficiada.
+O sorriso do denunciado foi notado por todos.
+"""
+
+
+def secao_contexto(dados):
+    print("10. o contexto (município, comarca, cargo, empresa, fazenda, número do processo), o alerta de contexto e o mapa cifrado")
+    pasta_x = os.path.join(BASE, "contexto")
+    shutil.rmtree(pasta_x, ignore_errors=True)
+    os.makedirs(pasta_x)
+    pdf = os.path.join(pasta_x, "caso do contexto.pdf")
+    open(pdf, "wb").write(gerar_pdfs.pdf_texto([CONTEXTO_FICTICIO.splitlines()]))
+    saida = os.path.join(pasta_x, "saida")
+    rel = rodar_app({"arquivos": [pdf], "saida": saida, "txt": True, "contexto": True, "cifrar": True,
+                     "extracao": os.path.join(SAIDA, "extracao-contexto"), "relatorio": os.path.join(SAIDA, "relatorio-contexto.json")},
+                    "http://127.0.0.1:9/", dados)
+    it = rel["itens"][0]
+    sd = it.get("saida") or {}
+    txt = open(sd["txt"], encoding="utf-8").read() if sd.get("txt") else ""
+    print(f"  {it['nome']}: {it['etapa']} · {it.get('avisos')}")
+    claros = [x for x in ("Vale Fictício", "VALE FICTÍCIO", "Serra Inventada", "Boa Esperança", "Recanto Feliz", "Bom Preço", "Tonhão", "Agro Fictícia",
+                          "tabelião", "prefeito", "vereadora", "Secretário Municipal", "1000777-22", "GENOVEVO") if x in txt]
+    marcas = [t for t in ("«MUNICIPIO_01»", "«CARGO_01»", "«FAZENDA_01»", "«EMPRESA_01»", "«PROCESSO_01»") if t in txt]
+    confere(it["etapa"] == "pronto" and len(marcas) == 5 and not claros,
+            f"o município, a comarca, o cargo, a fazenda, a empresa e o número do processo saem do texto ({len(marcas)} tipos de marcador; em claro: {claros or 'nada'})")
+    confere("Contexto também trocado por tokens: " in txt and "MUNICIPIO (município ou comarca)" in txt, "o cabeçalho avisa a IA dos tokens de contexto")
+    confere("12/03/2026" in txt and "Fazenda Pública" in txt and "SSP/MT" in txt and "sorriso do denunciado" in txt and "MATO GROSSO" in txt,
+            "as datas ficam, e o que não é contexto também (Fazenda Pública, SSP/MT, a palavra comum em minúscula, o estado)")
+    al = it.get("alertas") or []
+    regras = {a.split(":")[0] for a in al}
+    confere({"unico", "porte", "parente", "dono"} <= regras and "processo" not in regras,
+            f"o alerta de contexto aponta o que sobra: o único, o tamanho do lugar, o parentesco, o dono do negócio ({sorted(regras)})")
+    bruto = open(sd["mapa"], encoding="utf-8").read() if sd.get("mapa") else ""
+    cf = rel.get("cofre") or {}
+    confere(bruto.lstrip().startswith("{") and '"incognitus_cofre": 1' in bruto[:80] and not [x for x in ("GENOVEVO", "Vale Fict", "tokens", "MUNICIPIO") if x in bruto]
+            and cf.get("cifrado") and not cf.get("aviso"), "o mapa vai cifrado para o disco: nenhum nome, nenhum marcador no arquivo")
+    confere(not cf.get("erro") and "«MUNICIPIO_01»" in (cf.get("tokens") or []) and "«PROCESSO_01»" in (cf.get("tokens") or []),
+            f"o app abre o mapa cifrado e acha nele os marcadores do contexto ({cf.get('erro') or len(cf.get('tokens') or [])} marcadores)")
+
+
 MODELOS_FICTICIOS = {
     "Denúncia - tráfico de drogas.txt": "EXCELENTÍSSIMO SENHOR JUIZ DE DIREITO. O Ministério Público oferece DENÚNCIA contra [NOME], pela prática do "
         "crime do art. 33 da Lei 11.343/2006 (tráfico de drogas): trazia consigo, para venda, porções de entorpecente. Requer o recebimento da denúncia.",
@@ -694,6 +746,11 @@ def secao_pasta(dados):
 def main():
     if not os.path.exists(EXE):
         raise SystemExit("falta o executável: npx tauri build --debug --no-bundle")
+    if os.environ.get("SKIA_E2E_SO") == "contexto":   # só a seção 10
+        os.makedirs(SAIDA, exist_ok=True)
+        secao_contexto(os.path.join(SAIDA, "dados-contexto"))
+        print("\nRESULTADO: " + ("tudo certo" if not falhas else f"{len(falhas)} falha(s)"))
+        sys.exit(1 if falhas else 0)
     if os.environ.get("SKIA_E2E_SO") in ("tesoura", "pasta"):   # só a seção 8 ou a 9
         os.makedirs(SAIDA, exist_ok=True)
         if os.environ.get("SKIA_E2E_SO") == "tesoura":
@@ -839,6 +896,7 @@ def main():
     secao_casos(dados)
     secao_tesoura(dados)
     secao_pasta(dados)
+    secao_contexto(dados)
 
     print()
     print("RESULTADO: " + ("tudo certo" if not falhas else f"{len(falhas)} falha(s)"))

@@ -56,6 +56,11 @@ modelos do Livro que a IA pedir — conferidos antes por um porteiro contra o ma
 - O mapa, `… — MAPA (nomes reais).json`, na subpasta, sai **sempre** (pedido do Promotor, 05/11/2026): o dicionário de cada token
   («Thanasis», «REU_01», «CPF_01»…) com o nome ou o dado real, no mesmo formato do mapa do Graphé. É ele que devolve
   os nomes na reidentificação. Tem os **nomes reais**: fica no computador e nunca vai à IA — para a IA vai só o PDF.
+  Desde 19/11/2026 o mapa vai **cifrado** para o disco (AES-256-GCM, `plugin/src/cofre.rs`): quem copiar a pasta não o
+  abre. A chave fica no chaveiro do sistema, só naquele computador; a **chave de recuperação** (Opções, Mapa cifrado)
+  abre os mapas em outro computador ou depois de uma formatação. O mapa em claro, de antes ou do Graphé, continua
+  sendo lido. A cifra pode ser desligada nas Opções. Os outros arquivos da subpasta (a análise e a minuta com os nomes
+  reais) continuam em claro: são o texto de trabalho de quem usa.
 - A **lista CONFIRA**, `… — CONFIRA (nomes reais).txt`, também na subpasta (e no botão **Lista CONFIRA** da fila): o
   que olhar antes de mandar o PDF à IA — etapas do motor que falharam, páginas sem texto ou com pouco texto, páginas
   que passaram por OCR, candidatos a nome que ficaram em claro (com a página e o contexto), sobras da varredura e, no
@@ -156,6 +161,18 @@ e cola os pedaços.
   anonimizado (`… — MPA 22h41_anon.md`), ao lado do PDF, e o com os nomes reais (`… — MPA 22h41 (nomes reais).md`), na
   subpasta "NÃO ENVIAR À IA (nomes reais)". O card mostra o próximo ato, o custo estimado e **Ver** (a análise e a
   minuta numa janela, com **Copiar**).
+- **O contexto** (19/11/2026, `modulo/contexto.js`): nome trocado não basta quando o texto diz "o único tabelião do
+  município X, de 8 mil habitantes". Depois do motor, o Incognitus troca também o **município e a comarca**, o
+  **cargo** (prefeito, vereador, tabelião, secretário municipal…), o nome de **empresa** e de estabelecimento, de
+  **fazenda**, sítio ou gleba, o **apelido** e o **número do processo** (os quatro últimos dígitos dizem a comarca) por
+  marcadores («MUNICIPIO_01», «CARGO_01», «EMPRESA_01», «FAZENDA_01», «APELIDO_01», «PROCESSO_01»), que entram no mapa
+  do caso e voltam na reidentificação. As **datas ficam**. É por regra (expressões regulares), no computador, e pode
+  ser desligado nas Opções; o que for ensinado como "não é dado pessoal" fica em claro. Limites conhecidos: o nome do
+  arquivo de saída ainda leva o número do processo; os nomes de autoridades continuam em claro pela regra do motor; a
+  profissão comum ("lavrador", "médico") não é cargo.
+- **O alerta de contexto**: o que sobra e regra nenhuma troca com segurança ("o único…", "filho do prefeito", "dono
+  do posto", o tamanho da cidade, o bairro, a rodovia) é apontado na linha do caso, com o trecho, e a janela pergunta
+  antes do primeiro envio do caso à IA. **Tarjar** ensina o trecho como dado pessoal.
 - **Abrir no Google Docs** (18/11/2026): no editor da minuta, ao lado de "Abrir no Word / LibreOffice". O .docx sobe
   para o Google Drive de quem usa, vira um documento do Google Docs e abre no navegador. É o único caminho pelo qual os
   **nomes reais** saem do computador: só no clique, depois de uma confirmação, para a conta do Google da própria pessoa.

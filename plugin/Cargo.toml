@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-anonimizacao"
-version = "0.8.1"
+version = "0.9.0"
 description = "Incognitus como plugin do Tauri: anonimização de PDFs em lote com o motor do Graphé e reidentificação de minutas (o app Incognitus e o módulo do Graphé Desktop)"
 edition = "2021"
 publish = false
@@ -23,6 +23,8 @@ ttf-parser = "0.25"
 flate2 = "1"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 getrandom = "0.2"
+# o cofre do mapa (AES-256-GCM); o ring já vem com o rustls do reqwest
+ring = "0.17"
 # macros e rt-multi-thread só servem aos testes; ficam aqui porque o CI testa o plugin pelo Cargo.toml do app, e
 # dependência só de teste não vale em pacote fora do workspace
 tokio = { version = "1", features = ["time", "macros", "rt-multi-thread"] }

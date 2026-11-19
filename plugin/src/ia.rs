@@ -27,6 +27,13 @@ pub struct Ia {
     cancelar: Mutex<Arc<AtomicBool>>,
 }
 
+impl Ia {
+    /// O serviço no chaveiro (o cofre do mapa guarda a chave dele no mesmo serviço).
+    pub fn servico(&self) -> &str {
+        &self.servico
+    }
+}
+
 #[derive(Clone)]
 pub struct EstadoIa(pub Arc<Ia>);
 

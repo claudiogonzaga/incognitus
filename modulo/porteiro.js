@@ -10,9 +10,14 @@
 // pode ser a de outro ato do processo).
 
 const SEM_CONFERIR = new Set(['PRENOME', 'ALCUNHA', 'INICIAIS', 'ALIAS', 'NASC']);
-const POR_DIGITOS = new Set(['CPF', 'CPFMASC', 'CNPJ', 'RG', 'CNH', 'DOC', 'CNS', 'CERT', 'RJI', 'CAR', 'TEL', 'CEP', 'BANCO', 'GPS', 'PLACA']);
+const POR_DIGITOS = new Set(['CPF', 'CPFMASC', 'CNPJ', 'RG', 'CNH', 'DOC', 'CNS', 'CERT', 'RJI', 'CAR', 'TEL', 'CEP', 'BANCO', 'GPS', 'PLACA', 'PROCESSO']);
 const LITERAIS = new Set(['EMAIL', 'REDE']);
 const LIGA = /^(D[AEO]S?|E|DI|DEL|VAN|VON)$/;
+// 19/11/2026, o contexto (contexto.js): o município, o cargo, a empresa, a fazenda e o apelido valem com uma palavra só
+// ("Sorriso", "prefeito"); e o que é nome próprio de uma palavra só é trocado onde aparece com maiúscula (o município
+// "Sorriso" não leva o "sorriso" do depoimento)
+const UMA_PALAVRA = new Set(['MUNICIPIO', 'CARGO', 'EMPRESA', 'FAZENDA', 'APELIDO']);
+const COM_MAIUSCULA = new Set(['MUNICIPIO', 'EMPRESA', 'FAZENDA', 'APELIDO']);
 
 const normal = (s) => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
 const escapar = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -168,11 +173,12 @@ function preparar(mapa) {
         if ((alnum.match(/\d/g) || []).length < 5 || vistos.has(alnum.toUpperCase())) continue;
         vistos.add(alnum.toUpperCase());
         lista.push({ token, tipo, valor: v, re: new RegExp('(?<![0-9A-Za-z])' + alnum.split('').map(escapar).join('[\\s.\\-/]?') + '(?![0-9A-Za-z])', 'gi') });
-      } else if (nomeComposto(v) || (ensinado && normal(v).replace(/[^A-Z0-9]/g, '').length >= 3)) {
+      } else if (nomeComposto(v) || ((ensinado || UMA_PALAVRA.has(tipo)) && normal(v).replace(/[^A-Z0-9]/g, '').length >= 3)) {
         const alvo = normal(v);
         if (vistos.has(alvo)) continue;
         vistos.add(alvo);
-        lista.push({ token, tipo, valor: v, partes: alvo.split(' ').filter(Boolean) });
+        const partes = alvo.split(' ').filter(Boolean);
+        lista.push({ token, tipo, valor: v, partes, maiuscula: COM_MAIUSCULA.has(tipo) && partes.length === 1 && v.charAt(0) !== v.charAt(0).toLowerCase() });
       }
     }
   }
@@ -212,6 +218,7 @@ function tarjar(texto, mapa) {
     } else {
       if (!d) d = dobrar(cru);
       casarNome(d.dob, t.partes, (a, b) => {
+        if (t.maiuscula) { const c = cru[d.idx[a]]; if (c === c.toLowerCase()) return; }
         let f = d.idx[b - 1] + 1;
         while (f < cru.length && MARCA.test(cru[f])) f++;   // o acento solto da última letra vai junto
         achados.push({ i: d.idx[a], f, t });

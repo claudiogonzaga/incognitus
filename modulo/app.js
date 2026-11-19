@@ -19,6 +19,7 @@ const estado = {
   ajustes: { saida: 'ao_lado', pastaSaida: '', txt: false, rigoroso: false, juntar: true, contatos: null, checarAoAbrir: true },
   motorCaso: false,
   instPadrao: '', motor: null, worker: null, casos: null, e2e: null,
+  alertas: {}, alertasVistos: {},   // o alerta de contexto de cada caso (pelo caminho do mapa) e os que quem usa já viu
   marcados: new Set(), confirmar: null, soEstes: null, lote: null, loteQual: null, aprEdit: null,   // a seleção da mesa e a ação à espera de confirmação
   aba: 'anon', filtro: 'todos', reid: { mapa: null, texto: null, itens: [] },
   minutas: {},   // mapa do caso → { itens } : as minutas da IA reidentificadas no próprio card
@@ -450,6 +451,9 @@ function desenhar() {
       (det.length ? '<div class="det">' + det.join(' · ') + '</div>' : '') + linhaCaso +
       (i.saida ? '<div class="det">saiu como <b>' + esc(nomeDe(i.saida.pdf)) + '</b>' + (i.restaurado ? ' · caso guardado de outro dia (ao gerar a minuta, o app anonimiza os autos de novo sozinho)' : '') + '</div>' : '') +
       (i.avisos.length ? '<div class="det">⚠ ' + esc(i.avisos.join(' · ')) + '</div>' : '') +
+      (mapa && (estado.alertas[mapa] || []).length && primeiroDoMapa(i) ? '<div class="alerta-ctx"><span>Alerta de contexto: <b>' + estado.alertas[mapa].length +
+        (estado.alertas[mapa].length === 1 ? ' trecho ainda pode' : ' trechos ainda podem') + '</b> identificar alguém, mesmo sem o nome.</span>' +
+        '<button class="ghost mini" data-alertas="' + esc(mapa) + '">Ver</button></div>' : '') +
       (i.erro ? '<div class="msg-erro">' + esc(i.erro) + '</div>' : '') +
       painelDoCard(i) + '</div>';
     const numero = numeroDoCaso(c) || (rec && campo(rec, 'pje'));
@@ -1005,7 +1009,7 @@ function aprender(valor, pessoal, origem) {
  *  ('tinha') ou se não foi anotado ('fora': resto de citação). É o que a janela do 🧠 mostra em "o que o app aprendeu". */
 function aprenderDoPorteiro(mapaObj, token, formas, diario, onde) {
   const e = mapaObj.tokens && mapaObj.tokens[token];
-  if (!e || e.tipo === 'APRENDIDO') return false;
+  if (!e || e.tipo === 'APRENDIDO' || Contexto.TIPOS[e.tipo]) return false;   // o contexto (município, cargo…) não vira lição: é achado de novo em cada caso
   let mudou = false;
   for (const v of new Set([e.valor].concat(formas || []))) {
     if (!v) continue;
@@ -1088,6 +1092,45 @@ function aplicarAprendizado(r, mapaObj) {
   return { claros, ensinados };
 }
 
+// O contexto e o cofre (19/11/2026). No teste de ponta a ponta ficam desligados, salvo quando o plano os pede (os casos
+// antigos da suíte conferem o mapa no disco e o texto sem as tarjas de contexto).
+const primeiroDoMapa = (i) => !!(i.saida && i.saida.mapa) && estado.fila.find((x) => !x.lapide && x.saida && x.saida.mapa === i.saida.mapa) === i;
+
+/** A janela do alerta de contexto de um caso: os trechos por regra, com o Tarjar (ensina o trecho como dado pessoal). */
+function abrirAlertas(mapa) {
+  const lista = estado.alertas[mapa] || [], grupos = new Map();
+  for (const a of lista) { if (!grupos.has(a.regra)) grupos.set(a.regra, []); grupos.get(a.regra).push(a); }
+  let h = '';
+  for (const [regra, itens] of grupos) {
+    h += '<h3>' + esc(itens[0].titulo) + '<small>' + esc(itens[0].porque) + '</small></h3>';
+    for (const a of itens) h += '<div class="ctx"><p>' + (a.antes ? '…' + esc(a.antes) : '') + '<mark>' + esc(a.trecho) + '</mark>' + (a.depois ? esc(a.depois) + '…' : '') + '</p>' +
+      (regra === 'autoridade' ? '' : '<button class="ghost mini" data-ctx-tarjar="' + esc(a.trecho) + '">Tarjar</button>') + '</div>';
+  }
+  $('contexto_lista').innerHTML = h || '<p class="dica">Nenhum trecho apontado neste caso.</p>';
+  $('contexto_msg').textContent = '';
+  $('dlg_contexto').dataset.mapa = mapa;
+  estado.alertasVistos[mapa] = true;
+  if (!$('dlg_contexto').open) $('dlg_contexto').showModal();
+}
+
+/** Antes de mandar o caso à IA: se há alerta de contexto que quem usa ainda não viu, a janela pergunta (uma vez por caso). */
+async function conferirAlertas(mapa, autos, mapaObj) {
+  if (estado.e2e || !alertaLigado() || estado.alertasVistos[mapa]) return;
+  if (!estado.alertas[mapa]) estado.alertas[mapa] = Contexto.alertas(autos, mapaObj);
+  const lista = estado.alertas[mapa];
+  if (!lista.length) return;
+  const amostra = lista.slice(0, 6).map((a) => '• ' + a.titulo + ': “' + a.trecho.slice(0, 70) + '”').join('\n');
+  const enviar = await T.dialog.ask('Alerta de contexto: ' + lista.length + (lista.length === 1 ? ' trecho ainda pode' : ' trechos ainda podem') +
+    ' identificar alguém, mesmo sem o nome.\n\n' + amostra + (lista.length > 6 ? '\n… e mais ' + (lista.length - 6) : '') + '\n\nEnviar à IA assim mesmo?',
+    { title: 'Alerta de contexto', kind: 'warning', okLabel: 'Enviar assim mesmo', cancelLabel: 'Ver os trechos' });
+  estado.alertasVistos[mapa] = true;
+  if (!enviar) { abrirAlertas(mapa); throw new Error('Envio cancelado: confira o alerta de contexto e gere a minuta de novo.'); }
+}
+
+const contextoLigado = () => (estado.e2e ? !!estado.e2eContexto : estado.ajustes.contexto !== false);
+const alertaLigado = () => (estado.e2e ? !!estado.e2eContexto : estado.ajustes.alertaContexto !== false);
+const cifrarLigado = () => (estado.e2e ? !!estado.e2eCifrar : estado.ajustes.cifrarMapa !== false);
+
 /** O repasse do porteiro na anonimização (16/11/2026, pedido do usuário: "Identificou dados em claro? reaplica a função
  *  para esses dados!"): depois do motor, cada página é conferida contra o mapa do próprio caso, e o dado que ainda
  *  estiver em claro vira o token — no PDF, no .txt e no texto que o 🧠 manda. { total, porDoc: [n por documento] }. */
@@ -1095,24 +1138,39 @@ async function repassarCaso(r) {
   const mapaObj = JSON.parse(r.mapaJson), porDoc = [];
   let total = 0, feitas = 0;
   const apr = aplicarAprendizado(r, mapaObj), usados = new Map(), formas = new Map();
+  // o contexto (19/11/2026): o município, a comarca, o cargo, a empresa, a fazenda, o apelido e o número do processo
+  // entram no mapa do caso, e o porteiro os troca junto com o resto (contexto.js). O que quem usa ensinou que não é
+  // dado pessoal fica em claro.
+  const doContexto = new Map(), porTipo = {};
+  if (contextoLigado()) {
+    const nao = new Set(aprendidos().filter((x) => !x.pessoal).map((x) => chaveApr(x.valor)));
+    const tudo = [r.cabecalho].concat(...(r.documentos || []).map((d) => d.paginas)).join('\n\f\n');
+    for (const c of Contexto.registrar(mapaObj, Contexto.achar(tudo), (v) => nao.has(chaveApr(v)))) doContexto.set(c.token, c.tipo);
+    await new Promise((res) => setTimeout(res));
+  }
+  // devolve quantas das trocas são do contexto (não contam como "ficou em claro": o motor nem as procura)
   const conta = (x) => {
+    let nCtx = 0;
     for (const t of x.trocas) {
       usados.set(t.token, (usados.get(t.token) || 0) + t.n);
       formas.set(t.token, (formas.get(t.token) || []).concat(t.valores || []));
+      if (doContexto.has(t.token)) { nCtx += t.n; porTipo[doContexto.get(t.token)] = (porTipo[doContexto.get(t.token)] || 0) + t.n; }
     }
+    return nCtx;
   };
-  const cab = Porteiro.tarjar(r.cabecalho, mapaObj);
-  conta(cab);
+  const cab = Porteiro.tarjar(r.cabecalho, mapaObj), cabCtx = conta(cab);
   if (cab.total) r.cabecalho = cab.texto;
   for (const [k, d] of (r.documentos || []).entries()) {
-    let n = k === 0 ? cab.total : 0;
+    let n = k === 0 ? cab.total - cabCtx : 0;
     for (let p = 0; p < d.paginas.length; p++) {
       const x = Porteiro.tarjar(d.paginas[p], mapaObj);
-      conta(x);
-      if (x.total) { d.paginas[p] = x.texto; n += x.total; }
+      const nCtx = conta(x);
+      if (x.total) { d.paginas[p] = x.texto; n += x.total - nCtx; }
       if (++feitas % 25 === 0) await new Promise((res) => setTimeout(res));   // a janela respira nos autos grandes
     }
     if (typeof d.texto === 'string') { const x = Porteiro.tarjar(d.texto, mapaObj); conta({ trocas: x.trocas.map((t) => Object.assign({}, t, { n: 0 })) }); if (x.total) d.texto = x.texto; }
+    // o nome do arquivo de saída vai no título do documento que a IA lê: o número do processo e o município saem dele também
+    if (doContexto.size && typeof d.nomeSaida === 'string') d.nomeIa = Porteiro.tarjar(d.nomeSaida, mapaObj).texto;
     porDoc.push(n);
     total += n;
   }
@@ -1120,10 +1178,18 @@ async function repassarCaso(r) {
   let ensinados = 0, mudou = false;
   const rodada = [];
   for (const t of apr.ensinados) { if (usados.has(t)) ensinados += usados.get(t); else delete mapaObj.tokens[t]; }
-  for (const t of usados.keys()) if (!apr.ensinados.includes(t)) mudou = aprenderDoPorteiro(mapaObj, t, formas.get(t), rodada, 'na anonimização') || mudou;
+  for (const t of doContexto.keys()) if (!usados.has(t)) delete mapaObj.tokens[t];   // achado que outro mais comprido cobriu
+  // o cabeçalho que a IA lê passa a dizer que há tokens de contexto (para ela os reproduzir como os outros)
+  const ancora = '\n\nINSTRUÇÃO PARA A IA';
+  if (Object.keys(porTipo).length) {
+    const linha = '\nContexto também trocado por tokens: ' + Object.keys(porTipo).map((t) => t + ' (' + Contexto.TIPOS[t] + ')').join(' · ') + '.' + ancora;
+    if (r.cabecalho.includes(ancora)) r.cabecalho = r.cabecalho.replace(ancora, linha);
+    for (const d of r.documentos || []) if (typeof d.texto === 'string' && d.texto.includes(ancora)) d.texto = d.texto.replace(ancora, linha);   // o .txt leva o cabeçalho dentro
+  }
+  for (const t of usados.keys()) if (!apr.ensinados.includes(t) && !doContexto.has(t)) mudou = aprenderDoPorteiro(mapaObj, t, formas.get(t), rodada, 'na anonimização') || mudou;
   if (mudou) await gravarAprendizado();
-  if (apr.claros || ensinados) r.mapaJson = JSON.stringify(mapaObj, null, 1);
-  return { total: total - ensinados, porDoc, claros: apr.claros, ensinados, rodada };
+  if (apr.claros || ensinados || doContexto.size) r.mapaJson = JSON.stringify(mapaObj, null, 1);
+  return { total: total - ensinados, porDoc, claros: apr.claros, ensinados, rodada, contexto: porTipo };
 }
 
 /** Passo 3: o caso inteiro no motor (um documento só já veio pronto do passo 1), a leitura rigorosa e a gravação. */
@@ -1148,6 +1214,9 @@ async function gravarCaso(g, nomesUsados) {
     marcar('gravando');
     const destino = estado.ajustes.saida === 'outra' ? estado.ajustes.pastaSaida : null;
     const textoDoCaso = autosParaIa(r);
+    // o alerta de contexto: o que ainda pode identificar alguém sem nome nenhum ("o único…", "filho do prefeito")
+    const alertasDoCaso = alertaLigado() ? Contexto.alertas(textoDoCaso, JSON.parse(r.mapaJson)) : [];
+    const nCtx = Object.values(repasse.contexto || {}).reduce((a, b) => a + b, 0);
     for (const [k, i] of its.entries()) {
       const d = r.documentos[k];
       let nome = d.nomeSaida, n = 2;
@@ -1159,12 +1228,16 @@ async function gravarCaso(g, nomesUsados) {
       if (k === 0 && (repasse.ensinados || repasse.claros)) i.avisos.push('aprendizado: ' + [repasse.ensinados ? repasse.ensinados + ' trecho(s) com dado que você ensinou foram tarjados' : '',
         repasse.claros ? repasse.claros + ' dado(s) que você disse não serem pessoais ficaram em claro' : ''].filter(Boolean).join('; '));
       if (repasse.porDoc[k]) i.avisos.push('repasse do porteiro: ' + repasse.porDoc[k] + (repasse.porDoc[k] === 1 ? ' trecho que tinha ficado em claro foi tarjado' : ' trechos que tinham ficado em claro foram tarjados'));
+      if (k === 0 && nCtx) i.avisos.push('contexto: ' + nCtx + (nCtx === 1 ? ' trecho tarjado' : ' trechos tarjados') + ' (' +
+        Object.keys(repasse.contexto).map((t) => Contexto.TIPOS[t] + ' ' + repasse.contexto[t]).join(', ') + ')');
       i.saida = await invoke('gravar_saida', { pedido: {
         origem: i.caminho, destino, versao_motor: r.versao, nome_saida: nome,
         cabecalho: r.cabecalho.normalize('NFC'), paginas: d.paginas.map((p) => p.normalize('NFC')),
-        texto: comTexto ? d.texto : null, mapa: r.mapaJson, confira: r.confira,
+        texto: comTexto ? d.texto : null, mapa: r.mapaJson, confira: r.confira, cifrar: cifrarLigado(),
       } });
-      if (k === 0) estado.autosAnon[i.saida.mapa] = textoDoCaso;
+      if (i.saida.aviso_cofre && k === 0) i.avisos.push('o mapa foi gravado SEM cifrar: ' + i.saida.aviso_cofre);
+      if (k === 0) { estado.autosAnon[i.saida.mapa] = textoDoCaso; estado.alertas[i.saida.mapa] = alertasDoCaso; delete estado.alertasVistos[i.saida.mapa]; }
+      mapasLidos[i.saida.mapa] = r.mapaJson;   // o mapa deste caso já está em claro na memória: não precisa abrir o cofre de novo
       if (i.saida.sem_glifo) i.avisos.push(i.saida.sem_glifo + ' caractere(s) sem desenho na fonte viraram "?" no PDF' + (comTexto ? ' (o .txt tem o original)' : ''));
       i.etapa = 'pronto';
     }
@@ -1235,6 +1308,9 @@ async function lerAjustes() {
   Object.assign(estado.ajustes, a || {});
   $('op_txt').checked = !!estado.ajustes.txt;
   $('op_rigoroso').checked = !!estado.ajustes.rigoroso;
+  $('op_contexto').checked = estado.ajustes.contexto !== false;
+  $('op_alerta').checked = estado.ajustes.alertaContexto !== false;
+  $('op_cifrar').checked = estado.ajustes.cifrarMapa !== false;
   $('op_juntar').checked = estado.ajustes.juntar !== false;
   document.querySelector('input[name=saida][value=' + (estado.ajustes.saida === 'outra' ? 'outra' : 'ao_lado') + ']').checked = true;
   $('pasta_saida').value = estado.ajustes.pastaSaida || '';
@@ -1913,7 +1989,7 @@ async function conversaMpa(base, mensagens, ctx) {
 /** O texto anonimizado do caso inteiro, como vai à IA: o cabeçalho e cada documento com as páginas numeradas. */
 function autosParaIa(r) {
   const docs = r.documentos || [];
-  return [r.cabecalho].concat(docs.map((d, k) => '===== DOCUMENTO ' + (k + 1) + ' de ' + docs.length + ': ' + d.nomeSaida + ' =====\n\n' +
+  return [r.cabecalho].concat(docs.map((d, k) => '===== DOCUMENTO ' + (k + 1) + ' de ' + docs.length + ': ' + (d.nomeIa || d.nomeSaida) + ' =====\n\n' +
     d.paginas.map((p, n) => '— página ' + (n + 1) + ' —\n' + p).join('\n\n'))).join('\n\n').normalize('NFC');
 }
 
@@ -2079,6 +2155,7 @@ async function rodarMpa(mapa) {
       } catch (e) { avisos.push('sem a pasta de modelos: ' + String((e && e.message) || e)); }
     }
     const mapaJson = await mapaDoCaso(mapa), mapaObj = JSON.parse(mapaJson);
+    await conferirAlertas(mapa, autos, mapaObj);
     const tok = async (t) => (await estado.worker.pedir('aplicarMapa', { texto: t, mapa: mapaJson })).texto;
     const sis = await montarSistema(prompt, extras, faltam, tok);
     if (extras.livro && !sis.livro) avisos.push('o Livro de Modelos não tem nenhum modelo reconhecível');
@@ -2910,6 +2987,31 @@ function ligar() {
   };
   document.querySelectorAll('input[name=saida]').forEach((el) => { el.onchange = () => { estado.ajustes.saida = el.value; gravarAjustes(); }; });
   $('op_txt').onchange = () => { estado.ajustes.txt = $('op_txt').checked; gravarAjustes(); };
+  for (const [id, chave] of [['op_contexto', 'contexto'], ['op_alerta', 'alertaContexto'], ['op_cifrar', 'cifrarMapa']]) {
+    $(id).onchange = () => { estado.ajustes[chave] = $(id).checked; gravarAjustes(); };
+  }
+  $('bt_cofre_mostrar').onclick = async () => {
+    try {
+      const c = await invoke('cofre_chave_mostrar');
+      $('cofre_msg').innerHTML = 'A chave de recuperação deste computador. Guarde-a num lugar seguro (um gerenciador de senhas, um papel no cofre): quem a tiver abre os seus mapas.<code>' + esc(c) + '</code>';
+    } catch (e) { $('cofre_msg').innerHTML = '<span class="msg-erro">' + esc((e && e.message) || e) + '</span>'; }
+  };
+  $('bt_cofre_importar').onclick = async () => {
+    $('cofre_msg').innerHTML = 'Cole aqui a chave de recuperação do outro computador: <input id="cofre_chave" type="text" spellcheck="false" placeholder="XXXX-XXXX-…"> ' +
+      '<button type="button" id="bt_cofre_ok" class="ghost pequeno">Usar esta chave</button><br>A chave atual deste computador fica guardada e continua abrindo os mapas dela.';
+    $('bt_cofre_ok').onclick = async () => {
+      try { await invoke('cofre_chave_importar', { chave: $('cofre_chave').value }); $('cofre_msg').textContent = 'Chave trocada. Os mapas cifrados com ela já abrem aqui, e os próximos serão cifrados com ela.'; }
+      catch (e) { avisar(String((e && e.message) || e)); }
+    };
+  };
+  $('bt_contexto_fechar').onclick = () => $('dlg_contexto').close();
+  $('contexto_lista').onclick = async (ev) => {
+    const b = ev.target.closest('[data-ctx-tarjar]');
+    if (!b) return;
+    if (aprender(b.dataset.ctxTarjar, true, 'você')) await gravarAprendizado();
+    b.disabled = true; b.textContent = 'Ensinado';
+    $('contexto_msg').textContent = 'Ensinado como dado pessoal. Para valer neste caso, marque a linha e use Reanonimizar.';
+  };
   $('op_juntar').onchange = () => { estado.ajustes.juntar = $('op_juntar').checked; gravarAjustes(); };
   $('op_rigoroso').onchange = async () => {
     estado.ajustes.rigoroso = $('op_rigoroso').checked; gravarAjustes();
@@ -2956,6 +3058,8 @@ function ligar() {
     if (b) invoke('revelar', { caminho: b.dataset.revelar });
     const co = ev.target.closest('[data-colar]');
     if (co) abrirColar(co.dataset.colar);
+    const al = ev.target.closest('[data-alertas]');
+    if (al) abrirAlertas(al.dataset.alertas);
     const ap = ev.target.closest('[data-aprender]');
     if (ap) abrirAprendizado(ap.dataset.aprender).catch((e) => avisar(String((e && e.message) || e)));
     const ve = ev.target.closest('[data-ver]');
@@ -3248,6 +3352,7 @@ async function testeDePontaAPonta(p) {
     estado.ajustes.pastaSaida = p.saida || '';
     $('op_txt').checked = !!p.txt;
     estado.ajustes.rigoroso = !!p.rigoroso;
+    estado.e2eContexto = !!p.contexto; estado.e2eCifrar = !!p.cifrar;
     $('op_rigoroso').checked = estado.ajustes.rigoroso;
     estado.ajustes.juntar = p.juntar !== false;
     $('op_juntar').checked = estado.ajustes.juntar;
@@ -3255,7 +3360,14 @@ async function testeDePontaAPonta(p) {
     await rodar();
     rel.itens = estado.fila.map((i) => ({ nome: i.nome, caminho: i.caminho, etapa: i.etapa, erro: i.erro, saida: i.saida, stats: i.stats,
       avisos: i.avisos, paginas: i.paginas, e2e: i.e2e, motor: i.motor, segundos: i.segundos,
+      alertas: ((i.saida && estado.alertas[i.saida.mapa]) || []).map((x) => x.regra + ':' + x.trecho),
       caso: i.caso ? { rotulo: i.caso.rotulo, chave: i.caso.chave, n: i.caso.itens.length, motivo: i.caso.motivo } : null }));
+    // o cofre: o mapa cifrado no disco volta em claro pelo ler_texto (sem o atalho da memória)
+    if (p.cifrar) {
+      const i = estado.fila.find((x) => x.saida && x.saida.mapa);
+      try { const t = await invoke('ler_texto', { caminho: i.saida.mapa }); rel.cofre = { cifrado: !!i.saida.mapa_cifrado, aviso: i.saida.aviso_cofre || null, tokens: Object.keys(JSON.parse(t).tokens || {}) }; }
+      catch (e) { rel.cofre = { erro: String((e && e.message) || e) }; }
+    }
     // o teste de Separar: tira o documento pedido do caso dele e refaz
     if (p.separar) {
       const alvo = estado.fila.find((i) => i.nome === p.separar);

@@ -11,6 +11,7 @@
 //! (`init_como_modulo`). A lista de comandos está aqui, no build.rs e em permissions/default.toml.
 mod chaveiro;
 mod claude;
+mod cofre;
 mod docx;
 mod ferramentas;
 mod gdocs;
@@ -181,6 +182,9 @@ struct PedidoSaida {
     #[serde(default)]
     nome_saida: Option<String>,
     versao_motor: String,
+    /// O mapa vai cifrado para o disco (cofre.rs). Sem a chave do chaveiro, vai em claro e a janela é avisada.
+    #[serde(default)]
+    cifrar: bool,
 }
 
 /// O nome de saída termina em "_anon" (sem repetir, se já termina).
@@ -206,6 +210,10 @@ struct Gravado {
     confira: Option<String>,
     sem_glifo: usize,
     folhas: usize,
+    /// o mapa foi gravado cifrado
+    mapa_cifrado: bool,
+    /// por que o mapa, pedido cifrado, foi em claro (o chaveiro do sistema recusou a chave)
+    aviso_cofre: Option<String>,
 }
 
 fn pasta_destino(origem: &Path, destino: &Option<String>) -> PathBuf {
@@ -248,7 +256,8 @@ fn gravar_atomico(p: &Path, dados: &[u8]) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn gravar_saida(pedido: PedidoSaida) -> Result<Gravado, String> {
+async fn gravar_saida(estado: tauri::State<'_, ia::EstadoIa>, pedido: PedidoSaida) -> Result<Gravado, String> {
+    let servico = estado.0.servico().to_string();
     em_segundo_plano(move || {
         let origem = PathBuf::from(&pedido.origem);
         let dir = pasta_destino(&origem, &pedido.destino);
@@ -286,9 +295,21 @@ async fn gravar_saida(pedido: PedidoSaida) -> Result<Gravado, String> {
         if pedido.mapa.is_some() || pedido.confira.is_some() {
             std::fs::create_dir_all(&privada).map_err(|e| format!("não consegui criar a pasta do mapa: {e}"))?;
         }
+        let (mut mapa_cifrado, mut aviso_cofre) = (false, None);
         if let Some(m) = &pedido.mapa {
             let p = privada.join(format!("{base_final} — MAPA (nomes reais).json"));
-            gravar_atomico(&p, m.as_bytes())?;
+            // o mapa nunca deixa de ser gravado: se o chaveiro recusa a chave, ele vai em claro e a janela avisa
+            match if pedido.cifrar { cofre::selar_aqui(&servico, m.as_bytes()).map(Some) } else { Ok(None) } {
+                Ok(Some(envelope)) => {
+                    gravar_atomico(&p, envelope.as_bytes())?;
+                    mapa_cifrado = true;
+                }
+                Ok(None) => gravar_atomico(&p, m.as_bytes())?,
+                Err(e) => {
+                    gravar_atomico(&p, m.as_bytes())?;
+                    aviso_cofre = Some(e);
+                }
+            }
             mapa = Some(p.to_string_lossy().to_string());
         }
         if let Some(c) = &pedido.confira {
@@ -296,7 +317,7 @@ async fn gravar_saida(pedido: PedidoSaida) -> Result<Gravado, String> {
             gravar_atomico(&p, c.as_bytes())?;
             confira = Some(p.to_string_lossy().to_string());
         }
-        Ok(Gravado { pdf: destino_pdf.to_string_lossy().to_string(), txt, mapa, confira, sem_glifo: r.sem_glifo, folhas: pedido.paginas.len() + 1 })
+        Ok(Gravado { pdf: destino_pdf.to_string_lossy().to_string(), txt, mapa, confira, sem_glifo: r.sem_glifo, folhas: pedido.paginas.len() + 1, mapa_cifrado, aviso_cofre })
     })
     .await
 }
@@ -367,9 +388,46 @@ fn expandir_caminhos(caminhos: Vec<String>) -> Vec<String> {
 // ── reidentificação ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// O texto de um arquivo (o mapa .json, uma minuta .txt ou .md).
+/// O mapa cifrado (cofre.rs) é aberto aqui, com a chave do chaveiro: a janela recebe o dicionário como sempre.
 #[tauri::command]
-async fn ler_texto(caminho: String) -> Result<String, String> {
-    em_segundo_plano(move || reid::ler_texto(Path::new(&caminho))).await
+async fn ler_texto(estado: tauri::State<'_, ia::EstadoIa>, caminho: String) -> Result<String, String> {
+    let servico = estado.0.servico().to_string();
+    em_segundo_plano(move || {
+        let t = reid::ler_texto(Path::new(&caminho))?;
+        if cofre::eh_cofre(&t) { cofre::abrir_aqui(&servico, &t) } else { Ok(t) }
+    })
+    .await
+}
+
+/// O cofre do mapa nas Configurações: se já há chave neste computador e o apelido dela (nunca a chave).
+#[derive(Serialize)]
+struct SituacaoCofre {
+    tem_chave: bool,
+    apelido: String,
+}
+
+#[tauri::command]
+async fn cofre_situacao(estado: tauri::State<'_, ia::EstadoIa>) -> Result<SituacaoCofre, String> {
+    let servico = estado.0.servico().to_string();
+    em_segundo_plano(move || {
+        let c = cofre::chaves(&servico, false)?;
+        Ok(SituacaoCofre { tem_chave: c.is_some(), apelido: c.map(|(a, _)| cofre::apelido(&a)).unwrap_or_default() })
+    })
+    .await
+}
+
+/// A chave de recuperação, para quem usa copiar e guardar (só no clique dela; cria a chave se ainda não há).
+#[tauri::command]
+async fn cofre_chave_mostrar(estado: tauri::State<'_, ia::EstadoIa>) -> Result<String, String> {
+    let servico = estado.0.servico().to_string();
+    em_segundo_plano(move || cofre::chaves(&servico, true)?.map(|(a, _)| cofre::em_grupos(&a)).ok_or_else(|| "sem a chave do cofre".to_string())).await
+}
+
+/// A chave de outro computador, colada: passa a ser a deste (a de antes fica guardada e ainda abre os mapas dela).
+#[tauri::command]
+async fn cofre_chave_importar(estado: tauri::State<'_, ia::EstadoIa>, chave: String) -> Result<String, String> {
+    let servico = estado.0.servico().to_string();
+    em_segundo_plano(move || cofre::importar(&servico, &chave)).await
 }
 
 /// As partes com texto de uma minuta .docx, para o front trocar os tokens.
@@ -760,6 +818,9 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             ia::ia_modelos,
             ia::ia_pasta_listar,
             ia::ia_gdocs_enviar,
+            cofre_situacao,
+            cofre_chave_mostrar,
+            cofre_chave_importar,
             visor::visor_abrir
         ])
         .register_asynchronous_uri_scheme_protocol(visor::ESQUEMA, visor::servir)
@@ -868,7 +929,7 @@ mod testes {
         // cada comando do build.rs está no conjunto `default`; o `api` só tem comandos que existem
         let build = include_str!("../build.rs");
         let comandos: Vec<String> = build.split('"').skip(1).step_by(2).map(|c| c.to_string()).collect();
-        assert_eq!(comandos.len(), 55);
+        assert_eq!(comandos.len(), 58);
         let toml = include_str!("../permissions/default.toml");
         let (padrao, api) = toml.split_once("[[set]]").expect("o conjunto api");
         for c in &comandos {
