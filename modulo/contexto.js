@@ -79,6 +79,8 @@ function aparar(texto, opts) {
 const TIPOS = {
   MUNICIPIO: 'município ou comarca', CARGO: 'cargo', EMPRESA: 'empresa ou estabelecimento', FAZENDA: 'fazenda, sítio ou gleba',
   APELIDO: 'apelido', PROCESSO: 'número do processo',
+  JUIZ: 'juiz', PROMOTOR: 'promotor de justiça', DELEGADO: 'delegado', ADVOGADO: 'advogado', DEFENSOR: 'defensor', POLICIAL: 'policial', PERITO: 'perito',
+  SERVIDOR: 'servidor ou outra autoridade',
 };
 
 // ── 1. ACHAR ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -194,10 +196,77 @@ function registrar(mapa, achados, recusar) {
     let token;
     do { n[a.tipo] = (n[a.tipo] || 0) + 1; token = '«' + a.tipo + '_' + String(n[a.tipo]).padStart(2, '0') + '»'; } while (tokens[token]);
     tokens[token] = { valor: a.valor, tipo: a.tipo };
+    if (a.variantes && a.variantes.length) tokens[token].variantes = a.variantes.slice();
     tem.add(k);
-    novos.push({ token, tipo: a.tipo, valor: a.valor });
+    novos.push({ token, tipo: a.tipo, valor: a.valor, origem: a.origem });
   }
   return novos;
+}
+
+// ── 1b. AS AUTORIDADES (19/11/2026, pedido do usuário: "tira o nome do juiz, promotor, delegado e adv também; tira
+// tudo, mais prático; juiz1, promotor1, etc.") ──────────────────────────────────────────────────────────────────────
+// O motor deixa em claro o nome de autoridade, servidor e advogado e anota a chave de cada um em `mapa.emClaro` (as
+// palavras do nome, sem acento, sem "de/da"). Aqui cada chave é procurada no texto, o papel sai do que vem antes ou
+// depois do nome ("Juiz de Direito", "OAB", "Delegada de Polícia") e o nome vira um token do papel: «JUIZ_01»,
+// «PROMOTOR_01», «DELEGADO_01», «ADVOGADO_01», «DEFENSOR_01», «POLICIAL_01», «PERITO_01», «SERVIDOR_01» (o resto).
+// Fica em claro o ministro, o desembargador e o relator: é nome de julgado citado (decisão de 09/11/2026).
+const PAPEIS_AUT = [
+  ['FORA', 'ministr[oa]|min\\.|desembargador[a]?|des[a]?\\.|relator[a]?|rel\\.'],
+  ['JUIZ', 'ju[ií]z[a]?|magistrad[oa]|MM\\.?'],
+  ['PROMOTOR', 'promotor[a]?|procurador[a]?\\s+de\\s+justi[çc]a'],
+  ['DELEGADO', 'delegad[oa]'],
+  ['DEFENSOR', 'defensor[a]?'],
+  ['ADVOGADO', 'advogad[oa]|OAB|adv\\.'],
+  ['PERITO', 'perit[oa]|m[ée]dic[oa]\\s+legista'],
+  ['POLICIAL', 'policia(?:l|is)|investigador[a]?|(?:SD|CB|SGT|SUBTEN|TEN|CAP|MAJ|CEL)\\.?\\s*(?:PM|BM)|PM|soldado|sargento|cabo|tenente|capit[ãa]o|major|coronel'],
+].map(([tipo, alt]) => [tipo, new RegExp('(?<![' + LET + '])(?:' + alt + ')(?![' + LET + '])', 'gi')]);
+
+/** O texto sem acento e em maiúsculas, com uma letra por letra (as posições valem no original). */
+const dobra = (cru) => cru.normalize('NFC').split('').map((c) => c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().charAt(0) || c).join('');
+
+/** O papel de quem tem o nome entre `i` e `f`: o cargo mais perto, antes (na mesma linha) ou depois (até a linha de baixo). */
+function papelDe(t, i, f) {
+  // só a frase do nome: o cargo da frase vizinha é de outra pessoa ("Rel.", "Des.", "adv." não fecham frase)
+  const antes = t.slice(Math.max(0, i - 60), i).split('\n').pop().split(/[a-zà-ÿ]{4,}[.;!?]\s/).pop();
+  const depois = t.slice(f, f + 110).split('\n').slice(0, 2).join('\n').split(/[.;!?](?:\s|$)/)[0];
+  let melhor = null, dist = 1e9;
+  for (const [tipo, re] of PAPEIS_AUT) {
+    let m;
+    re.lastIndex = 0;
+    while ((m = re.exec(antes))) { const d = antes.length - (m.index + m[0].length); if (d < dist) { dist = d; melhor = tipo; } }
+    re.lastIndex = 0;
+    if ((m = re.exec(depois)) && m.index < dist) { dist = m.index; melhor = tipo; }
+  }
+  return melhor;
+}
+
+/** Os nomes que o motor deixou em claro, cada um com o seu papel: [{ tipo, valor, variantes, origem }] (`origem`: a
+ *  chave do motor). O que só aparece como julgador de precedente (ministro, desembargador, relator) não entra. */
+function autoridades(texto, mapa) {
+  const t = String(texto || '').normalize('NFC'), chaves = ((mapa && mapa.emClaro) || []).concat((mapa && mapa.autoridadesIa) || []), out = [];
+  if (!t || !chaves.length) return out;
+  const dob = dobra(t), vistas = new Set();
+  for (const k of chaves) {
+    const ps = String(k || '').toUpperCase().split(' ').filter(Boolean);
+    if (ps.length < 2 || vistas.has(k)) continue;
+    vistas.add(k);
+    const re = new RegExp('(?<![A-Z0-9«_])' + ps.map((p) => p.replace(/[^A-Z0-9]/g, '')).join('\\s+(?:(?:D[AEO]S?|E|DI|DEL|VON|VAN)\\s+)?') + '(?![A-Z0-9»_])', 'g');
+    const formas = new Map(), votos = {};
+    let m;
+    while ((m = re.exec(dob))) {
+      const forma = t.slice(m.index, m.index + m[0].length).replace(/\s+/g, ' '), kf = chave(forma);
+      if (!formas.has(kf) || (forma !== forma.toUpperCase() && formas.get(kf) === formas.get(kf).toUpperCase())) formas.set(kf, forma);
+      const p = papelDe(t, m.index, m.index + m[0].length) || 'SERVIDOR';
+      votos[p] = (votos[p] || 0) + 1;
+    }
+    if (!formas.size) continue;
+    const ordem = Object.keys(votos).filter((p) => p !== 'SERVIDOR').sort((a, b) => votos[b] - votos[a]);
+    const tipo = ordem[0] || 'SERVIDOR';
+    if (tipo === 'FORA') continue;
+    const lista = [...formas.values()].sort((a, b) => (a === a.toUpperCase()) - (b === b.toUpperCase()) || b.length - a.length);
+    out.push({ tipo, valor: lista[0], variantes: lista.slice(1), origem: k });
+  }
+  return out;
 }
 
 // ── 2. ALERTAR ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -245,13 +314,13 @@ function alertas(texto, mapa, max) {
         antes: t.slice(Math.max(0, m.index - 60), m.index).replace(/\s+/g, ' '), depois: t.slice(m.index + m[0].length, m.index + m[0].length + 60).replace(/\s+/g, ' ') });
     }
   }
-  const claros = mapa && mapa.emClaro ? (Array.isArray(mapa.emClaro) ? mapa.emClaro.length : Object.keys(mapa.emClaro).length) : 0;
+  const claros = Math.max(0, (mapa && Array.isArray(mapa.emClaro) ? mapa.emClaro.length : 0) - (mapa && Array.isArray(mapa.emClaroTarjados) ? mapa.emClaroTarjados.length : 0));
   if (claros) out.push({ regra: 'autoridade', titulo: 'Autoridades com o nome em claro', porque: 'o nome do juiz, do promotor, do delegado ou do advogado permite descobrir a comarca',
-    trecho: claros + (claros === 1 ? ' nome ficou' : ' nomes ficaram') + ' em claro pela regra do motor (autoridade, servidor ou advogado)', antes: '', depois: '', i: -1 });
+    trecho: claros + (claros === 1 ? ' nome ficou' : ' nomes ficaram') + ' em claro (autoridade, servidor ou advogado: julgador de precedente citado, ou nome que você ensinou a deixar)', antes: '', depois: '', i: -1 });
   return out;
 }
 
-const api = { achar, registrar, alertas, TIPOS, chave };
+const api = { achar, registrar, autoridades, alertas, TIPOS, chave };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 else raiz.Contexto = api;
 })(typeof window !== 'undefined' ? window : globalThis);

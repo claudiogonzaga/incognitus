@@ -225,7 +225,7 @@
   <div id="msg_rigoroso" class="suave"></div>
   <h2>Contexto</h2>
   <label class="opcao"><input id="op_contexto" type="checkbox" checked> <span>Tarjar também o contexto</span></label>
-  <p class="dica">Além dos nomes e documentos, saem do texto o <b>município e a comarca</b>, o <b>cargo</b> (prefeito, vereador, tabelião, secretário…), o nome de <b>empresa</b> e de estabelecimento, de <b>fazenda</b>, sítio ou gleba, o <b>apelido</b> e o <b>número do processo</b> (os quatro últimos dígitos dele dizem a comarca). Cada um vira um marcador («MUNICIPIO_01», «CARGO_01»…) e volta na reidentificação. As datas ficam.</p>
+  <p class="dica">Além dos nomes e documentos, saem do texto o <b>município e a comarca</b>, o <b>cargo</b> (prefeito, vereador, tabelião, secretário…), o nome de <b>empresa</b> e de estabelecimento, de <b>fazenda</b>, sítio ou gleba, o <b>apelido</b> e o <b>número do processo</b> (os quatro últimos dígitos dele dizem a comarca). Sai também o nome do <b>juiz, do promotor, do delegado, do advogado</b> e dos servidores, cada um com o marcador do papel («JUIZ_01», «PROMOTOR_01»…); só o julgador de precedente citado continua em claro. Cada um vira um marcador («MUNICIPIO_01», «CARGO_01»…) e volta na reidentificação. As datas ficam.</p>
   <label class="opcao"><input id="op_alerta" type="checkbox" checked> <span>Alerta de contexto</span></label>
   <p class="dica">Depois de anonimizar, o Incognitus aponta os trechos que ainda podem identificar alguém sem nome nenhum (“o único…”, “filho do prefeito”, “dono do posto”, o tamanho da cidade, o bairro) e pergunta antes de mandar o caso à IA.</p>
   <h2>Mapa cifrado</h2>
@@ -246,7 +246,7 @@
 
     <h3>O que a lei chama de anonimização</h3>
     <p>Pela LGPD (Lei 13.709/2018), <b>dado anonimizado</b> é o “relativo a titular que não possa ser identificado, considerando a utilização de meios técnicos razoáveis e disponíveis na ocasião de seu tratamento” (art. 5º, III). <b>Anonimização</b> é o uso desses meios para que o dado perca “a possibilidade de associação, direta ou indireta, a um indivíduo” (art. 5º, XI).</p>
-    <p>O dado anonimizado não é dado pessoal, salvo quando o processo for revertido com meios próprios ou puder ser revertido com <b>esforços razoáveis</b> (art. 12). O que é razoável se mede por fatores objetivos, como o custo e o tempo para reverter, conforme a tecnologia disponível (art. 12, § 1º). O critério da lei é esse, e não a impossibilidade absoluta de reverter.</p>
+    <p>O dado anonimizado não é dado pessoal, salvo quando o processo for revertido com meios próprios ou puder ser revertido com <b>esforços razoáveis</b> (art. 12). O que é razoável se mede por fatores objetivos, como o custo e o tempo para reverter, conforme a tecnologia disponível (art. 12, § 1º).</p>
 
     <h3>O que a lei chama de pseudonimização</h3>
     <p>É “o tratamento por meio do qual um dado perde a possibilidade de associação, direta ou indireta, a um indivíduo, senão pelo uso de informação adicional mantida separadamente pelo controlador em ambiente controlado e seguro” (art. 13, § 4º). A palavra da lei é pseudonimização; “pseudoanonimização” é a forma popular.</p>
@@ -255,7 +255,7 @@
     <h3>O que o Incognitus faz</h3>
     <ul>
       <li>Troca nomes, CPF, RG, endereços, telefones, e-mails, placas e outros identificadores por marcadores (por exemplo, «REU_01» e «VITIMA_01»). A mesma pessoa leva o mesmo marcador no caso inteiro.</li>
-      <li>Com a opção de contexto ligada, troca também o município e a comarca, o cargo, o nome de empresa, de fazenda, o apelido e o número do processo. As datas ficam.</li>
+      <li>Com a opção de contexto ligada, troca também o município e a comarca, o cargo, o nome de empresa, de fazenda, o apelido, o número do processo e o nome do juiz, do promotor, do delegado, do advogado e dos servidores («JUIZ_01», «PROMOTOR_01»…). As datas ficam.</li>
       <li>Guarda o <b>mapa</b> (a informação adicional da lei) só neste computador, numa subpasta à parte e cifrado. O mapa nunca vai à IA.</li>
       <li>Depois que a IA devolve a minuta, recoloca os nomes reais, também neste computador.</li>
       <li>Refaz o PDF só com o texto: as imagens, as fotos e as assinaturas desenhadas do original não vão para o PDF anonimizado.</li>
@@ -266,7 +266,7 @@
     <ul>
       <li><b>O contexto identifica.</b> “O único tabelião do município”, “filho do prefeito”, o bairro, um fato que saiu no jornal: nada disso é nome, e tudo isso aponta para alguém. O alerta de contexto mostra os trechos que as regras reconhecem, não todos.</li>
       <li><b>A troca é automática e pode falhar.</b> As regras (e, na leitura rigorosa, o modelo de linguagem) erram, sobretudo em texto de digitalização ruim (OCR), em nome incomum ou grafado de modos diferentes. Confira antes de enviar.</li>
-      <li><b>Autoridades ficam em claro.</b> Juiz, promotor, delegado, servidor e advogado não são trocados, e o nome deles pode revelar a comarca.</li>
+      <li><b>Julgador de precedente fica em claro.</b> O ministro, o desembargador e o relator de julgado citado não são trocados. Com a opção de contexto desligada, juiz, promotor, delegado, servidor e advogado também ficam em claro, e o nome deles pode revelar a comarca.</li>
       <li><b>O nome do arquivo</b> anonimizado ainda traz o número do processo. Renomeie o arquivo se for anexá-lo a uma IA.</li>
       <li><b>Sigilo.</b> Em segredo de justiça, infância e juventude, família e investigação sigilosa, avalie se o texto pode sair, mesmo tarjado.</li>
       <li><b>O que continua em claro neste computador:</b> os autos originais, a análise e a minuta com os nomes reais e a tabela do aprendizado. Proteja o computador e a pasta.</li>

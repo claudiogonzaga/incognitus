@@ -1141,11 +1141,14 @@ async function repassarCaso(r) {
   // o contexto (19/11/2026): o município, a comarca, o cargo, a empresa, a fazenda, o apelido e o número do processo
   // entram no mapa do caso, e o porteiro os troca junto com o resto (contexto.js). O que quem usa ensinou que não é
   // dado pessoal fica em claro.
-  const doContexto = new Map(), porTipo = {};
+  const doContexto = new Map(), porTipo = {}, origens = new Map();
   if (contextoLigado()) {
     const nao = new Set(aprendidos().filter((x) => !x.pessoal).map((x) => chaveApr(x.valor)));
     const tudo = [r.cabecalho].concat(...(r.documentos || []).map((d) => d.paginas)).join('\n\f\n');
     for (const c of Contexto.registrar(mapaObj, Contexto.achar(tudo), (v) => nao.has(chaveApr(v)))) doContexto.set(c.token, c.tipo);
+    // as autoridades (19/11/2026: "tira o nome do juiz, promotor, delegado e adv também"): o que o motor deixou em claro
+    // vira token do papel («JUIZ_01», «PROMOTOR_01»…); só o julgador de precedente citado continua em claro
+    for (const c of Contexto.registrar(mapaObj, Contexto.autoridades(tudo, mapaObj), (v) => nao.has(chaveApr(v)))) { doContexto.set(c.token, c.tipo); origens.set(c.token, c.origem); }
     await new Promise((res) => setTimeout(res));
   }
   // devolve quantas das trocas são do contexto (não contam como "ficou em claro": o motor nem as procura)
@@ -1179,6 +1182,14 @@ async function repassarCaso(r) {
   const rodada = [];
   for (const t of apr.ensinados) { if (usados.has(t)) ensinados += usados.get(t); else delete mapaObj.tokens[t]; }
   for (const t of doContexto.keys()) if (!usados.has(t)) delete mapaObj.tokens[t];   // achado que outro mais comprido cobriu
+  const tarjadas = [...origens].filter(([t]) => usados.has(t)).map(([, k]) => k);
+  if (tarjadas.length) {
+    mapaObj.emClaroTarjados = tarjadas;
+    // a linha do motor "Em claro (…): N nome(s)." passa a contar só o que ficou mesmo em claro
+    const conserta = (x) => x.replace(/\nEm claro \(servidores, autoridades, advogados\): (\d+) nome\(s\)\./, (m0, n) => (Number(n) - tarjadas.length > 0 ? m0.replace(n, String(Number(n) - tarjadas.length)) : ''));
+    r.cabecalho = conserta(r.cabecalho);
+    for (const d of r.documentos || []) if (typeof d.texto === 'string') d.texto = conserta(d.texto);
+  }
   // o cabeçalho que a IA lê passa a dizer que há tokens de contexto (para ela os reproduzir como os outros)
   const ancora = '\n\nINSTRUÇÃO PARA A IA';
   if (Object.keys(porTipo).length) {

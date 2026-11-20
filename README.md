@@ -168,8 +168,13 @@ e cola os pedaços.
   marcadores («MUNICIPIO_01», «CARGO_01», «EMPRESA_01», «FAZENDA_01», «APELIDO_01», «PROCESSO_01»), que entram no mapa
   do caso e voltam na reidentificação. As **datas ficam**. É por regra (expressões regulares), no computador, e pode
   ser desligado nas Opções; o que for ensinado como "não é dado pessoal" fica em claro. Limites conhecidos: o nome do
-  arquivo de saída ainda leva o número do processo; os nomes de autoridades continuam em claro pela regra do motor; a
+  arquivo de saída ainda leva o número do processo; a
   profissão comum ("lavrador", "médico") não é cargo.
+- **As autoridades** (0.9.2, 19/11/2026): com o contexto ligado, o nome que o motor deixa em claro (`mapa.emClaro`:
+  juiz, promotor, delegado, advogado, defensor, policial, perito, servidor) vira marcador do papel («JUIZ_01»,
+  «PROMOTOR_01», «DELEGADO_01», «ADVOGADO_01», «DEFENSOR_01», «POLICIAL_01», «PERITO_01», «SERVIDOR_01»). O papel sai
+  do cargo escrito junto do nome. Continua em claro o ministro, o desembargador e o relator (julgado citado) e o que
+  for ensinado como "não é dado pessoal". Limite: o sobrenome sozinho ("Dr. Fulano") não é trocado.
 - **Sobre** (19/11/2026): o botão ao lado das Configurações explica, pelos conceitos da LGPD (arts. 5º, III e XI, 12 e
   13, § 4º), o que é anonimização e pseudonimização, o que o Incognitus faz (pseudonimização, com o mapa guardado à
   parte) e os limites dele.

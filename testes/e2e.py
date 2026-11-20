@@ -655,6 +655,10 @@ A vítima é dona do Bar do Tonhão e sócia da empresa Agro Fictícia Comércio
 O Secretário Municipal de Saúde e uma vereadora foram ouvidos.
 A Fazenda Pública não se manifestou. A SSP/MT foi oficiada.
 O sorriso do denunciado foi notado por todos.
+Marcos Antônio Ficticiano, Juiz de Direito, recebeu a denúncia em 15/03/2026.
+Carlos Eduardo Inventado, Promotor de Justiça, subscreve a peça.
+Ana Paula Imaginária, Delegada de Polícia, presidiu o inquérito.
+Advogado: José Roberto Fabulado, OAB/MT 99.999.
 """
 
 
@@ -678,6 +682,10 @@ def secao_contexto(dados):
     marcas = [t for t in ("«MUNICIPIO_01»", "«CARGO_01»", "«FAZENDA_01»", "«EMPRESA_01»", "«PROCESSO_01»") if t in txt]
     confere(it["etapa"] == "pronto" and len(marcas) == 5 and not claros,
             f"o município, a comarca, o cargo, a fazenda, a empresa e o número do processo saem do texto ({len(marcas)} tipos de marcador; em claro: {claros or 'nada'})")
+    aut_claros = [x for x in ("Ficticiano", "Inventado", "Imaginária", "Fabulado") if x in txt]
+    aut_marcas = [t for t in ("«JUIZ_01»", "«PROMOTOR_01»", "«DELEGADO_01»", "«ADVOGADO_01»") if t in txt]
+    confere(len(aut_marcas) == 4 and not aut_claros and "15/03/2026" in txt,
+            f"o juiz, o promotor, o delegado e o advogado saem do texto, cada um com o marcador do papel ({aut_marcas}; em claro: {aut_claros or 'nada'})")
     confere("Contexto também trocado por tokens: " in txt and "MUNICIPIO (município ou comarca)" in txt, "o cabeçalho avisa a IA dos tokens de contexto")
     confere("12/03/2026" in txt and "Fazenda Pública" in txt and "SSP/MT" in txt and "sorriso do denunciado" in txt and "MATO GROSSO" in txt,
             "as datas ficam, e o que não é contexto também (Fazenda Pública, SSP/MT, a palavra comum em minúscula, o estado)")
