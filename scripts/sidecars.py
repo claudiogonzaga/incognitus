@@ -25,6 +25,10 @@ import urllib.request
 
 POPPLER = "25.02.0"
 TESSERACT = "5.5.0"
+# 24/11/2026: a libcurl 8.23 do conda-forge passou a depender da libpsl e, por ela, da ICU (60 MB a mais no .dmg). No Mac
+# fica a 8.21.0 na compilação 1, a que ia até a 0.9.2 (da compilação 2 em diante, a própria 8.21.0 já puxa a libpsl); o
+# Windows não puxa a ICU.
+LIBCURL_MAC = "8.21.0=*_1"
 MICROMAMBA = "2.10.0"
 POR_URL = "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/por.traineddata"
 POR_SHA256 = "c4932b937207a9514b7514d518b931a99938c02a28a5a5a553f8599ed58b7deb"
@@ -79,7 +83,8 @@ def ambiente(plataforma):
     if not os.path.exists(pronto):
         os.environ["MAMBA_ROOT_PREFIX"] = os.path.join(CACHE, "mamba")
         rodar([micromamba(), "create", "-y", "-q", "-p", env, "--platform", plataforma, "-c", "conda-forge",
-               "--override-channels", f"poppler={POPPLER}", f"tesseract={TESSERACT}"])
+               "--override-channels", f"poppler={POPPLER}", f"tesseract={TESSERACT}"]
+              + ([f"libcurl={LIBCURL_MAC}"] if plataforma.startswith("osx") else []))
         open(pronto, "w").write(f"poppler={POPPLER} tesseract={TESSERACT}\n")
     return env
 
