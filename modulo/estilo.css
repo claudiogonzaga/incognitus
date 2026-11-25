@@ -73,6 +73,12 @@ body.arrastando .vazio, body.arrastando #fila { outline:3px dashed var(--ink); o
 button.anonimizar { background:var(--anonimizar); border-color:var(--anonimizar-forte); color:var(--cream);
   box-shadow:0 1px 2px rgba(37,29,22,.25); letter-spacing:.02em; }
 button.anonimizar:hover:not(:disabled) { background:var(--anonimizar-forte); }
+/* o modo de anonimização (24/11/2026): Normal | Profundo, colado à esquerda do botão Anonimizar */
+.modo-anon { display:inline-flex; border:1px solid var(--anonimizar); border-radius:5px; overflow:hidden; vertical-align:middle; }
+.modo-anon button { margin:0; width:auto; padding:6px 10px; font-size:12px; border:0; border-radius:0; background:transparent; color:var(--anonimizar); box-shadow:none; }
+.modo-anon button + button { border-left:1px solid var(--anonimizar); }
+.modo-anon button[aria-checked="true"] { background:var(--anonimizar); color:var(--cream); }
+.modo-anon button:hover:not([aria-checked="true"]) { background:rgba(138,43,34,.10); }
 #fila { list-style:none; margin:0; padding:0; display:grid; gap:8px; max-height:calc(100vh - 290px); overflow-y:auto; }
 .item { padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
 .item.ativo { border-color:var(--ink); background:var(--surface-up); }

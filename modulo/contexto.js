@@ -316,7 +316,7 @@ function alertas(texto, mapa, max) {
   }
   const claros = Math.max(0, (mapa && Array.isArray(mapa.emClaro) ? mapa.emClaro.length : 0) - (mapa && Array.isArray(mapa.emClaroTarjados) ? mapa.emClaroTarjados.length : 0));
   if (claros) out.push({ regra: 'autoridade', titulo: 'Autoridades com o nome em claro', porque: 'o nome do juiz, do promotor, do delegado ou do advogado permite descobrir a comarca',
-    trecho: claros + (claros === 1 ? ' nome ficou' : ' nomes ficaram') + ' em claro (autoridade, servidor ou advogado: julgador de precedente citado, ou nome que você ensinou a deixar)', antes: '', depois: '', i: -1 });
+    trecho: claros + (claros === 1 ? ' nome ficou' : ' nomes ficaram') + ' em claro (autoridade, servidor ou advogado). O modo profundo troca esses nomes, menos o do julgador de precedente citado', antes: '', depois: '', i: -1 });
   return out;
 }
 

@@ -175,6 +175,13 @@ e cola os pedaços.
   «PROMOTOR_01», «DELEGADO_01», «ADVOGADO_01», «DEFENSOR_01», «POLICIAL_01», «PERITO_01», «SERVIDOR_01»). O papel sai
   do cargo escrito junto do nome. Continua em claro o ministro, o desembargador e o relator (julgado citado) e o que
   for ensinado como "não é dado pessoal". Limite: o sobrenome sozinho ("Dr. Fulano") não é trocado.
+- **Modo normal e modo profundo** (0.9.3, 24/11/2026): o seletor ao lado do botão Anonimizar. O normal troca os
+  identificadores diretos (nome, documento, endereço, telefone, e-mail, placa); o profundo troca também o contexto e o
+  nome das autoridades (os dois itens acima). O modo vale para a próxima anonimização; o normal é o padrão, e a linha do
+  caso avisa o que ficou em claro.
+- **Nome da versão** (0.9.3, 24/11/2026): o nome público é curto, como o dos modelos do Claude ("Incognitus 0.9"); o
+  número de três partes continua por dentro (instalador, aviso de atualização, etiqueta do GitHub) e aparece entre
+  parênteses no Sobre e nas Configurações. O nome público só muda quando há novidade que vale anunciar.
 - **Sobre** (19/11/2026): o botão ao lado das Configurações explica, pelos conceitos da LGPD (arts. 5º, III e XI, 12 e
   13, § 4º), o que é anonimização e pseudonimização, o que o Incognitus faz (pseudonimização, com o mapa guardado à
   parte) e os limites dele.

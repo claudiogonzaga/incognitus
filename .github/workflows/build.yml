@@ -181,10 +181,15 @@ jobs:
           cp "$msi" fixos/Incognitus-Windows.msi
           ls -la fixos todos
 
+      - name: nome público da versão (Incognitus 0.9; o número de três partes fica entre parênteses)
+        id: nome
+        shell: bash
+        run: v="${GITHUB_REF_NAME#v}"; echo "publico=$(echo "$v" | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
+
       - name: release publicada, a mais nova
         uses: softprops/action-gh-release@v2
         with:
-          name: Incognitus ${{ github.ref_name }}
+          name: Incognitus ${{ steps.nome.outputs.publico }} (${{ github.ref_name }})
           make_latest: true
           files: |
             fixos/*

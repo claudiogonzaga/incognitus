@@ -1127,7 +1127,16 @@ async function conferirAlertas(mapa, autos, mapaObj) {
   if (!enviar) { abrirAlertas(mapa); throw new Error('Envio cancelado: confira o alerta de contexto e gere a minuta de novo.'); }
 }
 
-const contextoLigado = () => (estado.e2e ? !!estado.e2eContexto : estado.ajustes.contexto !== false);
+// o modo de anonimização (24/11/2026, pedido do usuário: "um modo mais hard e um modo normal"): o profundo tarja também
+// o contexto (município, comarca, cargo, empresa, fazenda, apelido, número do processo) e o nome das autoridades
+// o nome público da versão (24/11/2026, pedido do usuário: "como o Claude nomeia os modelos"): "Incognitus 0.9". O número
+// de três partes (0.9.3) continua por dentro, porque o instalador e o aviso de atualização precisam dele.
+const nomeVersao = (v) => String(v || '').split('.').slice(0, 2).join('.');
+const modoAnon = () => (estado.ajustes.modo === 'profundo' ? 'profundo' : 'normal');
+const contextoLigado = () => (estado.e2e ? !!estado.e2eContexto : modoAnon() === 'profundo');
+function desenharModo() {
+  for (const b of document.querySelectorAll('#modo_anon button')) b.setAttribute('aria-checked', String(b.dataset.modo === modoAnon()));
+}
 const alertaLigado = () => (estado.e2e ? !!estado.e2eContexto : estado.ajustes.alertaContexto !== false);
 const cifrarLigado = () => (estado.e2e ? !!estado.e2eCifrar : estado.ajustes.cifrarMapa !== false);
 
@@ -1239,6 +1248,7 @@ async function gravarCaso(g, nomesUsados) {
       if (k === 0 && (repasse.ensinados || repasse.claros)) i.avisos.push('aprendizado: ' + [repasse.ensinados ? repasse.ensinados + ' trecho(s) com dado que você ensinou foram tarjados' : '',
         repasse.claros ? repasse.claros + ' dado(s) que você disse não serem pessoais ficaram em claro' : ''].filter(Boolean).join('; '));
       if (repasse.porDoc[k]) i.avisos.push('repasse do porteiro: ' + repasse.porDoc[k] + (repasse.porDoc[k] === 1 ? ' trecho que tinha ficado em claro foi tarjado' : ' trechos que tinham ficado em claro foram tarjados'));
+      if (k === 0 && !contextoLigado()) i.avisos.push('modo normal: município, cargo, empresa, número do processo e autoridades ficaram em claro');
       if (k === 0 && nCtx) i.avisos.push('contexto: ' + nCtx + (nCtx === 1 ? ' trecho tarjado' : ' trechos tarjados') + ' (' +
         Object.keys(repasse.contexto).map((t) => Contexto.TIPOS[t] + ' ' + repasse.contexto[t]).join(', ') + ')');
       i.saida = await invoke('gravar_saida', { pedido: {
@@ -1319,7 +1329,7 @@ async function lerAjustes() {
   Object.assign(estado.ajustes, a || {});
   $('op_txt').checked = !!estado.ajustes.txt;
   $('op_rigoroso').checked = !!estado.ajustes.rigoroso;
-  $('op_contexto').checked = estado.ajustes.contexto !== false;
+  desenharModo();
   $('op_alerta').checked = estado.ajustes.alertaContexto !== false;
   $('op_cifrar').checked = estado.ajustes.cifrarMapa !== false;
   $('op_juntar').checked = estado.ajustes.juntar !== false;
@@ -2929,7 +2939,7 @@ async function checarApp(manual) {
   try {
     estado.novaVersao = await invoke('app_checar');
     mostrarNovidade();
-    if (manual) $('app_msg').textContent = estado.novaVersao ? 'Há uma versão nova: ' + estado.novaVersao.versao + '.' : 'Esta já é a versão mais nova.';
+    if (manual) $('app_msg').textContent = estado.novaVersao ? 'Há uma versão nova: Incognitus ' + nomeVersao(estado.novaVersao.versao) + ' (versão ' + estado.novaVersao.versao + ').' : 'Esta já é a versão mais nova.';
   } catch (e) {
     if (manual) $('app_msg').textContent = 'Não consegui procurar: ' + ((e && e.message) || e);
   }
@@ -2939,7 +2949,9 @@ function mostrarNovidade() {
   const n = estado.novaVersao, el = $('novidade');
   el.hidden = !n || !!estado.novidadeAdiada;
   if (!n) return;
-  el.innerHTML = '<span>Versão nova do Incognitus: <b>' + esc(n.versao) + '</b>' + (n.tamanho ? ' (' + Math.round(n.tamanho / 1048576) + ' MB)' : '') + '.</span>' +
+  const mesmo = nomeVersao(n.versao) === nomeVersao(estado.versaoApp);
+  el.innerHTML = '<span>' + (mesmo ? 'Atualização do Incognitus ' + esc(nomeVersao(n.versao)) + ' (versão ' + esc(n.versao) + ')'
+    : 'Chegou o <b>Incognitus ' + esc(nomeVersao(n.versao)) + '</b> (versão ' + esc(n.versao) + ')') + (n.tamanho ? ' (' + Math.round(n.tamanho / 1048576) + ' MB)' : '') + '.</span>' +
     '<button id="bt_app_atualizar" class="pequeno">Atualizar agora</button><button id="bt_app_depois" class="ghost pequeno">Depois</button>' +
     (n.notas ? '<details><summary>O que mudou</summary><div class="notas">' + esc(n.notas) + '</div></details>' : '');
   $('bt_app_atualizar').onclick = atualizarApp;
@@ -2998,7 +3010,10 @@ function ligar() {
   };
   document.querySelectorAll('input[name=saida]').forEach((el) => { el.onchange = () => { estado.ajustes.saida = el.value; gravarAjustes(); }; });
   $('op_txt').onchange = () => { estado.ajustes.txt = $('op_txt').checked; gravarAjustes(); };
-  for (const [id, chave] of [['op_contexto', 'contexto'], ['op_alerta', 'alertaContexto'], ['op_cifrar', 'cifrarMapa']]) {
+  for (const b of document.querySelectorAll('#modo_anon button')) {
+    b.onclick = () => { if (estado.rodando) return; estado.ajustes.modo = b.dataset.modo; desenharModo(); gravarAjustes(); };
+  }
+  for (const [id, chave] of [['op_alerta', 'alertaContexto'], ['op_cifrar', 'cifrarMapa']]) {
     $(id).onchange = () => { estado.ajustes[chave] = $(id).checked; gravarAjustes(); };
   }
   $('bt_cofre_mostrar').onclick = async () => {
@@ -3116,7 +3131,7 @@ function ligar() {
   $('bt_colar_fechar').onclick = () => $('dlg_colar').close();
   $('bt_ajustes').onclick = () => abrirAjustes();
   $('bt_sobre').onclick = () => {
-    $('sobre_versao').textContent = 'Incognitus ' + (estado.versaoApp || '') + (estado.motor && estado.motor.manifesto ? ' · motor ' + estado.motor.manifesto.versao : '') + '.';
+    $('sobre_versao').textContent = 'Incognitus ' + nomeVersao(estado.versaoApp) + ' (versão ' + (estado.versaoApp || '') + ')' + (estado.motor && estado.motor.manifesto ? ' · motor ' + estado.motor.manifesto.versao : '') + '.';
     $('dlg_sobre').showModal();
     document.querySelector('#dlg_sobre .sobre').scrollTop = 0;
   };
@@ -3348,9 +3363,9 @@ async function iniciar() {
   desenharReid();
   invoke('info_app').then((info) => {
     const f = info.ferramentas;
-    $('versao_app').textContent = 'Incognitus ' + info.versao;
+    $('versao_app').textContent = 'Incognitus ' + nomeVersao(info.versao) + ' (versão ' + info.versao + ')';
     estado.versaoApp = info.versao;
-    $('ferramentas_info').textContent = 'Incognitus ' + info.versao + ' · ' + (f.Ok ? f.Ok.join(' · ') : 'PROBLEMA nas ferramentas: ' + f.Err);
+    $('ferramentas_info').textContent = 'Incognitus ' + nomeVersao(info.versao) + ' (versão ' + info.versao + ') · ' + (f.Ok ? f.Ok.join(' · ') : 'PROBLEMA nas ferramentas: ' + f.Err);
     if (f.Err) avisar('As ferramentas embutidas (pdftotext, pdftoppm, tesseract) não rodaram: ' + f.Err);
   });
   estado.e2e = await invoke('e2e_plano');
