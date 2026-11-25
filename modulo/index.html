@@ -45,11 +45,21 @@
     </div>
     <div id="barra_acoes" class="acoes-mesa">
       <span id="sel_n" class="suave"></span>
-      <span id="modo_anon" class="modo-anon" role="radiogroup" aria-label="Modo de anonimização">
-        <button type="button" role="radio" data-modo="normal" title="Modo normal: troca nomes, documentos, endereços, telefones, e-mails e placas. Município, comarca, cargo, empresa, fazenda, número do processo e o nome das autoridades ficam em claro.">Normal</button>
-        <button type="button" role="radio" data-modo="profundo" title="Modo profundo: além do normal, troca o município e a comarca, o cargo, o nome de empresa e de fazenda, o apelido, o número do processo e o nome do juiz, do promotor, do delegado, do advogado e dos servidores. As datas ficam.">Profundo</button>
+      <span class="anon-grupo">
+        <button id="bt_rodar" class="pequeno anonimizar" disabled title="Anonimiza as linhas marcadas que ainda não foram anonimizadas; sem nenhuma marcada, todas as que faltam">Anonimizar</button>
+        <span class="anon-modo">
+          <label class="chave" title="Ligada: anonimização profunda (o padrão). Desligada: anonimização simples.">
+            <input type="checkbox" id="op_profundo" role="switch" checked><span class="trilho" aria-hidden="true"></span>
+            <span id="modo_rotulo">Anonimização profunda</span>
+          </label>
+          <button type="button" id="bt_modo_info" class="info" aria-label="O que muda entre a anonimização simples e a profunda" aria-expanded="false" aria-controls="modo_info">i</button>
+        </span>
+        <span id="modo_info" class="modo-info" role="dialog" aria-label="Anonimização simples e profunda" hidden>
+          <b>Anonimização simples</b>: troca nomes, CPF, RG e outros documentos, endereços, telefones, e-mails e placas.
+          <br><b>Anonimização profunda</b> (o padrão): troca também o município e a comarca, o cargo (prefeito, vereador…), o nome de empresa e de fazenda, o apelido, o número do processo e o nome do juiz, do promotor, do delegado e do advogado. As datas ficam.
+          <br><span class="suave">Vale para a próxima anonimização.</span>
+        </span>
       </span>
-      <button id="bt_rodar" class="pequeno anonimizar" disabled title="Anonimiza as linhas marcadas que ainda não foram anonimizadas; sem nenhuma marcada, todas as que faltam">Anonimizar</button>
       <button id="bt_parar" class="ghost pequeno" hidden>Parar depois deste</button>
       <button id="ac_reid" class="ghost pequeno" disabled title="A minuta que a IA escreveu com os tokens volta aos nomes reais, com o mapa do caso (marque um caso)">Desanonimizar minuta…</button>
       <button id="ac_gerar" class="ghost pequeno" disabled title="A IA lê os autos anonimizados dos casos marcados, faz a análise e redige a minuta">🧠 Gerar minuta</button>
@@ -228,7 +238,7 @@
   <p class="dica">Depois das regras, um modelo de inteligência artificial lê o texto e tarja o que ainda parecer nome de pessoa ou endereço. Fica bem mais lento (de 1 a 4 segundos por página) e, na primeira vez, baixa o modelo (110 MB). Tudo continua neste computador.</p>
   <div id="msg_rigoroso" class="suave"></div>
   <h2>Contexto</h2>
-  <p class="dica">O modo de anonimização fica ao lado do botão Anonimizar. No <b>normal</b>, saem os nomes, os documentos, os endereços, os telefones, os e-mails e as placas. No <b>profundo</b>, além disso, saem do texto o <b>município e a comarca</b>, o <b>cargo</b> (prefeito, vereador, tabelião, secretário…), o nome de <b>empresa</b> e de estabelecimento, de <b>fazenda</b>, sítio ou gleba, o <b>apelido</b> e o <b>número do processo</b> (os quatro últimos dígitos dele dizem a comarca). Sai também o nome do <b>juiz, do promotor, do delegado, do advogado</b> e dos servidores, cada um com o marcador do papel («JUIZ_01», «PROMOTOR_01»…); só o julgador de precedente citado continua em claro. Cada um vira um marcador («MUNICIPIO_01», «CARGO_01»…) e volta na reidentificação. As datas ficam.</p>
+  <p class="dica">A chave da anonimização fica logo abaixo do botão Anonimizar. Na <b>simples</b>, saem os nomes, os documentos, os endereços, os telefones, os e-mails e as placas. Na <b>profunda</b>, que é o padrão, além disso saem do texto o <b>município e a comarca</b>, o <b>cargo</b> (prefeito, vereador, tabelião, secretário…), o nome de <b>empresa</b> e de estabelecimento, de <b>fazenda</b>, sítio ou gleba, o <b>apelido</b> e o <b>número do processo</b> (os quatro últimos dígitos dele dizem a comarca). Sai também o nome do <b>juiz, do promotor, do delegado, do advogado</b> e dos servidores, cada um com o marcador do papel («JUIZ_01», «PROMOTOR_01»…); só o julgador de precedente citado continua em claro. Cada um vira um marcador («MUNICIPIO_01», «CARGO_01»…) e volta na reidentificação. As datas ficam.</p>
   <label class="opcao"><input id="op_alerta" type="checkbox" checked> <span>Alerta de contexto</span></label>
   <p class="dica">Depois de anonimizar, o Incognitus aponta os trechos que ainda podem identificar alguém sem nome nenhum (“o único…”, “filho do prefeito”, “dono do posto”, o tamanho da cidade, o bairro) e pergunta antes de mandar o caso à IA.</p>
   <h2>Mapa cifrado</h2>
@@ -258,7 +268,7 @@
     <h3>O que o Incognitus faz</h3>
     <ul>
       <li>Troca nomes, CPF, RG, endereços, telefones, e-mails, placas e outros identificadores por marcadores (por exemplo, «REU_01» e «VITIMA_01»). A mesma pessoa leva o mesmo marcador no caso inteiro.</li>
-      <li>No modo profundo, troca também o município e a comarca, o cargo, o nome de empresa, de fazenda, o apelido, o número do processo e o nome do juiz, do promotor, do delegado, do advogado e dos servidores («JUIZ_01», «PROMOTOR_01»…). As datas ficam.</li>
+      <li>Na anonimização profunda, que é o padrão, troca também o município e a comarca, o cargo, o nome de empresa, de fazenda, o apelido, o número do processo e o nome do juiz, do promotor, do delegado, do advogado e dos servidores («JUIZ_01», «PROMOTOR_01»…). As datas ficam.</li>
       <li>Guarda o <b>mapa</b> (a informação adicional da lei) só neste computador, numa subpasta à parte e cifrado. O mapa nunca vai à IA.</li>
       <li>Depois que a IA devolve a minuta, recoloca os nomes reais, também neste computador.</li>
       <li>Refaz o PDF só com o texto: as imagens, as fotos e as assinaturas desenhadas do original não vão para o PDF anonimizado.</li>
@@ -269,7 +279,7 @@
     <ul>
       <li><b>O contexto identifica.</b> “O único tabelião do município”, “filho do prefeito”, o bairro, um fato que saiu no jornal: nada disso é nome, e tudo isso aponta para alguém. O alerta de contexto mostra os trechos que as regras reconhecem, não todos.</li>
       <li><b>A troca é automática e pode falhar.</b> As regras (e, na leitura rigorosa, o modelo de linguagem) erram, sobretudo em texto de digitalização ruim (OCR), em nome incomum ou grafado de modos diferentes. Confira antes de enviar.</li>
-      <li><b>Julgador de precedente fica em claro.</b> O ministro, o desembargador e o relator de julgado citado não são trocados. No modo normal, juiz, promotor, delegado, servidor e advogado também ficam em claro, e o nome deles pode revelar a comarca.</li>
+      <li><b>Julgador de precedente fica em claro.</b> O ministro, o desembargador e o relator de julgado citado não são trocados. Na anonimização simples, juiz, promotor, delegado, servidor e advogado também ficam em claro, e o nome deles pode revelar a comarca.</li>
       <li><b>O nome do arquivo</b> anonimizado ainda traz o número do processo. Renomeie o arquivo se for anexá-lo a uma IA.</li>
       <li><b>Sigilo.</b> Em segredo de justiça, infância e juventude, família e investigação sigilosa, avalie se o texto pode sair, mesmo tarjado.</li>
       <li><b>O que continua em claro neste computador:</b> os autos originais, a análise e a minuta com os nomes reais e a tabela do aprendizado. Proteja o computador e a pasta.</li>

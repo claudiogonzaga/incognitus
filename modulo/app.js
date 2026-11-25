@@ -1127,15 +1127,17 @@ async function conferirAlertas(mapa, autos, mapaObj) {
   if (!enviar) { abrirAlertas(mapa); throw new Error('Envio cancelado: confira o alerta de contexto e gere a minuta de novo.'); }
 }
 
-// o modo de anonimização (24/11/2026, pedido do usuário: "um modo mais hard e um modo normal"): o profundo tarja também
+// o modo de anonimização (24/11/2026, pedido do usuário: "um modo mais hard e um modo normal"; em 25/11, "simples e profunda", a profunda por padrão): a profunda tarja também
 // o contexto (município, comarca, cargo, empresa, fazenda, apelido, número do processo) e o nome das autoridades
 // o nome público da versão (24/11/2026, pedido do usuário: "como o Claude nomeia os modelos"): "Incognitus 0.9". O número
 // de três partes (0.9.3) continua por dentro, porque o instalador e o aviso de atualização precisam dele.
 const nomeVersao = (v) => String(v || '').split('.').slice(0, 2).join('.');
-const modoAnon = () => (estado.ajustes.modo === 'profundo' ? 'profundo' : 'normal');
+// o "normal" gravado pela 0.9.3 e pela 0.9.4 era o padrão de então, não uma escolha: vale a profunda
+const modoAnon = () => (estado.ajustes.modo === 'simples' ? 'simples' : 'profundo');
 const contextoLigado = () => (estado.e2e ? !!estado.e2eContexto : modoAnon() === 'profundo');
 function desenharModo() {
-  for (const b of document.querySelectorAll('#modo_anon button')) b.setAttribute('aria-checked', String(b.dataset.modo === modoAnon()));
+  $('op_profundo').checked = modoAnon() === 'profundo';
+  $('modo_rotulo').textContent = modoAnon() === 'profundo' ? 'Anonimização profunda' : 'Anonimização simples';
 }
 const alertaLigado = () => (estado.e2e ? !!estado.e2eContexto : estado.ajustes.alertaContexto !== false);
 const cifrarLigado = () => (estado.e2e ? !!estado.e2eCifrar : estado.ajustes.cifrarMapa !== false);
@@ -1248,7 +1250,7 @@ async function gravarCaso(g, nomesUsados) {
       if (k === 0 && (repasse.ensinados || repasse.claros)) i.avisos.push('aprendizado: ' + [repasse.ensinados ? repasse.ensinados + ' trecho(s) com dado que você ensinou foram tarjados' : '',
         repasse.claros ? repasse.claros + ' dado(s) que você disse não serem pessoais ficaram em claro' : ''].filter(Boolean).join('; '));
       if (repasse.porDoc[k]) i.avisos.push('repasse do porteiro: ' + repasse.porDoc[k] + (repasse.porDoc[k] === 1 ? ' trecho que tinha ficado em claro foi tarjado' : ' trechos que tinham ficado em claro foram tarjados'));
-      if (k === 0 && !contextoLigado()) i.avisos.push('modo normal: município, cargo, empresa, número do processo e autoridades ficaram em claro');
+      if (k === 0 && !contextoLigado()) i.avisos.push('anonimização simples: município, cargo, empresa, número do processo e autoridades ficaram em claro');
       if (k === 0 && nCtx) i.avisos.push('contexto: ' + nCtx + (nCtx === 1 ? ' trecho tarjado' : ' trechos tarjados') + ' (' +
         Object.keys(repasse.contexto).map((t) => Contexto.TIPOS[t] + ' ' + repasse.contexto[t]).join(', ') + ')');
       i.saida = await invoke('gravar_saida', { pedido: {
@@ -3010,9 +3012,17 @@ function ligar() {
   };
   document.querySelectorAll('input[name=saida]').forEach((el) => { el.onchange = () => { estado.ajustes.saida = el.value; gravarAjustes(); }; });
   $('op_txt').onchange = () => { estado.ajustes.txt = $('op_txt').checked; gravarAjustes(); };
-  for (const b of document.querySelectorAll('#modo_anon button')) {
-    b.onclick = () => { if (estado.rodando) return; estado.ajustes.modo = b.dataset.modo; desenharModo(); gravarAjustes(); };
-  }
+  $('op_profundo').onchange = () => {
+    if (estado.rodando) { desenharModo(); return; }
+    estado.ajustes.modo = $('op_profundo').checked ? 'profundo' : 'simples'; desenharModo(); gravarAjustes();
+  };
+  const infoModo = (abrir) => {
+    // a caixa flutua acima da Mesa (que corta o que passa da borda), logo abaixo do (i)
+    if (abrir) { const r = $('bt_modo_info').getBoundingClientRect(); $('modo_info').style.top = (r.bottom + 6) + 'px'; $('modo_info').style.left = Math.max(8, r.left - 150) + 'px'; }
+    $('modo_info').hidden = !abrir; $('bt_modo_info').setAttribute('aria-expanded', String(abrir)); };
+  $('bt_modo_info').onclick = (ev) => { ev.stopPropagation(); infoModo($('modo_info').hidden); };
+  document.addEventListener('click', (ev) => { if (!$('modo_info').hidden && !ev.target.closest('#modo_info')) infoModo(false); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('modo_info').hidden) infoModo(false); });
   for (const [id, chave] of [['op_alerta', 'alertaContexto'], ['op_cifrar', 'cifrarMapa']]) {
     $(id).onchange = () => { estado.ajustes[chave] = $(id).checked; gravarAjustes(); };
   }

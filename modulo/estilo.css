@@ -73,12 +73,23 @@ body.arrastando .vazio, body.arrastando #fila { outline:3px dashed var(--ink); o
 button.anonimizar { background:var(--anonimizar); border-color:var(--anonimizar-forte); color:var(--cream);
   box-shadow:0 1px 2px rgba(37,29,22,.25); letter-spacing:.02em; }
 button.anonimizar:hover:not(:disabled) { background:var(--anonimizar-forte); }
-/* o modo de anonimização (24/11/2026): Normal | Profundo, colado à esquerda do botão Anonimizar */
-.modo-anon { display:inline-flex; border:1px solid var(--anonimizar); border-radius:5px; overflow:hidden; vertical-align:middle; }
-.modo-anon button { margin:0; width:auto; padding:6px 10px; font-size:12px; border:0; border-radius:0; background:transparent; color:var(--anonimizar); box-shadow:none; }
-.modo-anon button + button { border-left:1px solid var(--anonimizar); }
-.modo-anon button[aria-checked="true"] { background:var(--anonimizar); color:var(--cream); }
-.modo-anon button:hover:not([aria-checked="true"]) { background:rgba(138,43,34,.10); }
+/* o modo de anonimização (25/11/2026): uma chave pequena logo abaixo do botão Anonimizar, com o (i) que explica */
+.anon-grupo { position:relative; display:inline-flex; flex-direction:column; align-items:flex-start; gap:3px; }
+.anon-modo { display:inline-flex; align-items:center; gap:5px; font:500 11px/1.2 Arial, Helvetica, sans-serif; color:var(--m-soft, #7a6e60); white-space:nowrap; }
+.chave { display:inline-flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+.chave input { position:absolute; opacity:0; width:1px; height:1px; margin:0; }
+.chave .trilho { position:relative; width:24px; height:13px; border-radius:7px; background:#cbbfae; transition:background .15s; flex:none; }
+.chave .trilho::after { content:""; position:absolute; top:2px; left:2px; width:9px; height:9px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); transition:transform .15s; }
+.chave input:checked + .trilho { background:var(--anonimizar); }
+.chave input:checked + .trilho::after { transform:translateX(11px); }
+.chave input:focus-visible + .trilho { outline:2px solid var(--anonimizar); outline-offset:2px; }
+.chave input:checked ~ #modo_rotulo { color:var(--anonimizar); font-weight:700; }
+.acoes-mesa button.info, button.info { width:15px; height:15px; min-width:0; padding:0; margin:0; border-radius:50%; border:1px solid var(--m-soft, #7a6e60);
+  background:transparent; color:var(--m-soft, #7a6e60); font:italic 700 10px/13px Georgia, serif; text-align:center; box-shadow:none; }
+.acoes-mesa button.info:hover, .acoes-mesa button.info[aria-expanded="true"] { border-color:var(--anonimizar); color:var(--anonimizar); }
+.modo-info { position:fixed; z-index:60; width:330px; padding:10px 12px; border:1px solid var(--m-line, #d9cdbb);
+  border-radius:6px; background:#fffdf8; box-shadow:0 6px 18px rgba(40,25,15,.18); font:12px/1.45 Arial, Helvetica, sans-serif; color:var(--ink); white-space:normal; }
+.modo-info .suave { display:inline-block; margin-top:4px; }
 #fila { list-style:none; margin:0; padding:0; display:grid; gap:8px; max-height:calc(100vh - 290px); overflow-y:auto; }
 .item { padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
 .item.ativo { border-color:var(--ink); background:var(--surface-up); }
