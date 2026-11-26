@@ -480,6 +480,16 @@ dialog.auto .linha h2 { margin:0; }
 .auto-ias { display:flex; flex-wrap:wrap; gap:8px 18px; margin:4px 0 2px; font-size:12px; }
 .auto-ias label { display:flex; flex-direction:column; gap:3px; margin:0; }
 .auto-ias select { min-width:240px; }
+.auto-local { display:flex; flex-wrap:wrap; gap:6px 14px; margin:6px 0 2px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; }
+.auto-local > label { display:flex; flex-direction:column; gap:3px; margin:0; }
+.auto-local #auto_local_end { min-width:260px; }
+.auto-local #auto_local_mod { min-width:150px; }
+.auto-local #auto_local_ctx { width:110px; }
+.auto-local-senha { flex-basis:100%; }
+.auto-local-senha label { margin:0 0 3px; }
+.auto-local-teste { flex-basis:100%; align-items:center; gap:10px; }
+.auto-local-teste > button { flex:none; width:auto; }
+.auto-local .dica { flex-basis:100%; margin:0; }
 .auto-passos { margin:10px 0 0; padding-left:22px; }
 .auto-passos > li { margin:0 0 14px; }
 .auto-passos h3 { margin:0 0 6px; font-size:13px; }

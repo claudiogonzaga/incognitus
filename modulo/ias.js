@@ -4,6 +4,9 @@
 // Anthropic, para o resto do app (a análise, a minuta, as consultas, a continuação) seguir igual.
 //
 // - OpenAI e DeepInfra: a API "chat completions" (a DeepInfra é compatível com a da OpenAI).
+// - Qwen do servidor (26/11/2026, pedido do usuário: "usar o Qwen deste Mac"): o Ollama do servidor, sem chave, pela API
+//   dele (/api/chat, com options.num_ctx: o contexto local é menor); o endereço que termina em /v1 é um servidor compatível
+//   com a OpenAI (LM Studio, llama-server). A resposta volta no formato da OpenAI (o Rust e a web a remontam).
 // - Google Gemini: generateContent. O Gemini 3 exige que a assinatura do pensamento (thoughtSignature) de cada consulta
 //   volte no pedido seguinte: ela fica guardada no próprio bloco da conversa (campo _assinatura), que só esta IA lê.
 // Este arquivo não depende do navegador: os testes o carregam no Node.
@@ -31,6 +34,12 @@ var SkiaIas = (function () {
       modelos: [['zai-org/GLM-5.2', 'GLM 5.2'], ['deepseek-ai/DeepSeek-V3.2', 'DeepSeek V3.2'], ['Qwen/Qwen3.8-Flash', 'Qwen 3.8 Flash (barato, autos longos)'],
         ['Qwen/Qwen3.5-397B-A17B', 'Qwen 3.5 397B'], ['Qwen/Qwen4-Max', 'Qwen 4 Max (o mais capaz, mais caro)'], ['Qwen/Qwen3-235B-A22B', 'Qwen3 235B']],
       esforcos: [], padrao: 'zai-org/GLM-5.2', esforcoPadrao: '',
+    },
+    local: {
+      rotulo: 'Qwen do servidor (sem chave)', curto: 'Qwen do servidor', a: 'ao Qwen do servidor', da: 'do Qwen do servidor', A: 'O Qwen do servidor',
+      ondeChave: '', formaChave: 'a senha do servidor, se houver', semChave: true,
+      modelos: [['qwen3.5:9b', 'Qwen 3.5 9B (no servidor)']],
+      esforcos: [], padrao: 'qwen3.5:9b', esforcoPadrao: '', contexto: 32768,
     },
   };
   var ESFORCOS = { low: 'Baixo', medium: 'Médio', high: 'Alto', xhigh: 'Muito alto', max: 'Máximo' };
@@ -100,6 +109,41 @@ var SkiaIas = (function () {
     if (e.provedor === 'openai' && e.esforco && /^(gpt-5|o\d)/.test(e.modelo)) out.reasoning_effort = e.esforco === 'low' ? 'low' : e.esforco === 'medium' ? 'medium' : 'high';
     if (e.provedor === 'deepinfra') out.max_tokens = 32000;
     return out;
+  }
+
+  /** A API do Qwen do servidor pelo endereço: o que termina em /v1 é compatível com a OpenAI; o resto (e a web, que vai
+   *  pela rota do portal) é o Ollama. */
+  function apiLocal(endereco) { return /\/v1\/?$/.test(String(endereco || '').trim()) ? 'openai' : 'ollama'; }
+
+  /** Para o Ollama (/api/chat): as mensagens da OpenAI, as chamadas de ferramenta com os argumentos em objeto, sem o
+   *  raciocínio (think: false: num M1, cada token conta) e com o tamanho do contexto (options.num_ctx). Sem "format":
+   *  o motor MLX do Ollama não tem saída estruturada. */
+  function paraOllama(corpo, e) {
+    var o = paraOpenAi(corpo, e);
+    var msgs = o.messages.map(function (m) {
+      var x = { role: m.role, content: m.content == null ? '' : String(m.content) };
+      if (m.tool_calls) {
+        x.tool_calls = m.tool_calls.map(function (t) {
+          var a = {};
+          try { a = JSON.parse((t.function && t.function.arguments) || '{}') || {}; } catch (er) { a = {}; }
+          return { function: { name: (t.function && t.function.name) || '', arguments: a } };
+        });
+      }
+      return x;
+    });
+    var op = { num_ctx: +e.contexto || PROVEDORES.local.contexto };
+    if (corpo.max_tokens) op.num_predict = corpo.max_tokens;
+    if (typeof corpo.temperature === 'number') op.temperature = corpo.temperature;
+    var out = { model: e.modelo, messages: msgs, stream: true, think: false, options: op };
+    if (o.tools) out.tools = o.tools;
+    return out;
+  }
+  /** Para um servidor local compatível com a OpenAI: o pedido da OpenAI com o limite e a temperatura. */
+  function paraLocalOpenAi(corpo, e) {
+    var o = paraOpenAi(corpo, e);
+    if (corpo.max_tokens) o.max_tokens = corpo.max_tokens;
+    if (typeof corpo.temperature === 'number') o.temperature = corpo.temperature;
+    return o;
   }
 
   function semExtras(schema) {
@@ -190,11 +234,15 @@ var SkiaIas = (function () {
         output_tokens: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) } };
   }
 
-  function para(prov, corpo, e) { return prov === 'gemini' ? paraGemini(corpo, e) : paraOpenAi(corpo, e); }
+  function para(prov, corpo, e) {
+    if (prov === 'gemini') return paraGemini(corpo, e);
+    if (prov === 'local') return (e.api || apiLocal(e.endereco)) === 'openai' ? paraLocalOpenAi(corpo, e) : paraOllama(corpo, e);
+    return paraOpenAi(corpo, e);
+  }
   function de(prov, json) { return prov === 'gemini' ? deGemini(json) : deOpenAi(json); }
 
   return { PROVEDORES: PROVEDORES, ESFORCOS: ESFORCOS, normalizar: normalizar, nomeDoModelo: nomeDoModelo, para: para, de: de,
-    paraOpenAi: paraOpenAi, paraGemini: paraGemini, deOpenAi: deOpenAi, deGemini: deGemini };
+    paraOpenAi: paraOpenAi, paraGemini: paraGemini, paraOllama: paraOllama, apiLocal: apiLocal, deOpenAi: deOpenAi, deGemini: deGemini };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = SkiaIas;
 if (typeof self !== 'undefined') self.SkiaIas = SkiaIas;

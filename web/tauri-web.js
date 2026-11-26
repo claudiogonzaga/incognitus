@@ -3,7 +3,8 @@
 // window.__TAURI__.core.invoke(comando, argumentos), os diálogos e o arrastar e soltar.
 //
 // Nada sai do navegador além do que o aplicativo também manda: o texto ANONIMIZADO e o prompt à IA escolhida (com a chave
-// de quem usa), ao clique, e o download dos modelos de linguagem do Hugging Face, na primeira vez. Os PDFs, os mapas e as
+// de quem usa; o Qwen do servidor, sem chave, pela rota ia-local do portal), ao clique, e o download dos modelos de
+// linguagem do Hugging Face, na primeira vez. Os PDFs, os mapas e as
 // minutas ficam no armazenamento deste navegador (IndexedDB), cifrados quando são o mapa (AES-256-GCM, chave não
 // exportável guardada no próprio navegador; a chave de recuperação abre os mesmos mapas no aplicativo).
 //
@@ -528,7 +529,64 @@ async function anthropicStream(chave, corpo, cabecalhos) {
   msg.content = blocos.filter(Boolean);
   return msg;
 }
+// O Qwen do servidor (26/11/2026, pedido do usuário: "usar o Qwen deste Mac"): pela rota da função do portal
+// (/incognitus/webapp/ia-local), que confere a sessão de convidado e repassa ao túnel com o segredo. O navegador não vê
+// nem o segredo nem o endereço do servidor. Só o pedido já conferido pelo porteiro da janela (o texto anonimizado) vai;
+// o mapa nunca. A resposta vem do Ollama em NDJSON, aos pedaços (as linhas em branco são o sinal de vida do porteiro do
+// servidor), e volta no formato da OpenAI, como a do aplicativo.
+const URL_LOCAL = BASE + 'ia-local/api/';
+async function respostaLocal(r) {
+  if (r.status === 401 || r.status === 403) throw 'A sessão do portal expirou: recarregue a página e entre de novo.';
+  if (!r.ok) throw (await lerErro(r)).replace('A IA', 'O Qwen do servidor');
+  if (!/json/.test(r.headers.get('content-type') || '')) throw 'A sessão do portal expirou: recarregue a página e entre de novo.';
+  return r;
+}
+async function iaLocal(corpo, t0) {
+  let r;
+  try {
+    r = await fetch(URL_LOCAL + 'chat', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: corpo });
+  } catch (e) { throw 'O Qwen do servidor não respondeu (' + ((e && e.message) || e) + '). Confira a internet e tente de novo.'; }
+  await respostaLocal(r);
+  const leitor = r.body.getReader(), dec = new TextDecoder(), chamadas = [];
+  let buf = '', texto = '', fim = null, modelo = '', ent = 0, sai = 0, feito = false;
+  const linha = (l) => {
+    l = l.trim();
+    if (!l) return;   // o sinal de vida
+    let j;
+    try { j = JSON.parse(l); } catch (e) { throw 'O Qwen do servidor mandou um pedaço ilegível da resposta.'; }
+    if (j.error) throw 'O Qwen do servidor interrompeu a resposta: ' + String(j.error.message || j.error).slice(0, 300);
+    if (j.model) modelo = j.model;
+    const m = j.message || {};
+    if (m.content) texto += m.content;   // o raciocínio (m.thinking) não entra
+    (m.tool_calls || []).forEach((t) => {
+      const f = t.function || {};
+      chamadas.push({ id: 'call_' + (chamadas.length + 1), type: 'function', function: { name: f.name || '', arguments: typeof f.arguments === 'string' ? f.arguments : JSON.stringify(f.arguments || {}) } });
+    });
+    if (j.done) { feito = true; fim = j.done_reason === 'length' ? 'length' : chamadas.length ? 'tool_calls' : 'stop'; ent = j.prompt_eval_count || 0; sai = j.eval_count || 0; }
+  };
+  while (true) {
+    const { value, done } = await leitor.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let k;
+    while ((k = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, k); buf = buf.slice(k + 1); linha(l); }
+  }
+  linha(buf + dec.decode());
+  if (!feito) throw 'A resposta do Qwen do servidor veio cortada: a conexão terminou antes do fim. Tente de novo.';
+  const msg = { role: 'assistant', content: texto || null };
+  if (chamadas.length) msg.tool_calls = chamadas;
+  return { json: { model: modelo, choices: [{ index: 0, message: msg, finish_reason: fim }], usage: { prompt_tokens: ent, completion_tokens: sai } },
+    ms: Date.now() - t0, code: 200, tentativas: 1, quedas: 0 };
+}
+async function modelosLocal() {
+  let r;
+  try { r = await fetch(URL_LOCAL + 'tags', { credentials: 'same-origin' }); } catch (e) { throw 'O Qwen do servidor não respondeu (' + ((e && e.message) || e) + ').'; }
+  await respostaLocal(r);
+  return ((await r.json()).models || []).map((m) => m.name).filter(Boolean).sort();
+}
+
 async function iaEnviar({ corpo, cabecalhos, provedor }) {
+  if (provedor === 'local') return iaLocal(corpo, Date.now());
   const prov = provedor || 'anthropic', chave = await lerChaveIa(prov), t0 = Date.now();
   if (!chave) throw 'Falta a chave ' + ({ anthropic: 'da Anthropic', openai: 'da OpenAI', gemini: 'do Google (Gemini)', deepinfra: 'da DeepInfra' }[prov] || prov) + '.';
   const pedido = JSON.parse(corpo);
@@ -823,7 +881,8 @@ const comandos = {
     return { guardada: true, fim: c.slice(-4) };
   },
   ia_chave_apagar: async ({ provedor }) => { await kvApagar('ia-chave-' + (provedor || 'anthropic')); },
-  ia_modelos: ({ provedor }) => ((window.SkiaIas && SkiaIas.PROVEDORES[provedor]) ? SkiaIas.PROVEDORES[provedor].modelos.map((m) => m[0]) : []),
+  ia_modelos: ({ provedor }) => (provedor === 'local' ? modelosLocal()
+    : (window.SkiaIas && SkiaIas.PROVEDORES[provedor]) ? SkiaIas.PROVEDORES[provedor].modelos.map((m) => m[0]) : []),
   ia_enviar: (args) => iaEnviar(args),
   ia_google_entrar: () => naoNaWeb('o login do Google (Drive e Google Docs)'),
   ia_google_cancelar: () => null,

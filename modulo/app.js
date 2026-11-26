@@ -2094,8 +2094,8 @@ function perguntarPorteiro(achados) {
 }
 
 /** Um pedido à IA: o porteiro examina contra o mapa (e pergunta, se achar dado em claro); a chave é posta pelo Rust. Para
- *  a OpenAI, o Gemini e a DeepInfra, o pedido JÁ CONFERIDO é traduzido para o formato deles, e a resposta volta ao da
- *  Anthropic (modulo/ias.js). */
+ *  a OpenAI, o Gemini, a DeepInfra e o Qwen do servidor, o pedido JÁ CONFERIDO é traduzido para o formato deles, e a
+ *  resposta volta ao da Anthropic (modulo/ias.js). */
 async function enviarIa(corpo, mapaObj, aceitos, m, ia) {
   await confirmarPorteiro(corpo, mapaObj, aceitos || new Set(), m);
   const prov = (ia && ia.provedor) || 'anthropic';
@@ -2103,7 +2103,9 @@ async function enviarIa(corpo, mapaObj, aceitos, m, ia) {
   if (prov === 'anthropic') {
     r = await invoke('ia_enviar', { corpo: JSON.stringify(corpo), cabecalhos: { 'anthropic-version': '2023-06-01' } });
   } else {
-    r = await invoke('ia_enviar', { corpo: JSON.stringify(SkiaIas.para(prov, corpo, ia)), cabecalhos: {}, provedor: prov });
+    // o Qwen do servidor: o endereço vai junto (no aplicativo, o Rust manda para ele; na web, a rota do portal)
+    const extra = prov === 'local' ? { endereco: ia.endereco || '' } : {};
+    r = await invoke('ia_enviar', Object.assign({ corpo: JSON.stringify(SkiaIas.para(prov, corpo, ia)), cabecalhos: {}, provedor: prov }, extra));
     r.json = SkiaIas.de(prov, r.json);
   }
   if (r.quedas && m) m.quedas = (m.quedas || 0) + r.quedas;   // a conexão caiu no meio e o Rust refez o pedido sozinho

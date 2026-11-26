@@ -5,6 +5,9 @@
 //! que ela escolheu, para a Anthropic, com a chave dela. O mapa, os nomes reais e os PDFs nunca saem; antes de cada
 //! envio a janela confere o pedido contra o mapa (o porteiro, modulo/porteiro.js) e barra o que tiver dado em claro.
 //! A chave e a renovação do login ficam no chaveiro e não vão a arquivo, a log nem à janela.
+//!
+//! O Qwen do servidor (26/11/2026): sem chave; o endereço vem da janela (as Configurações da Minuta pelo modelo) e a
+//! senha do servidor, se ele pedir, fica no chaveiro (conta "local"), como as chaves.
 use crate::outras::Provedor;
 use crate::{chaveiro, claude, gdocs, google, outras, pastas, prompt};
 use serde::Serialize;
@@ -143,12 +146,12 @@ pub struct SituacaoGoogle {
 pub struct Situacao {
     /// a chave da Anthropic (como antes)
     chave: SituacaoChave,
-    /// a de cada IA: anthropic, openai, gemini, deepinfra
+    /// a de cada IA: anthropic, openai, gemini, deepinfra e local (a senha do Qwen do servidor, se houver)
     chaves: BTreeMap<String, SituacaoChave>,
     google: SituacaoGoogle,
 }
 
-const PROVEDORES: [&str; 4] = ["anthropic", "openai", "gemini", "deepinfra"];
+const PROVEDORES: [&str; 5] = ["anthropic", "openai", "gemini", "deepinfra", "local"];
 
 /// A conta do chaveiro da IA: a da Anthropic (a de sempre) ou a de outra (openai, gemini, deepinfra).
 fn conta_da(provedor: &Option<String>) -> Result<&'static str, String> {
@@ -239,10 +242,29 @@ async fn chave(ia: &Ia) -> Result<String, String> {
     chave_de(ia, &None).await
 }
 
-/// Os modelos que a conta da pessoa pode usar naquela IA (lidos da própria IA, com a chave dela).
+/// A senha do Qwen do servidor, se houver (o servidor sem porteiro não pede nenhuma).
+async fn senha_local(ia: &Ia) -> Result<Option<String>, String> {
+    if let Some(c) = de_prova("SKIA_CHAVE_DE_PROVA") {
+        return Ok(Some(c));
+    }
+    let s = ia.servico.clone();
+    bloqueante(move || chaveiro::ler(&s, Provedor::Local.conta())).await
+}
+
+/// O endereço do Qwen do servidor: o da janela (no teste de ponta a ponta, o do servidor de mentira).
+fn endereco_local(endereco: Option<String>) -> String {
+    de_prova("SKIA_LOCAL_URL").or(endereco).unwrap_or_default()
+}
+
+/// Os modelos que a conta da pessoa pode usar naquela IA (lidos da própria IA, com a chave dela). No Qwen do servidor,
+/// os que o servidor tem, no `endereco` que a janela manda.
 #[tauri::command]
-pub async fn ia_modelos(estado: State<'_, EstadoIa>, provedor: String) -> Result<Vec<String>, String> {
+pub async fn ia_modelos(estado: State<'_, EstadoIa>, provedor: String, endereco: Option<String>) -> Result<Vec<String>, String> {
     let ia = estado.0.clone();
+    if Provedor::de(&provedor) == Some(Provedor::Local) {
+        let senha = senha_local(&ia).await?;
+        return outras::listar_modelos_local(&ia.http, &endereco_local(endereco), senha.as_deref()).await;
+    }
     let prov = Some(provedor.clone());
     let chave = chave_de(&ia, &prov).await?;
     match Provedor::de(&provedor) {
@@ -434,14 +456,20 @@ pub async fn ia_gdocs_enviar(estado: State<'_, EstadoIa>, caminho: String, exist
 
 /// O pedido que a janela montou (já conferido pelo porteiro dela) vai à Anthropic com a chave do chaveiro.
 /// Com `provedor` (openai, gemini, deepinfra), o pedido já vem no formato daquela IA (a janela traduz depois do porteiro).
+/// Com `provedor` local, vai ao Qwen do servidor no `endereco` da janela, sem chave (com a senha do servidor, se houver).
 #[tauri::command]
 pub async fn ia_enviar(
     estado: State<'_, EstadoIa>,
     corpo: String,
     cabecalhos: BTreeMap<String, String>,
     provedor: Option<String>,
+    endereco: Option<String>,
 ) -> Result<claude::Resposta, String> {
     let ia = estado.0.clone();
+    if let Some(Provedor::Local) = provedor.as_deref().and_then(Provedor::de) {
+        let senha = senha_local(&ia).await?;
+        return outras::enviar_local(&ia.http, &endereco_local(endereco), senha.as_deref(), &corpo).await;
+    }
     if let Some(p) = provedor.as_deref().and_then(Provedor::de) {
         let chave = chave_de(&ia, &provedor).await?;
         let url = de_prova("SKIA_OUTRA_IA_URL");

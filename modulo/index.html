@@ -207,7 +207,24 @@
   <div class="auto-ias">
     <label>A IA que escolhe e preenche o modelo <select id="auto_ia"></select></label>
   </div>
-  <p class="dica">Vão à IA os autos anonimizados, a lista dos seus modelos e o texto do modelo escolhido; o mapa fica aqui. A chave é a sua (⚙ ao lado do 🧠 Gerar minuta).</p>
+  <div id="auto_local" class="auto-local" hidden>
+    <label id="auto_local_end_l">Endereço do servidor <input id="auto_local_end" type="text" spellcheck="false" autocomplete="off" placeholder="http://192.168.0.10:11434"></label>
+    <label>Modelo <input id="auto_local_mod" type="text" spellcheck="false" autocomplete="off" list="auto_local_lista" placeholder="qwen3.5:9b"></label>
+    <datalist id="auto_local_lista"></datalist>
+    <label>Contexto (tokens) <input id="auto_local_ctx" type="number" min="4096" max="262144" step="4096"></label>
+    <div id="auto_local_senha_l" class="auto-local-senha">
+      <label for="auto_local_senha">Senha do servidor <span id="auto_local_senha_sit" class="suave"></span></label>
+      <div class="linha">
+        <input id="auto_local_senha" type="password" autocomplete="off" spellcheck="false" placeholder="só se o servidor pedir">
+        <button type="button" id="bt_auto_local_senha" class="ghost pequeno">Guardar</button>
+        <button type="button" id="bt_auto_local_senha_apagar" class="ghost pequeno" hidden>Apagar</button>
+      </div>
+    </div>
+    <div class="linha auto-local-teste"><button type="button" id="bt_auto_local_testar" class="ghost pequeno">Testar a conexão</button><span id="auto_local_msg" class="suave"></span></div>
+    <p id="auto_local_web" class="dica" hidden>Na versão web, o Qwen do servidor passa pelo portal, só para os convidados: não há endereço nem senha a configurar.</p>
+    <p class="dica">O Qwen do servidor não usa chave. O Ollama: o endereço com a porta (http://…:11434). Um servidor compatível com a OpenAI (LM Studio, llama-server): o endereço terminado em /v1. Com o contexto menor, vão à IA o começo dos autos e os atos mais recentes; cada etapa leva alguns minutos.</p>
+  </div>
+  <p class="dica">Vão à IA os autos anonimizados, a lista dos seus modelos e o texto do modelo escolhido; o mapa fica aqui. Nas IAs da nuvem, a chave é a sua (⚙ ao lado do 🧠 Gerar minuta).</p>
   <ol class="auto-passos">
     <li><h3>O próximo ato e o modelo</h3><div id="auto_r1"></div></li>
     <li><h3>O modelo preenchido, com os marcadores</h3><div id="auto_r2"></div></li>
