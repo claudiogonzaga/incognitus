@@ -609,6 +609,70 @@ async function iaEnviar({ corpo, cabecalhos, provedor }) {
   return { json, ms: Date.now() - t0, code: 200, tentativas: 1, quedas: 0 };
 }
 
+// ── o Google Docs (26/11/2026, pedido do usuário: "se a pessoa logou com o Google, ter a opção de fazer tudo no Google
+// Docs") ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+// A permissão drive.file (só os arquivos que o próprio Incognitus criar), pedida no navegador pelo Google Identity
+// Services, no clique; o acesso fica só na memória desta aba (cerca de 1 hora). O ID do cliente OAuth vem do portal
+// (/incognitus/webapp/google-cliente); sem ele, o Google Docs não aparece. A minuta (com os nomes reais) só sobe no
+// clique, depois da confirmação, e vai direto do navegador para o Drive de quem usa.
+const ESCOPO_ARQUIVOS = 'https://www.googleapis.com/auth/drive.file';
+const google = { cliente: null, lido: false, acesso: null, vale: 0, email: '' };
+async function clienteGoogle() {
+  if (!google.lido) {
+    try { const r = await fetch(BASE + 'google-cliente', { credentials: 'same-origin' }); if (r.ok) google.cliente = (await r.json()).cliente || null; } catch (e) { google.cliente = null; }
+    google.lido = true;
+  }
+  return google.cliente;
+}
+let gisP = null;
+const gis = () => (gisP || (gisP = new Promise((ok, falha) => {
+  const sc = document.createElement('script');
+  sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+  sc.onload = () => ok(window.google.accounts.oauth2);
+  sc.onerror = () => { gisP = null; falha('Não consegui carregar o login do Google.'); };
+  document.head.appendChild(sc);
+})));
+async function googleEntrar() {
+  const cliente = await clienteGoogle();
+  if (!cliente) throw 'O Google Docs ainda não está disponível nesta página.';
+  const oauth2 = await gis();
+  const t = await new Promise((ok, falha) => {
+    const tc = oauth2.initTokenClient({ client_id: cliente, scope: ESCOPO_ARQUIVOS, callback: (r) => (r && r.access_token ? ok(r) : falha('O Google não deu a permissão.')),
+      error_callback: (e) => falha(e && e.type === 'popup_closed' ? 'A janela do Google foi fechada antes de dar a permissão.' : e && e.type === 'popup_failed_to_open' ? 'O navegador barrou a janela do Google: libere os pop-ups deste site e tente de novo.' : 'O login do Google falhou.') });
+    tc.requestAccessToken({ prompt: '' });
+  });
+  if (!oauth2.hasGrantedAllScopes(t, ESCOPO_ARQUIVOS)) throw 'O Google não deu a permissão de criar documentos no Drive: marque a caixa dessa permissão.';
+  google.acesso = t.access_token; google.vale = Date.now() + (Math.max(60, +t.expires_in || 3600) - 60) * 1000;
+  return { email: '' };
+}
+const acessoVale = () => !!google.acesso && Date.now() < google.vale;
+async function googleDocsEnviar({ caminho, existente }) {
+  const a = await arq(caminho);
+  if (!a || !/\.docx$/i.test(a.nome)) throw 'só mando ao Google Docs um .docx que já foi gravado';
+  if (existente && /^[A-Za-z0-9_-]{10,128}$/.test(existente)) {
+    const link = 'https://docs.google.com/document/d/' + existente + '/edit';
+    window.open(link, '_blank', 'noopener');
+    return { id: existente, link, feito: 'aberto' };
+  }
+  if (!acessoVale()) throw 'O acesso ao Google venceu: clique de novo para dar a permissão.';
+  const fronteira = 'incognitus' + Math.random().toString(36).slice(2);
+  const meta = JSON.stringify({ name: a.nome.replace(/\.docx$/i, ''), mimeType: 'application/vnd.google-apps.document' });
+  const corpo = new Blob(['--' + fronteira + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + meta + '\r\n--' + fronteira +
+    '\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\n', a.blob, '\r\n--' + fronteira + '--']);
+  let r;
+  try {
+    r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST', headers: { authorization: 'Bearer ' + google.acesso, 'content-type': 'multipart/related; boundary=' + fronteira }, body: corpo });
+  } catch (e) { throw 'Sem conexão com o Google Drive.'; }
+  if (r.status === 401) { google.acesso = null; throw 'O acesso ao Google venceu: clique de novo para dar a permissão.'; }
+  if (!r.ok) throw (await lerErro(r)).replace('A IA', 'O Google Drive');
+  const id = String((await r.json()).id || '');
+  if (!/^[A-Za-z0-9_-]{10,128}$/.test(id)) throw 'O Google Drive não devolveu o documento criado.';
+  const link = 'https://docs.google.com/document/d/' + id + '/edit';
+  window.open(link, '_blank', 'noopener');
+  return { id, link, feito: 'criado' };
+}
+
 // ── as janelas de diálogo (no lugar das do sistema) ──────────────────────────────────────────────────────────────
 function caixa(texto, op, comCancelar) {
   return new Promise((ok) => {
@@ -872,7 +936,8 @@ const comandos = {
   ia_situacao: async () => {
     const chavesIa = {};
     for (const p of PROVEDORES) { const c = await lerChaveIa(p); chavesIa[p] = { guardada: !!c, fim: c ? c.slice(-4) : '' }; }
-    return { chave: chavesIa.anthropic, chaves: chavesIa, google: { configurado: false, entrou: false, email: '', drive: false, escrever: false } };
+    const vale = acessoVale();
+    return { chave: chavesIa.anthropic, chaves: chavesIa, google: { configurado: !!(await clienteGoogle()), entrou: vale, email: google.email, drive: false, escrever: vale } };
   },
   ia_chave_guardar: async ({ chave, provedor }) => {
     const c = String(chave || '').trim();
@@ -884,10 +949,10 @@ const comandos = {
   ia_modelos: ({ provedor }) => (provedor === 'local' ? modelosLocal()
     : (window.SkiaIas && SkiaIas.PROVEDORES[provedor]) ? SkiaIas.PROVEDORES[provedor].modelos.map((m) => m[0]) : []),
   ia_enviar: (args) => iaEnviar(args),
-  ia_google_entrar: () => naoNaWeb('o login do Google (Drive e Google Docs)'),
+  ia_google_entrar: ({ escrever }) => (escrever ? googleEntrar() : naoNaWeb('o login do Google para ler o Drive')),
   ia_google_cancelar: () => null,
-  ia_google_sair: () => null,
-  ia_gdocs_enviar: () => naoNaWeb('o envio ao Google Docs'),
+  ia_google_sair: () => { if (google.acesso && window.google && window.google.accounts) window.google.accounts.oauth2.revoke(google.acesso, () => {}); google.acesso = null; },
+  ia_gdocs_enviar: (args) => googleDocsEnviar(args),
   ia_prompt_ler: async ({ fonte }) => {
     const f = String(fonte || '').trim();
     if (/^https?:\/\//.test(f)) throw 'Na versão web, o prompt e os modelos vêm de um arquivo escolhido aqui ou do texto escrito aqui (links do Google Docs e do OneDrive só no aplicativo).';

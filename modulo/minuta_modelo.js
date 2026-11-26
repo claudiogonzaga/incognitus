@@ -209,7 +209,7 @@ async function autoPreencher(mapa, id) {
   const a = estado.auto[mapa];
   const it = a && a.catalogo.find((x) => x.id === id);
   if (!it) return;
-  Object.assign(a, { etapa: 'preenchendo', msg: 'lendo o modelo ' + it.nome, escolhido: id, erro: null, preenchido: null, reid: null });
+  Object.assign(a, { etapa: 'preenchendo', msg: 'lendo o modelo ' + it.nome, escolhido: id, erro: null, preenchido: null, reid: null, gdoc: null, gdocMsg: '' });
   desenharAuto();
   try {
     const ehDocx = !!(it.caminho && extDe(it.caminho) === 'docx');
@@ -279,6 +279,39 @@ async function autoDesanonimizar(mapa) {
   desenharAuto();
 }
 
+// ── 4. no Google Docs (26/11/2026, pedido do usuário: "baixar as alegações finais em Google Docs; se a pessoa logou com
+// o Google, ter a opção de fazer tudo no Google Docs") ─────────────────────────────────────────────────────────────
+// A minuta com os nomes reais sobe para o Drive de quem usa (a permissão drive.file: o app só enxerga o que ele criou) e
+// abre no Google Docs. É o único caminho pelo qual os nomes reais saem do computador: só no clique, depois da confirmação.
+async function autoNoGoogleDocs(mapa) {
+  const a = estado.auto[mapa];
+  if (!a || !a.reid || a.gdocTrab) return;
+  const dizer = (t) => { a.gdocMsg = t; desenharAuto(); };
+  a.gdocTrab = true;
+  try {
+    let s = await invoke('ia_situacao');
+    if (!s.google || !s.google.configurado) throw new Error(ehWeb() ? 'O Google Docs ainda não está disponível nesta página.' : 'Esta cópia do Incognitus não tem o login do Google.');
+    if (!a.gdoc) {
+      const ok = await T.dialog.ask('A minuta vai, com os nomes reais, para o seu Google Drive' + (s.google.email ? ' (' + s.google.email + ')' : '') +
+        ', como um documento novo do Google Docs. Só você a vê, até compartilhar.\n\nÉ o único caso em que os nomes reais saem deste ' +
+        (ehWeb() ? 'navegador' : 'computador') + '. Mandar?', { title: 'Abrir no Google Docs', kind: 'warning', okLabel: 'Mandar ao Google Docs', cancelLabel: 'Cancelar' });
+      if (!ok) { dizer('Nada foi enviado ao Google Docs.'); return; }
+    }
+    if (!s.google.entrou || !s.google.escrever) {
+      dizer('Abrindo o Google: dê ao Incognitus a permissão de criar documentos no seu Drive…');
+      await invoke('ia_google_entrar', { escrever: true });
+      s = await invoke('ia_situacao');
+      if (!s.google.escrever) throw new Error('O Google não deu a permissão de criar documentos no Drive: marque a caixa dessa permissão na tela do login.');
+    }
+    dizer('Enviando a minuta ao Google Docs…');
+    const r = await invoke('ia_gdocs_enviar', { caminho: a.reid.saida, existente: a.gdoc ? a.gdoc.id : null, trocar: false });
+    a.gdoc = { id: r.id, link: r.link };
+    dizer(r.feito === 'aberto' ? 'O documento que já estava no Google Docs abriu' + (ehWeb() ? ' numa aba nova.' : ' no navegador.')
+      : 'A minuta está no seu Google Docs e abriu' + (ehWeb() ? ' numa aba nova.' : ' no navegador.'));
+  } catch (e) { dizer(String((e && e.message) || e)); }
+  finally { a.gdocTrab = false; desenharAuto(); }
+}
+
 // ── a janela ─────────────────────────────────────────────────────────────────────────────────────────────────────
 function desenharAuto() {
   const d = $('dlg_auto');
@@ -318,7 +351,9 @@ function desenharAuto() {
   $('auto_r3').innerHTML = !p ? '<p class="suave">Depois de preencher.</p>'
     : r ? '<div class="ok">✓ Minuta com os nomes reais: ' + esc(nomeDe(r.saida)) + ' · ' + r.n + ' marcador(es) devolvido(s)</div>' +
         (r.sobras && r.sobras.length ? '<div class="aviso">' + esc(avisoSobras(r.sobras)) + '</div>' : '') +
-        '<div class="linha"><button type="button" class="pequeno" data-auto-revelar="' + esc(r.saida) + '">' + (document.documentElement.classList.contains('web') ? 'Baixar' : 'Mostrar na pasta') + '</button></div>'
+        '<div class="linha"><button type="button" class="pequeno" data-auto-revelar="' + esc(r.saida) + '">' + (ehWeb() ? 'Baixar' : 'Mostrar na pasta') + '</button>' +
+        (/\.docx$/i.test(r.saida) ? '<button type="button" id="bt_auto_gdocs" class="pequeno ghost"' + (a.gdocTrab ? ' disabled' : '') + '>' + (a.gdoc ? 'Abrir de novo no Google Docs' : 'Abrir no Google Docs') + '</button>' : '') +
+        '</div>' + (a.gdocMsg ? '<div class="suave">' + esc(a.gdocMsg) + '</div>' : '')
     : '<div class="linha"><button type="button" id="bt_auto_reid" class="pequeno"' + (trab ? ' disabled' : '') + '>Desanonimizar a minuta</button>' +
       '<span class="suave">Os nomes voltam aqui, com o mapa do caso; nada sai do computador.</span></div>';
   if (a && a.etapa === 'erro') $('auto_r' + (a.preenchido ? 3 : a.escolha ? 2 : 1)).insertAdjacentHTML('beforeend', '<div class="msg-erro">❌ ' + esc(a.erro) + '</div>');
@@ -415,6 +450,7 @@ async function autoNoCaso() {
     const mapa = $('dlg_auto').dataset.mapa;
     if (ev.target.id === 'bt_auto_preencher') { const id = $('auto_modelo').value; if (id) autoPreencher(mapa, id); }
     else if (ev.target.id === 'bt_auto_reid') autoDesanonimizar(mapa);
+    else if (ev.target.id === 'bt_auto_gdocs') autoNoGoogleDocs(mapa);
     else if (ev.target.dataset.autoRevelar) invoke('revelar', { caminho: ev.target.dataset.autoRevelar }).catch((e) => avisar(String(e)));
   });
 })();
