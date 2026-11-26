@@ -534,6 +534,7 @@ function desenharAcoes() {
     $(id).textContent = rot + (a > 1 ? ' (' + a + ')…' : '');
   }
   $('ac_ia').textContent = '⚙ ' + rotuloIa();
+  if (typeof autoAlvos === 'function') $('ac_auto').disabled = autoAlvos().length !== 1 || !!lote;   // minuta_modelo.js
 }
 /** Aplica a ação aos casos marcados. Um caso: na hora, com a janela do 🧠 aberta. Vários: a janela do lote. */
 async function aplicarAcao(qual) {

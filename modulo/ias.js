@@ -28,7 +28,8 @@ var SkiaIas = (function () {
     },
     deepinfra: {
       rotulo: 'DeepInfra (modelos abertos)', curto: 'DeepInfra', a: 'à DeepInfra', da: 'da DeepInfra', A: 'A DeepInfra', ondeChave: 'deepinfra.com/dash/keys', formaChave: 'a chave da DeepInfra',
-      modelos: [['zai-org/GLM-5.2', 'GLM 5.2'], ['deepseek-ai/DeepSeek-V3.2', 'DeepSeek V3.2'], ['Qwen/Qwen3-235B-A22B', 'Qwen3 235B']],
+      modelos: [['zai-org/GLM-5.2', 'GLM 5.2'], ['deepseek-ai/DeepSeek-V3.2', 'DeepSeek V3.2'], ['Qwen/Qwen3.8-Flash', 'Qwen 3.8 Flash (barato, autos longos)'],
+        ['Qwen/Qwen3.5-397B-A17B', 'Qwen 3.5 397B'], ['Qwen/Qwen4-Max', 'Qwen 4 Max (o mais capaz, mais caro)'], ['Qwen/Qwen3-235B-A22B', 'Qwen3 235B']],
       esforcos: [], padrao: 'zai-org/GLM-5.2', esforcoPadrao: '',
     },
   };

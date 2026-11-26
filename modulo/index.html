@@ -63,6 +63,7 @@
       <button id="bt_parar" class="ghost pequeno" hidden>Parar depois deste</button>
       <button id="ac_reid" class="ghost pequeno" disabled title="A minuta que a IA escreveu com os tokens volta aos nomes reais, com o mapa do caso (marque um caso)">Desanonimizar minuta…</button>
       <button id="ac_gerar" class="ghost pequeno" disabled title="A IA lê os autos anonimizados dos casos marcados, faz a análise e redige a minuta">🧠 Gerar minuta</button>
+      <button id="ac_auto" class="ghost pequeno" disabled title="Um caso marcado: a IA (por padrão o Qwen) escolhe o próximo ato e o modelo da sua pasta; você confirma; ela preenche o modelo com os dados dos autos; você desanonimiza">Minuta pelo modelo</button>
       <button id="ac_refazer" class="ghost pequeno" disabled title="Gera de novo a análise e a minuta dos casos marcados que já têm minuta">🔁 Refazer minuta</button>
       <button id="ac_corrigir" class="ghost pequeno" disabled title="A IA confere a minuta com o seu prompt de correção e aponta o que achar, sem reescrevê-la (casos com minuta gerada nesta sessão)">🔎 Corrigir minuta</button>
       <button id="ac_parar_lote" class="ghost pequeno" hidden>Parar o lote</button>
@@ -198,6 +199,22 @@
     <thead><tr><th>Dado</th><th>É dado pessoal?</th><th>Quem ensinou</th><th></th></tr></thead>
     <tbody id="apr_corpo"></tbody></table></div>
   <div class="linha fim"><button type="button" id="bt_apr_fechar">Fechar</button></div>
+</dialog>
+
+<dialog id="dlg_auto" class="auto">
+  <div class="linha"><h2>Minuta pelo modelo</h2><span class="cresce"></span><button type="button" id="bt_auto_comecar" class="ghost pequeno">Começar</button><button type="button" id="bt_auto_fechar" class="pequeno">Fechar</button></div>
+  <p id="auto_caso" class="suave"></p>
+  <div class="auto-ias">
+    <label>Escolher o ato e o modelo com <select id="auto_ia1"></select></label>
+    <label>Preencher o modelo com <select id="auto_ia2"></select></label>
+  </div>
+  <p class="dica">Vão à IA os autos anonimizados, a lista dos seus modelos e o texto do modelo escolhido; o mapa fica aqui. A chave é a sua (⚙ ao lado do 🧠 Gerar minuta).</p>
+  <ol class="auto-passos">
+    <li><h3>O próximo ato e o modelo</h3><div id="auto_r1"></div></li>
+    <li><h3>O modelo preenchido, com os marcadores</h3><div id="auto_r2"></div></li>
+    <li><h3>Desanonimizar</h3><div id="auto_r3"></div></li>
+  </ol>
+  <div id="auto_estado" class="mpa-estado" hidden><span class="mpa-gira"></span><span id="auto_estado_txt"></span></div>
 </dialog>
 
 <dialog id="dlg_lote">
@@ -525,5 +542,6 @@
 <script src="ias.js"></script>
 <script src="busca.js"></script>
 <script src="app.js"></script>
+<script src="minuta_modelo.js"></script>
 </body>
 </html>

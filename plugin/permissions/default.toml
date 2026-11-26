@@ -6,7 +6,7 @@ permissions = [
   "allow-info", "allow-info-app", "allow-registrar", "allow-revelar", "allow-ajustes-ler", "allow-ajustes-gravar", "allow-acordado",
   "allow-preparar-arquivo", "allow-extrair-texto", "allow-ocr-pagina", "allow-limpar-arquivo", "allow-texto-documento",
   "allow-gravar-saida", "allow-pasta-padrao", "allow-listar-pdfs", "allow-expandir-caminhos",
-  "allow-ler-texto", "allow-docx-partes", "allow-gravar-reidentificado", "allow-gravar-texto",
+  "allow-ler-texto", "allow-docx-partes", "allow-gravar-reidentificado", "allow-gravar-partes", "allow-gravar-texto",
   "allow-gravar-docx", "allow-abrir-documento", "allow-abrir-modelo", "allow-mesa-ler", "allow-mesa-gravar",
   "allow-motor-ativo", "allow-motor-checar", "allow-motor-baixar", "allow-motor-instalar", "allow-motor-voltar",
   "allow-ner-estado", "allow-ner-baixar", "allow-ner-ler",

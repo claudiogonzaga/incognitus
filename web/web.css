@@ -1,0 +1,15 @@
+/* Incognitus web: as janelas que no aplicativo são do sistema, e o que não existe na web sai da tela. */
+dialog.web-caixa { width:min(520px, 92vw); }
+dialog.web-caixa p { font-size:13px; line-height:1.5; }
+dialog.web-visor { width:min(1000px, 96vw); height:min(900px, 94vh); max-height:94vh; padding:10px; }
+dialog.web-visor[open] { display:flex; flex-direction:column; gap:8px; }
+dialog.web-visor iframe { flex:1; width:100%; border:1px solid #c4b59f; border-radius:6px; background:#fff; }
+dialog.web-visor .linha { display:flex; align-items:center; gap:8px; }
+dialog.web-visor .cresce { flex:1; }
+/* sem login do Google, sem Google Docs, sem pasta de saída escolhida e sem troca de motor, na web */
+.web #bt_minuta_gdocs, .web #bt_ia_pasta_drive, .web #bt_pasta_saida, .web #bt_motor, .web #bt_atualizar, .web #bt_voltar { display:none !important; }
+.web-barra { position:fixed; right:10px; bottom:8px; z-index:20; font:11px/1.3 Arial, Helvetica, sans-serif; color:#5e5246;
+  background:rgba(255,251,244,.92); border:1px solid #d9cdbb; border-radius:6px; padding:4px 8px; display:flex; gap:10px; align-items:center; }
+.web-barra a, .web-barra button { color:#8a2b22; background:none; border:0; padding:0; margin:0; font:inherit; cursor:pointer; text-decoration:underline; width:auto; box-shadow:none; }
+dialog.web-visor .linha button, dialog.web-caixa .linha button { width:auto; flex:none; margin:0; }
+dialog.web-caixa .linha { display:flex; justify-content:flex-end; gap:8px; }

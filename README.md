@@ -183,6 +183,24 @@ e cola os pedaços.
 - **Nome da versão** (0.9.3, 24/11/2026): o nome público é curto, como o dos modelos do Claude ("Incognitus 0.9"); o
   número de três partes continua por dentro (instalador, aviso de atualização, etiqueta do GitHub) e aparece entre
   parênteses no Sobre e nas Configurações. O nome público só muda quando há novidade que vale anunciar.
+- **Minuta pelo modelo** (0.9.6, 26/11/2026, `modulo/minuta_modelo.js`): um caso marcado, o botão da barra. (1) A IA
+  (por padrão o Qwen 3.8 Flash, na DeepInfra, com a chave de quem usa) lê os autos anonimizados e o catálogo dos modelos
+  (o Livro de Modelos ou os 40 mais parecidos da pasta, pelo BERT) e diz o próximo ato e o modelo; quem usa confirma ou
+  troca. (2) Outra chamada (por padrão o Qwen 3.5 397B) devolve só as trocas `{de, para}` (o trecho exato do modelo e o
+  que entra, com os marcadores); o app as aplica no próprio modelo — no .docx, dentro de cada parágrafo, sem mexer na
+  formatação (`gravar_partes`) — e grava a minuta com os marcadores na subpasta dos nomes reais. (3) "Desanonimizar"
+  devolve os nomes com o mapa do caso (a reidentificação de sempre). O que a IA não achou nos autos volta como pendência.
+- **Incognitus web** (0.9.6, 26/11/2026, `web/`): o mesmo módulo, no navegador. `web/tauri-web.js` faz o papel do Rust
+  com o mesmo contrato (`__TAURI__.core.invoke`, os diálogos, o arrastar e soltar): pdf.js no lugar do pdftotext (com o
+  leiaute das linhas), tesseract.js no lugar do OCR, pdf-lib com a DejaVu Sans Mono no lugar do PDF de saída, JSZip no
+  .docx, IndexedDB no lugar das pastas (caminhos de mentira: `/Arquivos/<carimbo>/…`), WebCrypto no cofre (o mesmo
+  envelope; a chave de recuperação do aplicativo abre os mapas dele aqui), as IAs por fetch direto (a Anthropic por
+  streaming) e os modelos de linguagem do Hugging Face no Cache Storage. O que vai para `/Downloads/…` e o "revelar" viram
+  download. Não tem: login do Google (Drive, Google Docs), troca do motor, pasta de saída escolhida. `node web/montar.mjs
+  <pasta>` monta a página com as bibliotecas (`web/package.json`); no portal, fica em `consciencia/incognitus/webapp/`,
+  atrás do login do Google só para convidados (`functions/incognitus/webapp/_middleware.js`; o ID do cliente web, os
+  convidados e a chave do cookie são variáveis do projeto no Cloudflare, fora do git) e com uma política de conteúdo que só
+  deixa a página falar com o próprio site, as IAs e o Hugging Face. Não é divulgado no portal.
 - **Sobre** (19/11/2026): o botão ao lado das Configurações explica, pelos conceitos da LGPD (arts. 5º, III e XI, 12 e
   13, § 4º), o que é anonimização e pseudonimização, o que o Incognitus faz (pseudonimização, com o mapa guardado à
   parte) e os limites dele.

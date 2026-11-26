@@ -466,6 +466,26 @@ async fn gravar_reidentificado(pedido: PedidoReid) -> Result<String, String> {
 }
 
 /// O texto reidentificado, no arquivo que o usuário escolheu ("Salvar como .txt…").
+/// O modelo .docx preenchido (minuta pelo modelo, 26/11/2026): as partes trocadas no lugar das do modelo, gravadas em
+/// `destino` (nunca o próprio modelo). O resto do .docx (estilos, cabeçalho, imagens) vai como estava.
+#[tauri::command]
+async fn gravar_partes(origem: String, destino: String, partes: Vec<reid::Parte>) -> Result<(), String> {
+    em_segundo_plano(move || {
+        let (o, d) = (PathBuf::from(&origem), PathBuf::from(&destino));
+        if !eh_docx(&o) || !eh_docx(&d) {
+            return Err("o modelo preenchido só é gravado em .docx".into());
+        }
+        if d == o || mesmo_arquivo(&d, &o) {
+            return Err("a minuta tomaria o lugar do modelo".into());
+        }
+        if let Some(p) = d.parent() {
+            std::fs::create_dir_all(p).map_err(|e| format!("não consegui criar a pasta: {e}"))?;
+        }
+        reid::docx_gravar(&o, &d, &partes)
+    })
+    .await
+}
+
 #[tauri::command]
 async fn gravar_texto(caminho: String, texto: String) -> Result<(), String> {
     em_segundo_plano(move || gravar_atomico(Path::new(&caminho), texto.as_bytes())).await
@@ -779,6 +799,7 @@ fn montar<R: Runtime>(hospedado: bool) -> TauriPlugin<R> {
             ler_texto,
             docx_partes,
             gravar_reidentificado,
+            gravar_partes,
             gravar_texto,
             gravar_docx,
             abrir_documento,
@@ -929,7 +950,7 @@ mod testes {
         // cada comando do build.rs está no conjunto `default`; o `api` só tem comandos que existem
         let build = include_str!("../build.rs");
         let comandos: Vec<String> = build.split('"').skip(1).step_by(2).map(|c| c.to_string()).collect();
-        assert_eq!(comandos.len(), 58);
+        assert_eq!(comandos.len(), 59);
         let toml = include_str!("../permissions/default.toml");
         let (padrao, api) = toml.split_once("[[set]]").expect("o conjunto api");
         for c in &comandos {

@@ -9,7 +9,7 @@ const COMANDOS: &[&str] = &[
     // a saída: o PDF anonimizado, o .txt e o mapa
     "gravar_saida", "pasta_padrao", "listar_pdfs", "expandir_caminhos",
     // reidentificação
-    "ler_texto", "docx_partes", "gravar_reidentificado", "gravar_texto",
+    "ler_texto", "docx_partes", "gravar_reidentificado", "gravar_partes", "gravar_texto",
     // a minuta do 🧠 no editor: o .docx e a abertura dele no editor de texto do computador
     "gravar_docx", "abrir_documento", "abrir_modelo", "mesa_ler", "mesa_gravar",
     // o motor e a atualização assinada dele
