@@ -312,15 +312,29 @@ def main():
     segredo = ler_segredo("segredo")
     if not segredo:
         sys.exit("falta o segredo do túnel em " + str(BASE / "segredo") + " (24 caracteres ou mais)")
-    servidores = [servir(TUNEL, "tunel", segredo)]
+    tunel = servir(TUNEL, "tunel", segredo)
     if REDE:
         senha = ler_segredo("senha")
         if not senha:
             sys.exit("QWEN_REDE pede a senha da rede em " + str(BASE / "senha") + " (24 caracteres ou mais)")
-        servidores.append(servir(REDE, "rede", senha))
-    for s in servidores[1:]:
-        threading.Thread(target=s.serve_forever, daemon=True).start()
-    servidores[0].serve_forever()
+        threading.Thread(target=servir_rede, args=(senha,), daemon=True).start()
+    tunel.serve_forever()
+
+
+def servir_rede(senha):
+    """A rede local sobe ao lado do túnel. Se o endereço ainda não existe (o do Tailscale, logo depois de ligar o Mac),
+    tenta de novo a cada 30 s, sem derrubar o túnel."""
+    avisou = False
+    while True:
+        try:
+            s = servir(REDE, "rede", senha)
+        except OSError as e:
+            if not avisou:
+                registrar("rede", REDE, "ainda indisponível (" + str(e) + "); tento a cada 30 s")
+                avisou = True
+            time.sleep(30)
+            continue
+        s.serve_forever()
 
 
 if __name__ == "__main__":

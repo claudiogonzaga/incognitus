@@ -37,6 +37,26 @@ Para instalar como serviço do macOS (sobe com o Mac):
 sudo bash servidor/instalar_porteiro.sh http://<ip-do-ollama>:11434
 ```
 
+## O aplicativo na rede local (o MacBook Air M2)
+
+No Mac servidor, com o repositório baixado, ligue a rede local no endereço em que o M2 o alcança. O do Tailscale
+(`tailscale ip -4`) é o melhor: o tráfego vai cifrado e funciona fora do gabinete. O IP da rede do gabinete também
+serve, mas sem cifra.
+
+```bash
+sudo QWEN_REDE=<ip>:11435 bash servidor/instalar_porteiro.sh
+pbcopy < ~/.qwen-servidor/senha        # copia a senha sem mostrá-la
+```
+
+Se o endereço ainda não existe quando o Mac liga (o Tailscale sobe depois), o porteiro tenta de novo a cada 30 s, sem
+derrubar o túnel.
+
+No Incognitus do M2, na Minuta pelo modelo, com a IA "Qwen do servidor":
+
+- Endereço: `http://<ip>:11435`
+- Senha do servidor: cole a senha copiada (fica no chaveiro do M2)
+- Modelo: `qwen3.5:9b`; contexto: 32.768
+
 ## O túnel
 
 Uma regra no `config.yml` do cloudflared, antes da regra final `http_status:404`:
