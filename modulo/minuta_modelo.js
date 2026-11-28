@@ -79,12 +79,29 @@ function opcoesAuto(atual) {
   return out.join('');
 }
 
-/** O JSON da resposta: sem o raciocínio (<think>), sem a cerca de código, do primeiro { ao último }. */
+/** O JSON da resposta: sem o raciocínio (<think>), sem a cerca de código, do primeiro { ao último }. O Qwen (sem
+ *  `format: "json"` no motor MLX) às vezes põe quebras de linha cruas dentro dos textos; se o JSON.parse recusar, elas
+ *  são escapadas (só dentro das strings) e a leitura é tentada de novo. */
 function jsonDaResposta(txt) {
   let t = String(txt || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/```(?:json)?/gi, '');
   const a = t.indexOf('{'), b = t.lastIndexOf('}');
   if (a < 0 || b <= a) throw new Error('A IA não devolveu o JSON pedido.');
-  return JSON.parse(t.slice(a, b + 1));
+  const bruto = t.slice(a, b + 1);
+  try { return JSON.parse(bruto); } catch (e) { return JSON.parse(escaparControlesNasStrings(bruto)); }
+}
+/** Escapa os caracteres de controle (abaixo de U+0020) que aparecem crus dentro das strings de um JSON; fora delas, nada muda. */
+function escaparControlesNasStrings(s) {
+  let out = '', dentro = false, barra = false;
+  for (const ch of s) {
+    if (!dentro) { if (ch === '"') dentro = true; out += ch; continue; }
+    if (barra) { out += ch; barra = false; continue; }
+    if (ch === '\\') { out += ch; barra = true; continue; }
+    if (ch === '"') { dentro = false; out += ch; continue; }
+    const c = ch.charCodeAt(0);
+    if (c < 0x20) out += ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : ch === '\t' ? '\\t' : '\\u' + c.toString(16).padStart(4, '0');
+    else out += ch;
+  }
+  return out;
 }
 /** Os autos no tamanho que cabe (`max` caracteres): o começo (a capa) e o fim (os atos mais recentes). */
 function autosQueCabem(autos, max) {
