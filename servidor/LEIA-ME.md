@@ -37,10 +37,15 @@ Para instalar como serviço do macOS (sobe com o Mac):
 sudo bash servidor/instalar_porteiro.sh http://<ip-do-ollama>:11434
 ```
 
+Sem o endereço, o porteiro procura o Ollama em `http://127.0.0.1:11434`. Se o Ollama do Mac escuta só no IP do
+Tailscale (`OLLAMA_HOST=<ip>:11434`), passe esse endereço. Atenção: nesse caso o Ollama fica aberto, sem senha, a todo
+aparelho da rede Tailscale, por fora do porteiro. Se nada mais depende disso, prefira `OLLAMA_HOST=127.0.0.1:11434`.
+
 ## O aplicativo na rede local (o MacBook Air M2)
 
 No Mac servidor, com o repositório baixado, ligue a rede local no endereço em que o M2 o alcança. O do Tailscale
-(`tailscale ip -4`) é o melhor: o tráfego vai cifrado e funciona fora do gabinete. O IP da rede do gabinete também
+(`tailscale ip -4`) é o melhor: o tráfego vai cifrado e funciona fora do gabinete. Para isso, o M2 tem de entrar na mesma
+rede Tailscale (mesma conta). O IP da rede do gabinete também
 serve, mas sem cifra.
 
 ```bash
@@ -67,6 +72,18 @@ Uma regra no `config.yml` do cloudflared, antes da regra final `http_status:404`
 ```
 
 E o DNS: `cloudflared tunnel route dns <túnel> qwen.<domínio>`.
+
+## O segredo no Pages
+
+O conteúdo de `~/.qwen-servidor/segredo` vai na variável `QWEN_SEGREDO` do projeto `consciencia`, ambiente production,
+sem aparecer na tela:
+
+```bash
+npx wrangler pages secret put QWEN_SEGREDO --project-name consciencia < ~/.qwen-servidor/segredo
+```
+
+Rode o wrangler fora da pasta pessoal (`~`). De lá, ele cria `~/.wrangler`, e essa pasta esconde o login guardado em
+`~/Library/Preferences/.wrangler`. A função lê o valor novo a partir da próxima publicação do portal.
 
 ## Desempenho medido (Mac M1 16 GB, qwen3.5:9b nvfp4 no motor MLX do Ollama)
 
