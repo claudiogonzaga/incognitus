@@ -79,28 +79,56 @@ function opcoesAuto(atual) {
   return out.join('');
 }
 
-/** O JSON da resposta: sem o raciocínio (<think>), sem a cerca de código, do primeiro { ao último }. O Qwen (sem
- *  `format: "json"` no motor MLX) às vezes põe quebras de linha cruas dentro dos textos; se o JSON.parse recusar, elas
- *  são escapadas (só dentro das strings) e a leitura é tentada de novo. */
+/** O JSON da resposta: sem o raciocínio (<think>), sem a cerca de código, do primeiro { ao último }. O Qwen do servidor
+ *  (motor MLX, sem `format: "json"`) às vezes devolve JSON torto; se o JSON.parse recusar, consertarJson tenta de novo. */
 function jsonDaResposta(txt) {
   let t = String(txt || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/```(?:json)?/gi, '');
   const a = t.indexOf('{'), b = t.lastIndexOf('}');
-  if (a < 0 || b <= a) throw new Error('A IA não devolveu o JSON pedido.');
-  const bruto = t.slice(a, b + 1);
-  try { return JSON.parse(bruto); } catch (e) { return JSON.parse(escaparControlesNasStrings(bruto)); }
+  if (a < 0) throw new Error('A IA não devolveu o JSON pedido.');
+  let erro = null;
+  if (b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { erro = e; } }
+  try { return JSON.parse(consertarJson(t.slice(a))); } catch (e) { throw erro || e; }
 }
-/** Escapa os caracteres de controle (abaixo de U+0020) que aparecem crus dentro das strings de um JSON; fora delas, nada muda. */
-function escaparControlesNasStrings(s) {
+/** Conserta, numa passada, os defeitos que o Qwen comete no JSON: quebra de linha e outros caracteres de controle crus
+ *  dentro das strings; aspas internas sem barra; um `",` sobrando depois da vírgula; vírgula antes de } ou ]; o fim que
+ *  ficou sem fechar (string, ] ou }); e texto depois do fim do objeto. Só é usado quando o JSON.parse já recusou. */
+function consertarJson(s) {
   let out = '', dentro = false, barra = false;
-  for (const ch of s) {
-    if (!dentro) { if (ch === '"') dentro = true; out += ch; continue; }
-    if (barra) { out += ch; barra = false; continue; }
-    if (ch === '\\') { out += ch; barra = true; continue; }
-    if (ch === '"') { dentro = false; out += ch; continue; }
-    const c = ch.charCodeAt(0);
-    if (c < 0x20) out += ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : ch === '\t' ? '\\t' : '\\u' + c.toString(16).padStart(4, '0');
-    else out += ch;
+  const pilha = [];
+  const proximo = (i) => { while (i < s.length && /\s/.test(s[i])) i++; return i < s.length ? s[i] : ''; };
+  const ultimo = () => { const m = out.match(/\S(?=\s*$)/); return m ? m[0] : ''; };
+  const tirarVirgula = () => { out = out.replace(/,(\s*)$/, '$1'); };
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (dentro) {
+      if (barra) { out += ch; barra = false; continue; }
+      if (ch === '\\') { out += ch; barra = true; continue; }
+      if (ch === '"') {
+        const p = proximo(i + 1);
+        if (p === '' || ',}]:'.includes(p)) { dentro = false; out += ch; } else out += '\\"';
+        continue;
+      }
+      const c = ch.charCodeAt(0);
+      if (c < 0x20) out += ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : ch === '\t' ? '\\t' : '\\u' + c.toString(16).padStart(4, '0');
+      else out += ch;
+      continue;
+    }
+    if (ch === '"') {
+      if (ultimo() === ',' && s[i + 1] === ',') { i++; continue; }   // o `",` sobrando: "x",",  →  "x",
+      dentro = true; out += ch; continue;
+    }
+    if (ch === '{' || ch === '[') { pilha.push(ch === '{' ? '}' : ']'); out += ch; continue; }
+    if (ch === '}' || ch === ']') {
+      tirarVirgula(); out += ch;
+      if (pilha.length) pilha.pop();
+      if (!pilha.length) return out;                                 // o objeto acabou: o resto é comentário
+      continue;
+    }
+    out += ch;
   }
+  if (dentro) out += '"';
+  tirarVirgula();
+  while (pilha.length) out += pilha.pop();
   return out;
 }
 /** Os autos no tamanho que cabe (`max` caracteres): o começo (a capa) e o fim (os atos mais recentes). */
